@@ -35,6 +35,7 @@ import {
   GitBranch,
   ChevronDown,
   ChevronUp,
+  Palette,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -108,6 +109,7 @@ export const UnifiedMembershipManager: React.FC<
     passwordsAccess: false,
     passwordsManage: false,
     agentManage: false,
+    appearanceManage: false,
   });
 
   // Pod module state — drives which add-on / paid permission groups
@@ -117,6 +119,7 @@ export const UnifiedMembershipManager: React.FC<
     surveys_enabled: false,
     passwords_enabled: false,
     community_agent_enabled: false,
+    custom_appearance_enabled: false,
   });
 
   // Permission section collapse state — mirrors the Modules tab UX
@@ -145,6 +148,8 @@ export const UnifiedMembershipManager: React.FC<
           passwords_enabled: json.modules?.passwords_enabled ?? false,
           community_agent_enabled:
             json.modules?.community_agent_enabled ?? false,
+          custom_appearance_enabled:
+            json.modules?.custom_appearance_enabled ?? false,
         });
       } catch {
         /* non-fatal */
@@ -207,6 +212,7 @@ export const UnifiedMembershipManager: React.FC<
       passwordsAccess: perms.passwordsAccess ?? false,
       passwordsManage: perms.passwordsManage ?? false,
       agentManage: perms.agentManage ?? false,
+      appearanceManage: perms.appearanceManage ?? false,
     };
   };
 
@@ -593,6 +599,13 @@ export const UnifiedMembershipManager: React.FC<
                 perms: [
                   { key: 'passwordsAccess', label: 'Passwords Access', description: 'View / decrypt entries shared with this role', icon: KeyRound, color: '#1F453A' },
                   { key: 'passwordsManage', label: 'Passwords Manage', description: 'Add, edit, delete entries; grant access to newcomers', icon: KeyRound, color: '#C6933F' },
+                ],
+              },
+              {
+                title: 'Custom Appearance',
+                show: moduleFlags.custom_appearance_enabled,
+                perms: [
+                  { key: 'appearanceManage', label: 'Appearance Manage', description: "Design and publish the pod's custom app face (colors and icons)", icon: Palette, color: '#6A5F7A' },
                 ],
               },
             ];

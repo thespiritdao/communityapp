@@ -32,6 +32,7 @@ import {
   Vote,
   KeyRound,
   Wallet,
+  Palette,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
@@ -41,6 +42,7 @@ import { DAOGovernanceSettingsCard } from '@/features/governance/components/DAOG
 import { CommunityTokensAdminCard } from '@/features/pods/components/CommunityTokensAdminCard';
 import { SelfAdminCard } from '@/features/pods/components/SelfAdminCard';
 import { PasswordVaultPanel } from '@/features/passwords/components/PasswordVaultPanel';
+import PodFaceEditor from './PodFaceEditor';
 
 interface PodModulesManagerProps {
   podId: string;
@@ -69,6 +71,7 @@ interface PodModules {
   governance_enabled: boolean;
   passwords_enabled: boolean;
   external_wallet_linking_enabled: boolean;
+  custom_appearance_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -214,6 +217,17 @@ const ADDON_MODULES: ModuleInfo[] = [
     createsTab: false,
     execOnly: true,
   },
+  {
+    key: 'custom_appearance_enabled',
+    label: 'Custom Appearance',
+    description:
+      "Design a custom look (\"face\") for the app — colors and main-screen icons — that your members can choose to wear. Editing is granted via the appearanceManage role permission.",
+    icon: Palette,
+    color: '#6A5F7A',
+    bgColor: '#EDEAF0',
+    configComponent: 'appearance',
+    createsTab: false,
+  },
 ];
 
 const PAID_MODULES: ModuleInfo[] = [
@@ -256,6 +270,7 @@ export default function PodModulesManager({
     governance_enabled: true,
     passwords_enabled: false,
     external_wallet_linking_enabled: false,
+    custom_appearance_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -297,6 +312,7 @@ export default function PodModulesManager({
           passwords_enabled: data.passwords_enabled ?? false,
           external_wallet_linking_enabled:
             data.external_wallet_linking_enabled ?? false,
+          custom_appearance_enabled: data.custom_appearance_enabled ?? false,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
@@ -357,6 +373,8 @@ export default function PodModulesManager({
         setExpandedModule('knowledge');
       } else if (moduleKey === 'governance_enabled' && enabled) {
         setExpandedModule('governance');
+      } else if (moduleKey === 'custom_appearance_enabled' && enabled) {
+        setExpandedModule('appearance');
       }
 
       // Notify parent when a tab-creating module is toggled
@@ -545,6 +563,19 @@ export default function PodModulesManager({
                 to add credentials, manage audience, or grant access to
                 new members.
               </p>
+            </Card>
+          )}
+
+        {/* Custom Appearance (Pod Faces) editor */}
+        {isExpanded &&
+          module.configComponent === 'appearance' &&
+          modules.custom_appearance_enabled && (
+            <Card className="mt-4 p-4">
+              <PodFaceEditor
+                podId={podId}
+                podName={podName}
+                isManager={isManager}
+              />
             </Card>
           )}
 

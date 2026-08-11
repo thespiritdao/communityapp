@@ -510,6 +510,9 @@ export class PodRolePermissionsService {
           // get auto-set to true via the modules toggle sync block.)
           passwordsAccess: false,
           passwordsManage: false,
+          // Custom Appearance is opt-in like the vault: leaders get
+          // appearanceManage via the modules toggle sync when enabled.
+          appearanceManage: false,
         },
         max_holders: 5,
         created_by: createdBy,
@@ -544,6 +547,9 @@ export class PodRolePermissionsService {
           // rotate).
           passwordsAccess: false,
           passwordsManage: false,
+          // Members never get appearanceManage by default — wearing a
+          // face is open to all members; designing it is delegated.
+          appearanceManage: false,
         },
         max_holders: 10000,
         created_by: createdBy,

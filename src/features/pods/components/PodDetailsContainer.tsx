@@ -15,6 +15,7 @@ import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
 import { ProfileModal } from '@/features/identity';
 import { useAccountability } from '@/features/pods/hooks/useAccountability';
+import { WearFaceChip } from '@/features/pods/faces/WearFaceChip';
 import type { Pod } from '@/features/pods/types';
 
 interface PodDetailsContainerProps {
@@ -116,9 +117,13 @@ export function PodDetailsContainer({
                 )}
                 <div>
                   <CardTitle className="text-2xl mb-2">{pod.name}</CardTitle>
-                  <Badge className={`mb-2 ${getStatusColor(pod.status)}`}>
-                    {pod.status || 'inactive'}
-                  </Badge>
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <Badge className={getStatusColor(pod.status)}>
+                      {pod.status || 'inactive'}
+                    </Badge>
+                    {/* Pod Faces: apply this pod's published look */}
+                    <WearFaceChip podId={pod.id} />
+                  </div>
                   <p className="text-gray-600">{pod.description}</p>
                 </div>
               </div>

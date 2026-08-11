@@ -29,6 +29,7 @@ const ALLOWED_KEYS = [
   'governance_enabled',
   'passwords_enabled',
   'external_wallet_linking_enabled',
+  'custom_appearance_enabled',
 ] as const;
 
 // Keys that only the Executive Pod may toggle (not ordinary pod leaders).
@@ -317,6 +318,34 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       }
     } catch (permErr) {
       console.warn('Could not sync agent permissions:', permErr);
+    }
+  }
+
+  // When custom_appearance_enabled changes, sync appearanceManage onto leader
+  // roles only (designing the pod's face is a management capability; members
+  // just choose whether to wear it). Module off → flag off everywhere.
+  if ('custom_appearance_enabled' in updates) {
+    try {
+      const { data: roles } = await supabaseAdmin
+        .from('pod_role_permissions')
+        .select('id, permissions, role_name')
+        .eq('pod_id', podId);
+
+      if (roles) {
+        for (const role of roles) {
+          const perms = typeof role.permissions === 'string'
+            ? JSON.parse(role.permissions)
+            : { ...(role.permissions || {}) };
+          const isLeaderRole = /leader/i.test(role.role_name ?? '');
+          perms.appearanceManage = updates.custom_appearance_enabled && isLeaderRole;
+          await supabaseAdmin
+            .from('pod_role_permissions')
+            .update({ permissions: perms })
+            .eq('id', role.id);
+        }
+      }
+    } catch (permErr) {
+      console.warn('Could not sync appearance permissions:', permErr);
     }
   }
 

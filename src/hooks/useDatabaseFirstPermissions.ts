@@ -158,6 +158,7 @@ export const useDatabaseFirstPermissions =
           'knowledgeBaseManage',
           'surveyManage',
           'passwordsManage',
+          'appearanceManage',
           'chatModeration',
           'forumModeration',
           'subPodCreation',

@@ -3,42 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Home, Vote, Bell, HeartHandshake } from 'lucide-react';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
-
-type Item = {
-  href: string;
-  label: string;
-  match?: 'exact' | 'startsWith';
-  icon: JSX.Element;
-};
-
-const NAV_ITEMS: Item[] = [
-  {
-    href: '/home',
-    label: 'Home',
-    match: 'startsWith',
-    icon: <Home size={36} />,
-  },
-  {
-    href: '/claims',
-    label: 'Claims',
-    match: 'startsWith',
-    icon: <HeartHandshake size={36} />,
-  },
-  {
-    href: '/governance',
-    label: 'Govern',
-    match: 'startsWith',
-    icon: <Vote size={36} />,
-  },
-  {
-    href: '/notifications',
-    label: 'Alerts',
-    match: 'startsWith',
-    icon: <Bell size={36} />,
-  },
-];
+import { BOTTOM_NAV_ITEMS, type NavItemDef } from '@/config/moduleRegistry';
+import { NavSlotIcon } from '@/components/SlotIcon';
 
 // Wrapper component with error boundary
 function MobileBottomNavContent() {
@@ -99,7 +66,7 @@ function MobileBottomNavContent() {
     };
   }, [keyboardOpen]);
 
-  const isActive = (href: string, match: Item['match'] = 'exact') => {
+  const isActive = (href: string, match: NavItemDef['match'] = 'exact') => {
     if (!mounted) return false;
     return match === 'startsWith'
       ? pathname === href || pathname.startsWith(href + '/')
@@ -129,7 +96,7 @@ function MobileBottomNavContent() {
         pointerEvents: 'auto',
         transform: 'none',
         zIndex: 2147483647,
-        background: '#f5f4ed',
+        background: 'hsl(var(--background))',
         borderTop: '1px solid rgba(0,0,0,0.1)',
         boxShadow: '0 -8px 24px rgba(0,0,0,0.08)',
         paddingTop: '8px',
@@ -152,7 +119,7 @@ function MobileBottomNavContent() {
           listStyle: 'none',
         }}
       >
-        {NAV_ITEMS.map((item) => {
+        {BOTTOM_NAV_ITEMS.map((item) => {
           const active = isActive(item.href, item.match);
           const ALIGN: Record<string, 'flex-start' | 'center' | 'flex-end'> = {
             '/home': 'flex-start',
@@ -178,7 +145,9 @@ function MobileBottomNavContent() {
                   justifyContent: ALIGN[item.href] ?? 'center',
                   padding: '8px 12px',
                   textDecoration: 'none',
-                  color: active ? '#2F5D50' : '#5F5A54',
+                  color: active
+                    ? 'hsl(var(--primary))'
+                    : 'hsl(var(--muted-foreground))',
                   minHeight: '40px',
                   width: '100%',
                   borderRadius: '8px',
@@ -192,15 +161,19 @@ function MobileBottomNavContent() {
                     alignItems: 'center',
                   }}
                 >
-                  {item.icon}
+                  <NavSlotIcon
+                    slot={item.slot}
+                    defaultIcon={item.defaultIcon}
+                    size={36}
+                  />
                   {item.href === '/notifications' && unreadCounts.total > 0 && (
                     <span
                       style={{
                         position: 'absolute',
                         top: '-8px',
                         right: '-8px',
-                        backgroundColor: '#8B3A3A',
-                        color: 'white',
+                        backgroundColor: 'hsl(var(--destructive))',
+                        color: 'hsl(var(--destructive-foreground))',
                         borderRadius: '50%',
                         width: '20px',
                         height: '20px',
@@ -210,7 +183,7 @@ function MobileBottomNavContent() {
                         fontSize: '12px',
                         fontWeight: 'bold',
                         minWidth: '20px',
-                        border: '2px solid #f5f4ed',
+                        border: '2px solid hsl(var(--background))',
                       }}
                     >
                       {unreadCounts.total > 99 ? '99+' : unreadCounts.total}

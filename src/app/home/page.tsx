@@ -9,6 +9,8 @@ import { useUserProfile } from '@/features/identity/hooks/useUserProfile';
 import { TosModal } from '@/components/TosModal';
 import { PodInviteRedeemer } from '@/components/PodInviteRedeemer';
 import { supabase } from '@/utils/supabaseClient';
+import { HOME_USER_MODULES, HOME_COMMUNITY_MODULES } from '@/config/moduleRegistry';
+import { HomeModuleIcon } from '@/components/SlotIcon';
 import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
@@ -85,10 +87,10 @@ export default function HomePage() {
         <div style={{
           margin: '16px',
           padding: '16px',
-          background: 'linear-gradient(135deg, #FFFBF5 0%, #F9F5F0 100%)',
+          background: 'hsl(var(--card))',
           borderRadius: '12px',
-          border: '1px solid rgba(143, 170, 161, 0.3)',
-          boxShadow: '0 2px 8px rgba(47, 93, 80, 0.08)',
+          border: '1px solid hsl(var(--primary) / 0.3)',
+          boxShadow: '0 2px 8px hsl(var(--primary) / 0.08)',
         }}>
           <div style={{
             display: 'flex',
@@ -105,14 +107,14 @@ export default function HomePage() {
               <p style={{
                 fontSize: '15px',
                 fontWeight: '600',
-                color: '#3A3A3A',
+                color: 'hsl(var(--foreground))',
                 marginBottom: '4px',
               }}>
                 Complete your profile
               </p>
               <p style={{
                 fontSize: '13px',
-                color: '#5F5A54',
+                color: 'hsl(var(--muted-foreground))',
                 marginBottom: '12px',
               }}>
                 Help the community get to know you better by adding your name and details.
@@ -122,8 +124,8 @@ export default function HomePage() {
                 style={{
                   display: 'inline-block',
                   padding: '8px 16px',
-                  background: '#2F5D50',
-                  color: '#FFFFFF',
+                  background: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
                   borderRadius: '8px',
                   fontSize: '14px',
                   fontWeight: '500',
@@ -131,10 +133,11 @@ export default function HomePage() {
                   transition: 'background 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#254A40';
+                  e.currentTarget.style.background =
+                    'color-mix(in srgb, hsl(var(--primary)) 85%, black)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#2F5D50';
+                  e.currentTarget.style.background = 'hsl(var(--primary))';
                 }}
               >
                 Complete Profile →
@@ -144,162 +147,49 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* USER MODULES */}
+      {/* USER MODULES — registry-driven so Pod Faces can remap icons */}
       <section className="home-section">
         <div className="home-module-list">
-          <Link href="/identity" className="home-module-card" prefetch={true} data-tour="identity">
-            <Image
-              src="/images/icons/identityicon.png"
-              alt="Identity"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="eager"
-            />
-            <div className="home-module-title">Identity</div>
-          </Link>
-
-          <Link href="/market" className="home-module-card" prefetch={true} data-tour="artifacts">
-            <Image
-              src="/images/icons/artifactsicon.png"
-              alt="Artifacts"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="eager"
-            />
-            <div className="home-module-title">Artifacts</div>
-          </Link>
-
-          <Link
-            href="/sensemaker-ai"
-            className="home-module-card"
-            prefetch={true}
-            data-tour="sensemaker"
-          >
-            <Image
-              src="/images/sensemakeraikey.png"
-              alt="SensemakerAI"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="eager"
-            />
-            <div className="home-module-title">Sensemaker</div>
-          </Link>
+          {HOME_USER_MODULES.map((m) => (
+            <Link
+              key={m.slot}
+              href={m.href}
+              className="home-module-card"
+              prefetch={true}
+              data-tour={m.tourId}
+            >
+              <HomeModuleIcon
+                slot={m.slot}
+                defaultIcon={m.defaultIcon}
+                label={m.label}
+                eager={m.eager}
+              />
+              <div className="home-module-title">{m.label}</div>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {/* SPIRITDAO MODULES */}
+      {/* COMMUNITY MODULES */}
       <section className="home-section-2">
         <div className="home-module-list">
-          <Link href="/chat" className="home-module-card" prefetch={true} data-tour="chat">
-            <Image
-              src="/images/icons/chaticon.png"
-              alt="Chat"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Chat</div>
-          </Link>
-
-          <Link href="/forum" className="home-module-card" prefetch={true} data-tour="forum">
-            <Image
-              src="/images/icons/forumicon.png"
-              alt="Forum"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Forum</div>
-          </Link>
-
-          <Link href="/pods" className="home-module-card" prefetch={true} data-tour="pods">
-            <Image
-              src="/images/icons/podsicon.png"
-              alt="Pods"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Pods</div>
-          </Link>
-
-          <Link href="/events" className="home-module-card" prefetch={true} data-tour="events">
-            <Image
-              src="/images/icons/eventsicon.png"
-              alt="Events"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Events</div>
-          </Link>
-
-          <Link href="/members" className="home-module-card" prefetch={true} data-tour="members">
-            <Image
-              src="/images/icons/membersicon.png"
-              alt="Members"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Members</div>
-          </Link>
-
-          <Link href="/governance" className="home-module-card" prefetch={true} data-tour="governance">
-            <Image
-              src="/images/icons/governanceicon.png"
-              alt="Governance"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Governance</div>
-          </Link>
-
-          <Link href="/bounty" className="home-module-card" prefetch={true} data-tour="bounties">
-            <Image
-              src="/images/icons/bountiesicon.png"
-              alt="Bounties"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Bounties</div>
-          </Link>
-
-          <Link href="/knowledge" className="home-module-card" prefetch={true} data-tour="knowledge">
-            <Image
-              src="/images/icons/knowledgebaseicon.png"
-              alt="Knowledge Base"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Knowledge</div>
-          </Link>
-
-          <Link href="/explorer" className="home-module-card" prefetch={true} data-tour="pulse">
-            <Image
-              src="/images/icons/pulseicon.png"
-              alt="Pulse"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Pulse</div>
-          </Link>
+          {HOME_COMMUNITY_MODULES.map((m) => (
+            <Link
+              key={m.slot}
+              href={m.href}
+              className="home-module-card"
+              prefetch={true}
+              data-tour={m.tourId}
+            >
+              <HomeModuleIcon
+                slot={m.slot}
+                defaultIcon={m.defaultIcon}
+                label={m.label}
+                eager={m.eager}
+              />
+              <div className="home-module-title">{m.label}</div>
+            </Link>
+          ))}
         </div>
       </section>
 

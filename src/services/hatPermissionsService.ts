@@ -104,6 +104,7 @@ export interface HatPermissions {
   passwordsAccess?: boolean; // 🆕 View/decrypt entries in the pod's E2EE password vault
   passwordsManage?: boolean; // 🆕 Create/edit/delete vault entries, grant access to newcomers
   agentManage?: boolean; // 🆕 Configure pod's AI agent (persona, channels, posting cadence). Subscription billing stays leader-only.
+  appearanceManage?: boolean; // 🆕 Design/publish the pod's custom app face (colors + main-screen icons). See docs/spec-pod-faces.md
 }
 
 export interface HatRole {

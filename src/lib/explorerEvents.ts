@@ -34,6 +34,7 @@ export type ExplorerEventType =
   | 'pod_deletion_proposed'
   | 'pod_module_enabled'
   | 'pod_module_disabled'
+  | 'pod_face_published'
   // members
   | 'member_introduced'
   | 'member_joined'
@@ -116,6 +117,7 @@ export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
   pod_deletion_proposed: 'pods',
   pod_module_enabled: 'pods',
   pod_module_disabled: 'pods',
+  pod_face_published: 'pods',
 
   member_introduced: 'members',
   member_joined: 'members',

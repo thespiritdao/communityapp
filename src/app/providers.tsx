@@ -5,6 +5,7 @@ import React, { type ReactNode } from 'react';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { CommunityProvider } from '@/context/CommunityContext';
+import { FaceProvider } from '@/context/FaceContext';
 import { UnifiedNotificationProvider } from '@/context/UnifiedNotificationContext';
 import { TokenBalancesProvider } from '@/context/TokenBalancesContext';
 import { CDPEmbeddedProvider } from '../wallet/components/CDPEmbeddedProvider';
@@ -77,6 +78,8 @@ export function Providers({ children }: ProvidersProps) {
           <AuthProvider>
             <ProfilesProvider>
               <CommunityProvider>
+                {/* Pod Faces: applies the user's chosen appearance app-wide */}
+                <FaceProvider>
                 <UnifiedNotificationProvider>
                   {/* Load hat IDs from DB into client-side registry */}
                   <HatRegistryInitializer />
@@ -98,6 +101,7 @@ export function Providers({ children }: ProvidersProps) {
                   {/* PWA Install Prompt */}
                   <InstallPrompt />
                 </UnifiedNotificationProvider>
+                </FaceProvider>
               </CommunityProvider>
             </ProfilesProvider>
           </AuthProvider>

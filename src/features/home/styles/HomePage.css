@@ -1,9 +1,14 @@
+/* Home page styles. Colors reference the theme tokens from globals.css
+   (hsl(var(--token))) rather than hardcoded hexes so Pod Faces can restyle
+   this surface at runtime — see docs/spec-pod-faces.md §5.3. Default values
+   are visually identical to the previous hardcoded palette. */
+
 html, body {
   margin: 10px;
 
   font-family: Arial, sans-serif;
-  background-color: #f5f4ed; /* Soft gray background (kept from original) */
-  color: #1F453A;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
   background-image: url('/images/chatbg.png'); /* Update path if needed */
 }
 
@@ -13,18 +18,18 @@ html, body {
    ------------------------------------------------------------------------- */
 .home-container {
   max-width: 900px;
-  margin: 20px auto; 
+  margin: 20px auto;
   margin-bottom: 80px; /* Add space for BottomNav */
   padding: 30px;
-  background-color: #fff; /* White or very light background */
-  border-radius: 10px; 
+  background-color: hsl(var(--card));
+  border-radius: 10px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
 /* Large heading for your home page */
 .home-header {
   display: flex;
-  align-items: center; 
+  align-items: center;
   gap: 1rem; /* space between logo and text block */
   margin-bottom: 20px; /* spacing under the header */
 }
@@ -40,7 +45,7 @@ html, body {
 /* Subtext or welcome message near the top */
 .home-subtitle {
   font-size: 1rem;
-  color: #5F5A54;
+  color: hsl(var(--muted-foreground));
   text-align: center;
   margin-bottom: 30px;
 }
@@ -51,8 +56,8 @@ html, body {
 .home-section {
   margin-bottom: 20px;
   padding: 20px;
-  background-color: #F0ECE6; /* SpiritDAO warm off-white */
-  color: #3A3A3A;
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--foreground));
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
@@ -60,15 +65,17 @@ html, body {
 .home-section-2 {
   margin-bottom: 20px;
   padding: 20px;
-  background-color: #E8E4DC; /* SpiritDAO neutral warm tone */
-  color: #3A3A3A;
+  /* A touch darker than .home-section so the two bands stay distinct
+     regardless of the active face's secondary color. */
+  background-color: color-mix(in srgb, hsl(var(--secondary)) 95%, hsl(var(--foreground)));
+  color: hsl(var(--foreground));
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 /* Section Title */
 .home-section h2 {
-  color: #4a4a4a; 
+  color: hsl(var(--foreground));
   margin-bottom: 15px;
 }
 
@@ -114,13 +121,13 @@ html, body {
   margin-top: 8px;
   font-size: 14px;
   font-weight: bold;
-  color: #1F453A;
+  color: hsl(var(--foreground));
 }
 
 /* Optional descriptive text in the card */
 .home-module-description {
   font-size: 0.875rem;
-  color: #5F5A54;
+  color: hsl(var(--muted-foreground));
 }
 
 /* -------------------------------------------------------------------------
@@ -129,7 +136,7 @@ html, body {
 .home-footer {
   text-align: center;
   margin-top: 30px;
-  color: #5F5A54;
+  color: hsl(var(--muted-foreground));
   font-size: 0.9rem;
 }
 
@@ -141,13 +148,13 @@ html, body {
   cursor: pointer;
   font-weight: bold;
   transition: all 0.3s ease;
-  background-color: #2F5D50; /* SpiritDAO primary green */
-  color: #FFFFFF;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   margin-top: 10px;
 }
 
 .home-footer-button:hover {
-  background-color: #254A40; /* SpiritDAO primary green hover */
+  background-color: color-mix(in srgb, hsl(var(--primary)) 85%, black);
 }
 
 /* -------------------------------------------------------------------------
