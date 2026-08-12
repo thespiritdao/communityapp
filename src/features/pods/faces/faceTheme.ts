@@ -40,6 +40,16 @@ export function darkenHex(hex: string, amount: number): string {
   return `#${to2(r)}${to2(g)}${to2(b)}`;
 }
 
+/** Mix two #RRGGBB colors: t=1 → all a, t=0 → all b. */
+export function mixHex(a: string, b: string, t: number): string {
+  const ch = (i: number) =>
+    Math.round(
+      parseInt(a.slice(i, i + 2), 16) * t + parseInt(b.slice(i, i + 2), 16) * (1 - t),
+    );
+  const to2 = (c: number) => c.toString(16).padStart(2, '0');
+  return `#${to2(ch(1))}${to2(ch(3))}${to2(ch(5))}`;
+}
+
 type VarValue = { name: string; value: string };
 
 /** Face token → every CSS variable it drives. HSL triplets for the Tailwind
@@ -90,6 +100,23 @@ function varsForColors(colors: FaceColors): VarValue[] {
     raw('--ock-text-error', colors.destructive);
     raw('--ock-icon-color-error', colors.destructive);
   }
+
+  // Derived surface tokens (globals.css defaults are the exact legacy hexes;
+  // these overrides give faces coherent equivalents):
+  //  - subtle text / inactive nav = foreground pulled 25% toward background
+  //  - section band 1 = the face's secondary; band 2 = secondary nudged 5%
+  //    toward foreground so the two home bands stay distinct
+  const fg = colors.foreground;
+  const bg = colors.background;
+  if (fg && bg) {
+    const subtle = mixHex(fg, bg, 0.75);
+    raw('--face-nav-inactive', subtle);
+    raw('--face-text-subtle', subtle);
+  }
+  if (colors.secondary) {
+    raw('--face-surface-1', colors.secondary);
+    raw('--face-surface-2', mixHex(colors.secondary, fg ?? '#1F453A', 0.95));
+  }
   return out;
 }
 
@@ -105,6 +132,7 @@ const ALL_FACE_VARS = [
   '--ock-bg-default-active', '--ock-text-foreground', '--ock-icon-color-foreground',
   '--ock-bg-alternate', '--ock-bg-primary-washed', '--ock-bg-error',
   '--ock-text-error', '--ock-icon-color-error',
+  '--face-nav-inactive', '--face-text-subtle', '--face-surface-1', '--face-surface-2',
 ];
 
 export function applyFaceColors(colors: FaceColors): void {

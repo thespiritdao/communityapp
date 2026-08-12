@@ -147,7 +147,7 @@ function MobileBottomNavContent() {
                   textDecoration: 'none',
                   color: active
                     ? 'hsl(var(--primary))'
-                    : 'hsl(var(--muted-foreground))',
+                    : 'var(--face-nav-inactive)',
                   minHeight: '40px',
                   width: '100%',
                   borderRadius: '8px',

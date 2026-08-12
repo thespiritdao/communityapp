@@ -80,6 +80,15 @@
 
     --radius: 0.5rem;
 
+    /* Pod Faces surface tokens — EXACT legacy hex values so the default
+       appearance is pixel-identical to the pre-Faces app. FaceProvider
+       overrides these (derived from the face's palette) while a face is
+       worn and removes the overrides on revert. */
+    --face-nav-inactive: #5F5A54;
+    --face-text-subtle: #5F5A54;
+    --face-surface-1: #F0ECE6;
+    --face-surface-2: #E8E4DC;
+
     /* OnChainKit theme variables */
     --ock-font-family: 'DM Sans', sans-serif;
     --ock-border-radius: 0.5rem;

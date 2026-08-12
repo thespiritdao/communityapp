@@ -45,7 +45,7 @@ html, body {
 /* Subtext or welcome message near the top */
 .home-subtitle {
   font-size: 1rem;
-  color: hsl(var(--muted-foreground));
+  color: var(--face-text-subtle);
   text-align: center;
   margin-bottom: 30px;
 }
@@ -56,7 +56,7 @@ html, body {
 .home-section {
   margin-bottom: 20px;
   padding: 20px;
-  background-color: hsl(var(--secondary));
+  background-color: var(--face-surface-1);
   color: hsl(var(--foreground));
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -65,9 +65,7 @@ html, body {
 .home-section-2 {
   margin-bottom: 20px;
   padding: 20px;
-  /* A touch darker than .home-section so the two bands stay distinct
-     regardless of the active face's secondary color. */
-  background-color: color-mix(in srgb, hsl(var(--secondary)) 95%, hsl(var(--foreground)));
+  background-color: var(--face-surface-2);
   color: hsl(var(--foreground));
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -127,7 +125,7 @@ html, body {
 /* Optional descriptive text in the card */
 .home-module-description {
   font-size: 0.875rem;
-  color: hsl(var(--muted-foreground));
+  color: var(--face-text-subtle);
 }
 
 /* -------------------------------------------------------------------------
@@ -136,7 +134,7 @@ html, body {
 .home-footer {
   text-align: center;
   margin-top: 30px;
-  color: hsl(var(--muted-foreground));
+  color: var(--face-text-subtle);
   font-size: 0.9rem;
 }
 

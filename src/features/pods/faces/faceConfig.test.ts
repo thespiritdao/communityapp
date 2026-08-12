@@ -11,7 +11,7 @@ import {
   validateFaceContrast,
   validateFaceIconMap,
 } from './faceConfig';
-import { hexToHslTriplet, darkenHex } from './faceTheme';
+import { hexToHslTriplet, darkenHex, mixHex } from './faceTheme';
 import { ICON_PACKS, resolvePackIcon } from '@/config/iconPacks';
 
 describe('validateFaceColors', () => {
@@ -144,5 +144,11 @@ describe('faceTheme color math', () => {
     expect(darkenHex('#FFFFFF', 0.5)).toBe('#808080');
     expect(darkenHex('#000000', 0.5)).toBe('#000000');
     expect(darkenHex('#2F5D50', 0)).toBe('#2f5d50');
+  });
+
+  it('mixes colors linearly (surface-token derivations)', () => {
+    expect(mixHex('#000000', '#FFFFFF', 1)).toBe('#000000');
+    expect(mixHex('#000000', '#FFFFFF', 0)).toBe('#ffffff');
+    expect(mixHex('#000000', '#FFFFFF', 0.5)).toBe('#808080');
   });
 });

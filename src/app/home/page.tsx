@@ -106,7 +106,7 @@ export default function HomePage() {
               </p>
               <p style={{
                 fontSize: '13px',
-                color: 'hsl(var(--muted-foreground))',
+                color: 'var(--face-text-subtle)',
                 marginBottom: '12px',
               }}>
                 Help the community get to know you better by adding your name and details.
