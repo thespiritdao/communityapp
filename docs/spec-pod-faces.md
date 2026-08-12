@@ -399,6 +399,17 @@ notification → the full switcher lives in Identity → Appearance.
   no active face — no empty section for the common case.
 
 **Phase 2 implementation notes**
+- **Exact-default surface tokens (fix, 2026-08-11):** the initial hex sweep
+  mapped the nav inactive color (#5F5A54) and home section tints onto nearest
+  theme tokens (`--muted-foreground`, `--secondary`), which subtly shifted the
+  DEFAULT appearance — reported as "reverting a face doesn't restore the old
+  look." Fixed with dedicated `--face-nav-inactive` / `--face-text-subtle` /
+  `--face-surface-1` / `--face-surface-2` vars in globals.css whose defaults
+  are the exact legacy hexes; faceTheme overrides them with palette-derived
+  values (fg/bg mix, secondary-based bands) only while a face is worn.
+  RULE for future sweeps: when tokenizing a hardcoded color for face support,
+  the default MUST stay pixel-identical — add a `--face-*` var with the legacy
+  value rather than approximating with an existing token.
 - Icon pack values are `"<packId>/<slot>"` (e.g. `linework/chat`) so stored
   faces are self-describing; `resolvePackIcon()` returns null for unknown
   packs → SlotIcon falls back to the default icon rather than crashing.
