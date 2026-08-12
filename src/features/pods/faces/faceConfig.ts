@@ -57,14 +57,30 @@ export const FACE_ICON_SLOTS = [
 export type FaceIconSlot = (typeof FACE_ICON_SLOTS)[number];
 
 /**
- * Where a slot's icon comes from. Phase 2 ships curated packs only;
- * type 'upload' is reserved for a later phase (see spec §8) and is rejected
- * by the API until then.
+ * Where a slot's icon comes from:
+ *  - 'pack'   → "<packId>/<iconId>" into a curated lucide set (iconPacks.ts)
+ *  - 'upload' → public URL of a pod-uploaded image in the pod-faces storage
+ *               bucket (POST /api/pods/[id]/face/icon). Uploads take priority
+ *               over packs per slot, and are the only source that can remap
+ *               the 'logo' slot.
  */
-export type FaceIconSource = {
-  type: 'pack';
-  /** "<packId>/<iconId>", e.g. "minimal/chat" */
-  value: string;
+export type FaceIconSource =
+  | {
+      type: 'pack';
+      /** "<packId>/<iconId>", e.g. "linework/chat" */
+      value: string;
+    }
+  | {
+      type: 'upload';
+      /** https URL served from the pod-faces public storage bucket */
+      value: string;
+    };
+
+/** Upload constraints, enforced client- and server-side. */
+export const FACE_ICON_UPLOAD = {
+  bucket: 'pod-faces',
+  maxBytes: 1024 * 1024, // 1MB — these render at ≤64px
+  allowedTypes: ['image/png', 'image/jpeg', 'image/webp'] as const,
 };
 
 export type FaceIconMap = Partial<Record<FaceIconSlot, FaceIconSource>>;
@@ -174,7 +190,11 @@ export function validateFaceContrast(colors: FaceColors): FaceValidationResult {
   return { ok: errors.length === 0, errors };
 }
 
-/** Structural validation of an icon_map: known slots, pack sources only. */
+/**
+ * Structural validation of an icon_map: known slots, pack or upload sources.
+ * The API layer additionally verifies upload URLs point into OUR storage
+ * bucket for THIS pod (it knows the env + podId; this shared check can't).
+ */
 export function validateFaceIconMap(iconMap: unknown): FaceValidationResult {
   const errors: string[] = [];
   if (typeof iconMap !== 'object' || iconMap === null || Array.isArray(iconMap)) {
@@ -185,13 +205,23 @@ export function validateFaceIconMap(iconMap: unknown): FaceValidationResult {
       errors.push(`Unknown icon slot: ${slot}`);
       continue;
     }
-    const src = source as Partial<FaceIconSource> | null;
+    const src = source as { type?: string; value?: unknown } | null;
     if (typeof src !== 'object' || src === null) {
       errors.push(`${slot}: icon source must be an object`);
-    } else if (src.type !== 'pack') {
-      errors.push(`${slot}: only 'pack' icon sources are supported`);
-    } else if (typeof src.value !== 'string' || !PACK_VALUE_RE.test(src.value)) {
-      errors.push(`${slot}: pack value must look like "<packId>/<iconId>"`);
+    } else if (src.type === 'pack') {
+      if (typeof src.value !== 'string' || !PACK_VALUE_RE.test(src.value)) {
+        errors.push(`${slot}: pack value must look like "<packId>/<iconId>"`);
+      }
+    } else if (src.type === 'upload') {
+      if (
+        typeof src.value !== 'string' ||
+        !src.value.startsWith('https://') ||
+        !src.value.includes(`/storage/v1/object/public/${FACE_ICON_UPLOAD.bucket}/`)
+      ) {
+        errors.push(`${slot}: upload value must be a pod-faces storage URL`);
+      }
+    } else {
+      errors.push(`${slot}: icon source type must be 'pack' or 'upload'`);
     }
   }
   return { ok: errors.length === 0, errors };

@@ -32,6 +32,11 @@ Modules* section.
      **Publish** button disables (hover/long-press shows why).
    - Fix the color; pick an **Icon set** (Linework or Cosmos).
    - ✔ Expect: preview tiles swap from PNG circles to tinted line icons.
+   - **Upload your own icons**: in the "Your own icons" grid, upload a square
+     PNG for a couple of slots (e.g. Chat, Nav: Home, and Logo).
+   - ✔ Expect: tile + live preview show your image immediately; oversized
+     (>1MB) or wrong-type files get a clear toast; **Clear** reverts the slot
+     to the icon set/default. Uploads only persist after Save/Publish.
 3. **Save draft**, leave the page, come back.
    - ✔ Expect: editor reloads your draft (colors, pack, "Draft" badge).
 4. **Publish.**

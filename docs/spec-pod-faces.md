@@ -311,10 +311,18 @@ notification → the full switcher lives in Identity → Appearance.
 - Accepted limits: PWA `manifest.json` theme color and the Capacitor iOS shell
   splash stay SpiritDAO-branded (static assets); acceptable for a surface-level
   skin.
-- **Custom icon uploads:** per-slot upload to a Supabase storage bucket
-  following the `PodImageUpload.tsx` pattern (2MB, PNG, dimension check).
-  Hold until packs prove demand — uploads add moderation and
-  visual-consistency risk for little launch value.
+- ~~Custom icon uploads~~ **SHIPPED 2026-08-11** (turned out to be the core
+  intent, not an expansion): per-slot upload via
+  `POST /api/pods/[id]/face/icon` (multipart; PNG/JPEG/WebP ≤1MB) into the
+  public `pod-faces` storage bucket (lazily created), stored as
+  `{type:'upload', value:url}` in icon_map. Uploads override packs per slot
+  and are the only source that can remap the `logo` slot. Server verifies
+  upload URLs belong to the pod's own bucket folder; replaced icons delete
+  their predecessors (timestamped names bust CDN caches). Editor gained a
+  "Your own icons" per-slot grid; `SlotIcon`/preview render uploads with
+  broken-image fallback to pack/default; nav uploads show active state via
+  opacity (images can't inherit link color). Guard extracted to
+  `src/lib/faceGuard.ts` for reuse.
 - **Broader hex sweep:** extend tokenization beyond home + bottom nav
   (identity page headers, pod pages, etc.) if faces feel too subtle in
   practice — surface-by-surface, driven by real feedback.

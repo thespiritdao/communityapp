@@ -3,27 +3,38 @@
 // Custom Appearance module's config panel in PodModulesManager. Server-side
 // authority is the face API (leader OR appearanceManage OR exec); this UI is
 // cosmetic gating only, like every other manage surface.
+//
+// Icons resolve per slot: pod upload (own iconography) → pack icon → default.
+// Packs give a coherent one-tap base; uploads let the community be fully
+// itself, slot by slot.
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RotateCcw, Upload, X } from 'lucide-react';
 import {
   FACE_DEFAULT_COLORS,
   FACE_ICON_SLOTS,
+  FACE_ICON_UPLOAD,
   validateFaceContrast,
   contrastRatio,
   FACE_MIN_CONTRAST,
   type FaceColorToken,
   type FaceColors,
   type FaceIconMap,
+  type FaceIconSlot,
   type PodFace,
 } from '@/features/pods/faces/faceConfig';
 import { hexToHslTriplet } from '@/features/pods/faces/faceTheme';
 import { ICON_PACKS, resolvePackIcon, type PackSlot } from '@/config/iconPacks';
+import {
+  HOME_USER_MODULES,
+  HOME_COMMUNITY_MODULES,
+  BOTTOM_NAV_ITEMS,
+} from '@/config/moduleRegistry';
 import { useFace } from '@/context/FaceContext';
 
 interface PodFaceEditorProps {
@@ -80,25 +91,52 @@ const PRESETS: Array<{ id: string; label: string; colors: Record<FaceColorToken,
 ];
 
 type PackChoice = 'default' | keyof typeof ICON_PACKS;
+type Uploads = Partial<Record<FaceIconSlot, string>>;
 
-/** Build the full icon_map for a pack choice ('default' → empty map). */
-function iconMapForPack(pack: PackChoice): FaceIconMap {
-  if (pack === 'default') return {};
+/** All customizable slots with display metadata for the icon grid. */
+const SLOT_META: Array<{
+  slot: FaceIconSlot;
+  label: string;
+  /** default PNG for home slots / logo; nav slots use lucide defaults */
+  defaultPng?: string;
+}> = [
+  { slot: 'logo', label: 'Logo', defaultPng: '/images/spiritdaosymbol.png' },
+  ...[...HOME_USER_MODULES, ...HOME_COMMUNITY_MODULES].map((m) => ({
+    slot: m.slot,
+    label: m.label,
+    defaultPng: m.defaultIcon,
+  })),
+  ...BOTTOM_NAV_ITEMS.map((n) => ({ slot: n.slot, label: `Nav: ${n.label}` })),
+];
+
+/** Merge the chosen pack (base layer) with per-slot uploads (override layer)
+ *  into the icon_map the API stores. */
+function buildIconMap(pack: PackChoice, uploads: Uploads): FaceIconMap {
   const map: FaceIconMap = {};
-  for (const slot of FACE_ICON_SLOTS) {
-    if (slot === 'logo') continue; // packs don't cover the logo (spec §8)
-    map[slot] = { type: 'pack', value: `${pack}/${slot}` };
+  if (pack !== 'default') {
+    for (const slot of FACE_ICON_SLOTS) {
+      if (slot === 'logo') continue; // packs don't cover the logo
+      map[slot] = { type: 'pack', value: `${pack}/${slot}` };
+    }
+  }
+  for (const [slot, url] of Object.entries(uploads)) {
+    if (url) map[slot as FaceIconSlot] = { type: 'upload', value: url };
   }
   return map;
 }
 
-/** Infer the pack choice from a stored icon_map (first entry wins — the
- *  editor only writes whole-pack maps). */
-function packFromIconMap(iconMap: FaceIconMap | undefined): PackChoice {
-  const first = iconMap && Object.values(iconMap)[0];
-  if (!first || first.type !== 'pack') return 'default';
-  const packId = first.value.split('/')[0];
-  return packId in ICON_PACKS ? (packId as PackChoice) : 'default';
+/** Split a stored icon_map back into editor state. */
+function parseIconMap(iconMap: FaceIconMap | undefined): { pack: PackChoice; uploads: Uploads } {
+  let pack: PackChoice = 'default';
+  const uploads: Uploads = {};
+  for (const [slot, src] of Object.entries(iconMap ?? {})) {
+    if (src?.type === 'upload') uploads[slot as FaceIconSlot] = src.value;
+    else if (src?.type === 'pack' && pack === 'default') {
+      const packId = src.value.split('/')[0];
+      if (packId in ICON_PACKS) pack = packId as PackChoice;
+    }
+  }
+  return { pack, uploads };
 }
 
 // ── Live preview ────────────────────────────────────────────────────────────
@@ -114,7 +152,17 @@ const PREVIEW_TILES: Array<{ slot: PackSlot; label: string; png: string }> = [
 
 const PREVIEW_NAV: PackSlot[] = ['nav.home', 'nav.claims', 'nav.governance', 'nav.alerts'];
 
-function FacePreview({ colors, pack, podName }: { colors: FaceColors; pack: PackChoice; podName: string }) {
+function FacePreview({
+  colors,
+  pack,
+  uploads,
+  podName,
+}: {
+  colors: FaceColors;
+  pack: PackChoice;
+  uploads: Uploads;
+  podName: string;
+}) {
   const vars = useMemo(() => {
     const style: Record<string, string> = {};
     for (const [token, cssVar] of [
@@ -132,15 +180,30 @@ function FacePreview({ colors, pack, podName }: { colors: FaceColors; pack: Pack
     return style as React.CSSProperties;
   }, [colors]);
 
+  const circle: React.CSSProperties = {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    objectFit: 'cover',
+  };
+
   const tileIcon = (slot: PackSlot, png: string, label: string) => {
+    const uploaded = uploads[slot];
+    if (uploaded) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={uploaded} alt={label} style={circle} />;
+    }
     const PackIcon = pack !== 'default' ? resolvePackIcon(`${pack}/${slot}`) : null;
     if (PackIcon) {
       return (
         <span
           style={{
-            width: 40, height: 40, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'hsl(var(--primary) / 0.12)', color: 'hsl(var(--primary))',
+            ...circle,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'hsl(var(--primary) / 0.12)',
+            color: 'hsl(var(--primary))',
           }}
         >
           <PackIcon style={{ width: 22, height: 22 }} strokeWidth={1.75} />
@@ -148,7 +211,7 @@ function FacePreview({ colors, pack, podName }: { colors: FaceColors; pack: Pack
       );
     }
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={png} alt={label} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />;
+    return <img src={png} alt={label} style={circle} />;
   };
 
   return (
@@ -162,7 +225,11 @@ function FacePreview({ colors, pack, podName }: { colors: FaceColors; pack: Pack
         overflow: 'hidden',
       }}
     >
-      <div style={{ padding: '12px 14px', fontWeight: 700, fontSize: 14 }}>
+      <div style={{ padding: '12px 14px', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {uploads.logo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={uploads.logo} alt="logo" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }} />
+        )}
         Welcome to {podName}.
       </div>
       <div
@@ -198,6 +265,7 @@ function FacePreview({ colors, pack, podName }: { colors: FaceColors; pack: Pack
         }}
       >
         {PREVIEW_NAV.map((slot, i) => {
+          const uploaded = uploads[slot];
           const Icon =
             (pack !== 'default' ? resolvePackIcon(`${pack}/${slot}`) : null) ??
             ICON_PACKS.linework.icons[slot];
@@ -209,7 +277,16 @@ function FacePreview({ colors, pack, podName }: { colors: FaceColors; pack: Pack
                 position: 'relative', display: 'flex',
               }}
             >
-              <Icon size={22} />
+              {uploaded ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={uploaded}
+                  alt=""
+                  style={{ width: 22, height: 22, objectFit: 'contain', borderRadius: 5, opacity: i === 0 ? 1 : 0.55 }}
+                />
+              ) : (
+                <Icon size={22} />
+              )}
               {slot === 'nav.alerts' && (
                 <span
                   style={{
@@ -234,9 +311,13 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
 
   const [colors, setColors] = useState<Record<FaceColorToken, string>>({ ...FACE_DEFAULT_COLORS });
   const [pack, setPack] = useState<PackChoice>('default');
+  const [uploads, setUploads] = useState<Uploads>({});
   const [savedStatus, setSavedStatus] = useState<'none' | 'draft' | 'published'>('none');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<FaceIconSlot | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingSlotRef = useRef<FaceIconSlot | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +335,9 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
         const face: PodFace | null = json.face;
         if (face) {
           setColors({ ...FACE_DEFAULT_COLORS, ...(face.colors ?? {}) });
-          setPack(packFromIconMap(face.icon_map));
+          const parsed = parseIconMap(face.icon_map);
+          setPack(parsed.pack);
+          setUploads(parsed.uploads);
           setSavedStatus(face.status);
         }
       } catch {
@@ -270,6 +353,74 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
 
   const contrast = validateFaceContrast(colors);
 
+  const authHeaders = async (): Promise<Record<string, string>> => {
+    const { supabase } = await import('@/utils/supabaseClient');
+    const { data: session } = await supabase.auth.getSession();
+    const token = session.session?.access_token;
+    if (!token) throw new Error('Not authenticated');
+    return { Authorization: `Bearer ${token}` };
+  };
+
+  // ── Custom icon upload ──
+  const pickIconFor = (slot: FaceIconSlot) => {
+    if (!isManager || saving) return;
+    pendingSlotRef.current = slot;
+    fileInputRef.current?.click();
+  };
+
+  const onIconFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const slot = pendingSlotRef.current;
+    e.target.value = ''; // allow re-picking the same file
+    if (!file || !slot) return;
+
+    if (!(FACE_ICON_UPLOAD.allowedTypes as readonly string[]).includes(file.type)) {
+      toast({ title: 'PNG, JPEG, or WebP only', variant: 'destructive' });
+      return;
+    }
+    if (file.size > FACE_ICON_UPLOAD.maxBytes) {
+      toast({
+        title: `Icon too large — maximum ${Math.round(FACE_ICON_UPLOAD.maxBytes / 1024)}KB`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploadingSlot(slot);
+    try {
+      const headers = await authHeaders();
+      const form = new FormData();
+      form.set('slot', slot);
+      form.set('file', file);
+      const res = await fetch(`/api/pods/${podId}/face/icon`, {
+        method: 'POST',
+        headers,
+        body: form,
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Upload failed');
+      setUploads((prev) => ({ ...prev, [slot]: json.url }));
+      toast({ title: 'Icon uploaded', description: 'Remember to Save or Publish to apply it.' });
+    } catch (err) {
+      toast({
+        title: 'Could not upload icon',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
+  const clearUpload = (slot: FaceIconSlot) => {
+    setUploads((prev) => {
+      const next = { ...prev };
+      delete next[slot];
+      return next;
+    });
+  };
+
+  // ── Save / publish / remove ──
   const save = async (status: 'draft' | 'published') => {
     if (!isManager) return;
     if (status === 'published' && !contrast.ok) return;
@@ -285,15 +436,11 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
 
     setSaving(true);
     try {
-      const { supabase } = await import('@/utils/supabaseClient');
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      if (!token) throw new Error('Not authenticated');
-
+      const headers = await authHeaders();
       const res = await fetch(`/api/pods/${podId}/face`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ colors, icon_map: iconMapForPack(pack), status }),
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colors, icon_map: buildIconMap(pack, uploads), status }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.details?.join('; ') || json.error || 'Save failed');
@@ -324,17 +471,12 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
     if (!window.confirm('Remove this face entirely? Members wearing it revert to the default appearance.')) return;
     setSaving(true);
     try {
-      const { supabase } = await import('@/utils/supabaseClient');
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      if (!token) throw new Error('Not authenticated');
-      const res = await fetch(`/api/pods/${podId}/face`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const headers = await authHeaders();
+      const res = await fetch(`/api/pods/${podId}/face`, { method: 'DELETE', headers });
       if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
       setColors({ ...FACE_DEFAULT_COLORS });
       setPack('default');
+      setUploads({});
       setSavedStatus('none');
       toast({ title: 'Face removed' });
       if (activeFacePodId === podId) await refreshFace();
@@ -356,6 +498,51 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
       </div>
     );
   }
+
+  // Resolved tile for the icon grid: upload → pack → default.
+  const slotTile = (meta: (typeof SLOT_META)[number]) => {
+    const uploaded = uploads[meta.slot];
+    const box: React.CSSProperties = {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      objectFit: 'cover',
+    };
+    if (uploaded) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={uploaded} alt={meta.label} style={box} />;
+    }
+    const PackIcon =
+      pack !== 'default' && meta.slot !== 'logo'
+        ? resolvePackIcon(`${pack}/${meta.slot}`)
+        : null;
+    if (PackIcon) {
+      return (
+        <span
+          style={{
+            ...box,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'hsl(var(--primary) / 0.12)',
+            color: 'hsl(var(--primary))',
+          }}
+        >
+          <PackIcon style={{ width: 24, height: 24 }} strokeWidth={1.75} />
+        </span>
+      );
+    }
+    if (meta.defaultPng) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img src={meta.defaultPng} alt={meta.label} style={box} />;
+    }
+    const NavDefault = BOTTOM_NAV_ITEMS.find((n) => n.slot === meta.slot)?.defaultIcon;
+    return NavDefault ? (
+      <span style={{ ...box, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <NavDefault size={26} />
+      </span>
+    ) : null;
+  };
 
   return (
     <div className="space-y-4">
@@ -442,11 +629,11 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
 
         <div>
           <p className="text-sm font-medium mb-2">Preview</p>
-          <FacePreview colors={colors} pack={pack} podName={podName} />
+          <FacePreview colors={colors} pack={pack} uploads={uploads} podName={podName} />
         </div>
       </div>
 
-      {/* Icon pack */}
+      {/* Icon set — the coherent base layer */}
       <div>
         <p className="text-sm font-medium mb-2">Icon set</p>
         <div className="flex flex-wrap gap-2">
@@ -469,6 +656,63 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
             >
               {p.label}
             </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Custom icons — the pod's own iconography, slot by slot */}
+      <div>
+        <p className="text-sm font-medium mb-1">Your own icons</p>
+        <p className="text-xs text-muted-foreground mb-2">
+          Upload your community&apos;s own artwork for any button — it overrides the icon set
+          for that slot. Square images look best (128×128px or larger; PNG, JPEG, or WebP;
+          max {Math.round(FACE_ICON_UPLOAD.maxBytes / 1024)}KB).
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+          onChange={onIconFile}
+          className="hidden"
+        />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+          {SLOT_META.map((meta) => (
+            <div
+              key={meta.slot}
+              className="flex items-center gap-2 rounded-lg border p-2"
+            >
+              {slotTile(meta)}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium">{meta.label}</p>
+                <div className="mt-0.5 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => pickIconFor(meta.slot)}
+                    disabled={!isManager || saving || uploadingSlot !== null}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-50"
+                  >
+                    {uploadingSlot === meta.slot ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <Upload size={11} />
+                    )}
+                    {uploads[meta.slot] ? 'Replace' : 'Upload'}
+                  </button>
+                  {uploads[meta.slot] && (
+                    <button
+                      type="button"
+                      onClick={() => clearUpload(meta.slot)}
+                      disabled={!isManager || saving}
+                      className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:underline"
+                      title="Remove custom icon (revert to icon set / default)"
+                    >
+                      <X size={11} />
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>

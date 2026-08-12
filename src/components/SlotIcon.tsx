@@ -1,28 +1,59 @@
 // src/components/SlotIcon.tsx
-// Face-aware icon rendering for the two remappable surfaces
-// (docs/spec-pod-faces.md §5.2): the home-screen module grid and the bottom
-// nav. Resolution order: active face's icon_map → pack icon; otherwise the
-// registry default. Unknown pack references degrade to the default.
+// Face-aware icon rendering for the remappable surfaces
+// (docs/spec-pod-faces.md §5.2): the home-screen module grid, the bottom
+// nav, and the home logo. Resolution order per slot:
+//   upload (pod's own iconography) → pack icon → registry default.
+// Unknown pack references and broken upload URLs degrade to the default.
 
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
 import { useFace } from '@/context/FaceContext';
 import { resolvePackIcon } from '@/config/iconPacks';
-import type { FaceIconSlot } from '@/features/pods/faces/faceConfig';
+import type { FaceIconSlot, FaceIconSource } from '@/features/pods/faces/faceConfig';
 
-function usePackIcon(slot: FaceIconSlot): LucideIcon | null {
+function useSlotSource(slot: FaceIconSlot): FaceIconSource | null {
   const { iconMap } = useFace();
-  const source = iconMap[slot];
-  if (!source || source.type !== 'pack') return null;
-  return resolvePackIcon(source.value);
+  return iconMap[slot] ?? null;
+}
+
+/** Pod-uploaded icon <img>, falling back to children on load error (e.g. the
+ *  file was deleted from storage after the face was saved). */
+function UploadImg({
+  src,
+  alt,
+  className,
+  style,
+  onErrorFallback,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  style?: React.CSSProperties;
+  onErrorFallback: React.ReactNode;
+}) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <>{onErrorFallback}</>;
+  // Plain <img>: sources are user-uploaded storage URLs outside
+  // next/image's configured domains.
+  // eslint-disable-next-line @next/next/no-img-element
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      style={style}
+      onError={() => setBroken(true)}
+    />
+  );
 }
 
 /**
- * Home-grid module icon: the default PNG, or the face's pack icon rendered
- * in a tinted circle (same .home-module-icon box, so sizing/responsive rules
- * in HomePage.css apply to both).
+ * Home-grid module icon: pod upload (round, like the default PNGs) →
+ * pack icon in a tinted circle → default PNG. The .home-module-icon class
+ * carries sizing/responsive rules for all three.
  */
 export function HomeModuleIcon({
   slot,
@@ -35,8 +66,31 @@ export function HomeModuleIcon({
   label: string;
   eager?: boolean;
 }) {
-  const PackIcon = usePackIcon(slot);
+  const source = useSlotSource(slot);
 
+  const defaultImg = (
+    <Image
+      src={defaultIcon}
+      alt={label}
+      className="home-module-icon"
+      width={64}
+      height={64}
+      loading={eager ? 'eager' : 'lazy'}
+    />
+  );
+
+  if (source?.type === 'upload') {
+    return (
+      <UploadImg
+        src={source.value}
+        alt={label}
+        className="home-module-icon"
+        onErrorFallback={defaultImg}
+      />
+    );
+  }
+
+  const PackIcon = source?.type === 'pack' ? resolvePackIcon(source.value) : null;
   if (PackIcon) {
     return (
       <span
@@ -55,29 +109,73 @@ export function HomeModuleIcon({
     );
   }
 
-  return (
-    <Image
-      src={defaultIcon}
-      alt={label}
-      className="home-module-icon"
-      width={64}
-      height={64}
-      loading={eager ? 'eager' : 'lazy'}
-    />
-  );
+  return defaultImg;
 }
 
-/** Bottom-nav icon: the registry's lucide default unless the face remaps it. */
+/**
+ * Bottom-nav icon. Lucide icons (default/pack) inherit the link's color for
+ * active state; uploaded images can't, so active state is shown by opacity.
+ */
 export function NavSlotIcon({
   slot,
   defaultIcon,
   size = 36,
+  active = false,
 }: {
   slot: FaceIconSlot;
   defaultIcon: LucideIcon;
   size?: number;
+  active?: boolean;
 }) {
-  const PackIcon = usePackIcon(slot);
-  const Icon = PackIcon ?? defaultIcon;
+  const source = useSlotSource(slot);
+  const Default = defaultIcon;
+
+  if (source?.type === 'upload') {
+    return (
+      <UploadImg
+        src={source.value}
+        alt=""
+        style={{
+          width: size,
+          height: size,
+          objectFit: 'contain',
+          borderRadius: 8,
+          opacity: active ? 1 : 0.55,
+        }}
+        onErrorFallback={<Default size={size} />}
+      />
+    );
+  }
+
+  const PackIcon = source?.type === 'pack' ? resolvePackIcon(source.value) : null;
+  const Icon = PackIcon ?? Default;
   return <Icon size={size} />;
+}
+
+/** Home header logo: pod upload → SpiritDAO symbol. */
+export function LogoSlot({ size = 80 }: { size?: number }) {
+  const source = useSlotSource('logo');
+
+  const defaultLogo = (
+    <Image
+      src="/images/spiritdaosymbol.png"
+      alt="SpiritDAO Logo"
+      className="home-logo"
+      width={size}
+      height={size}
+      priority
+    />
+  );
+
+  if (source?.type === 'upload') {
+    return (
+      <UploadImg
+        src={source.value}
+        alt="Community logo"
+        className="home-logo"
+        onErrorFallback={defaultLogo}
+      />
+    );
+  }
+  return defaultLogo;
 }

@@ -41,6 +41,7 @@ You need the **appearance management** permission (leaders have it by default on
    - **Start from a palette** — five presets (Forest, Ocean, Dusk, Ember, Slate) give you a coherent starting point.
    - **Fine-tune each color** — seven color slots, each labeled with what it controls (buttons and links, background, text, section surfaces, alerts).
    - **Pick an icon set** — keep the SpiritDAO default icons, or apply a curated set (**Linework** for clean outlines, **Cosmos** for playful symbols).
+   - **Upload your own icons** — this is where your community's identity really comes through. In the **"Your own icons"** grid, upload your own artwork for any home-screen button, navigation icon, or even the logo. Your icon overrides the icon set for that slot; **Clear** reverts it. Square images look best (128×128px or larger; PNG, JPEG, or WebP, up to 1MB each).
    - The **live preview** shows a miniature home screen and navigation bar updating as you work.
 4. **Save draft** as often as you like — drafts are only visible to people who can edit the face, never to members.
 5. **Publish** when ready. Members of your pod can now wear the look, and they'll get a one-time notification that it's available.
@@ -60,6 +61,8 @@ Things to know:
 **I'm in several pods with faces. Can I mix them?** You wear one face at a time (or the default). Switch between them freely in Identity → Appearance.
 
 **Does a face change other members' screens?** Never. Each member's choice is their own.
+
+**Can we use our own logo and icons, not just the built-in sets?** Yes — that's the heart of the feature. Upload your community's own artwork per button in the editor's "Your own icons" grid. The curated sets are just a quick coherent base; your uploads always win for the slots you customize.
 
 **Does it work in dark mode?** Faces currently apply to the standard (light) appearance only.
 

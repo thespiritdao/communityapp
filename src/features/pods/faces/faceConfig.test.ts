@@ -85,9 +85,33 @@ describe('validateFaceIconMap', () => {
     ).toBe(true);
   });
 
-  it('rejects unknown slots, upload sources, and malformed values', () => {
+  it('accepts upload sources pointing at the pod-faces bucket', () => {
+    expect(
+      validateFaceIconMap({
+        chat: {
+          type: 'upload',
+          value: 'https://x.supabase.co/storage/v1/object/public/pod-faces/pod-1/chat-123.png',
+        },
+      }).ok,
+    ).toBe(true);
+  });
+
+  it('accepts logo uploads (the one slot packs cannot cover)', () => {
+    expect(
+      validateFaceIconMap({
+        logo: {
+          type: 'upload',
+          value: 'https://x.supabase.co/storage/v1/object/public/pod-faces/pod-1/logo-9.webp',
+        },
+      }).ok,
+    ).toBe(true);
+  });
+
+  it('rejects unknown slots, foreign upload URLs, and malformed values', () => {
     expect(validateFaceIconMap({ settings: { type: 'pack', value: 'linework/settings' } }).ok).toBe(false);
-    expect(validateFaceIconMap({ chat: { type: 'upload', value: 'https://x/y.png' } }).ok).toBe(false);
+    expect(validateFaceIconMap({ chat: { type: 'upload', value: 'https://evil.example/y.png' } }).ok).toBe(false);
+    expect(validateFaceIconMap({ chat: { type: 'upload', value: 'http://x.supabase.co/storage/v1/object/public/pod-faces/p/y.png' } }).ok).toBe(false);
+    expect(validateFaceIconMap({ chat: { type: 'sticker', value: 'x' } }).ok).toBe(false);
     expect(validateFaceIconMap({ chat: { type: 'pack', value: 'no-slash' } }).ok).toBe(false);
   });
 });

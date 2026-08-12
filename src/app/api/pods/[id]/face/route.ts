@@ -8,15 +8,16 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
-import { requirePodPermissionOrLeader } from '@/lib/apiPodGuard';
-import { getWalletFromRequest, isExecutiveLeader } from '@/lib/serverPodAuth';
+import { requireFaceManager } from '@/lib/faceGuard';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { sendServerNotificationBatch } from '@/lib/serverNotifications';
 import {
   validateFaceColors,
   validateFaceContrast,
   validateFaceIconMap,
+  FACE_ICON_UPLOAD,
   type FaceColors,
+  type FaceIconMap,
 } from '@/features/pods/faces/faceConfig';
 
 export const runtime = 'nodejs';
@@ -26,23 +27,17 @@ function podIdFromRequest(req: NextRequest): string {
   return match?.[1] ?? '';
 }
 
-/** Pod leader OR appearanceManage grantee OR Executive Pod Leader. */
-async function requireFaceManager(
-  req: NextRequest,
-  podId: string,
-): Promise<string | NextResponse> {
-  const walletOrDenied = await requirePodPermissionOrLeader(
-    req,
-    podId,
-    'appearanceManage',
-  );
-  if (!(walletOrDenied instanceof NextResponse)) return walletOrDenied;
-
-  // Exec leaders manage all pods (parity with the modules route + client hooks).
-  const wallet = getWalletFromRequest(req);
-  if (wallet && (await isExecutiveLeader(wallet))) return wallet.toLowerCase();
-
-  return walletOrDenied;
+/** Upload sources must point into OUR storage bucket, under THIS pod's
+ *  folder — a face can't hotlink arbitrary URLs or another pod's icons. */
+function validateUploadOwnership(iconMap: FaceIconMap, podId: string): string[] {
+  const prefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${FACE_ICON_UPLOAD.bucket}/${podId}/`;
+  const errors: string[] = [];
+  for (const [slot, src] of Object.entries(iconMap)) {
+    if (src?.type === 'upload' && !src.value.startsWith(prefix)) {
+      errors.push(`${slot}: upload URL must be this pod's own uploaded icon`);
+    }
+  }
+  return errors;
 }
 
 // GET /api/pods/[id]/face — published face for anyone; draft only for managers.
@@ -131,6 +126,14 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
   if (!iconCheck.ok) {
     return NextResponse.json(
       { error: 'Invalid icon_map', details: iconCheck.errors },
+      { status: 400 },
+    );
+  }
+
+  const ownershipErrors = validateUploadOwnership(iconMap as FaceIconMap, podId);
+  if (ownershipErrors.length > 0) {
+    return NextResponse.json(
+      { error: 'Invalid icon_map', details: ownershipErrors },
       { status: 400 },
     );
   }

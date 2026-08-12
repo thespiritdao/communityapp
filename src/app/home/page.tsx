@@ -2,7 +2,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserWallet } from '@/hooks/useUserWallet';
 import { useUserProfile } from '@/features/identity/hooks/useUserProfile';
@@ -10,7 +9,7 @@ import { TosModal } from '@/components/TosModal';
 import { PodInviteRedeemer } from '@/components/PodInviteRedeemer';
 import { supabase } from '@/utils/supabaseClient';
 import { HOME_USER_MODULES, HOME_COMMUNITY_MODULES } from '@/config/moduleRegistry';
-import { HomeModuleIcon } from '@/components/SlotIcon';
+import { HomeModuleIcon, LogoSlot } from '@/components/SlotIcon';
 import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
@@ -66,15 +65,8 @@ export default function HomePage() {
 
       {/* HEADER */}
       <div className="home-header" data-tour="welcome">
-        {/* Left-bound logo */}
-        <Image
-          src="/images/spiritdaosymbol.png"
-          alt="SpiritDAO Logo"
-          className="home-logo"
-          width={80}
-          height={80}
-          priority
-        />
+        {/* Left-bound logo — face-remappable (logo slot) */}
+        <LogoSlot size={80} />
 
         {/* Welcome text with user's first name */}
         <h1 className="home-title">

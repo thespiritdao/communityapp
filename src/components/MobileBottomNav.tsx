@@ -165,6 +165,7 @@ function MobileBottomNavContent() {
                     slot={item.slot}
                     defaultIcon={item.defaultIcon}
                     size={36}
+                    active={active}
                   />
                   {item.href === '/notifications' && unreadCounts.total > 0 && (
                     <span
