@@ -10,10 +10,12 @@ import { PodInviteRedeemer } from '@/components/PodInviteRedeemer';
 import { supabase } from '@/utils/supabaseClient';
 import { HOME_USER_MODULES, HOME_COMMUNITY_MODULES } from '@/config/moduleRegistry';
 import { HomeModuleIcon, LogoSlot } from '@/components/SlotIcon';
+import { useFace } from '@/context/FaceContext';
 import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
   const address = useUserWallet();
+  const { labelMap } = useFace();
   const { currentUser } = useCurrentUser();
   const { profile, loading } = useUserProfile(address || undefined);
   const [showTos, setShowTos] = useState(false);
@@ -139,49 +141,55 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* USER MODULES — registry-driven so Pod Faces can remap icons */}
+      {/* USER MODULES — registry-driven so Pod Faces can remap icons/labels */}
       <section className="home-section">
         <div className="home-module-list">
-          {HOME_USER_MODULES.map((m) => (
-            <Link
-              key={m.slot}
-              href={m.href}
-              className="home-module-card"
-              prefetch={true}
-              data-tour={m.tourId}
-            >
-              <HomeModuleIcon
-                slot={m.slot}
-                defaultIcon={m.defaultIcon}
-                label={m.label}
-                eager={m.eager}
-              />
-              <div className="home-module-title">{m.label}</div>
-            </Link>
-          ))}
+          {HOME_USER_MODULES.map((m) => {
+            const label = labelMap[m.slot]?.trim() || m.label;
+            return (
+              <Link
+                key={m.slot}
+                href={m.href}
+                className="home-module-card"
+                prefetch={true}
+                data-tour={m.tourId}
+              >
+                <HomeModuleIcon
+                  slot={m.slot}
+                  defaultIcon={m.defaultIcon}
+                  label={label}
+                  eager={m.eager}
+                />
+                <div className="home-module-title">{label}</div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
       {/* COMMUNITY MODULES */}
       <section className="home-section-2">
         <div className="home-module-list">
-          {HOME_COMMUNITY_MODULES.map((m) => (
-            <Link
-              key={m.slot}
-              href={m.href}
-              className="home-module-card"
-              prefetch={true}
-              data-tour={m.tourId}
-            >
-              <HomeModuleIcon
-                slot={m.slot}
-                defaultIcon={m.defaultIcon}
-                label={m.label}
-                eager={m.eager}
-              />
-              <div className="home-module-title">{m.label}</div>
-            </Link>
-          ))}
+          {HOME_COMMUNITY_MODULES.map((m) => {
+            const label = labelMap[m.slot]?.trim() || m.label;
+            return (
+              <Link
+                key={m.slot}
+                href={m.href}
+                className="home-module-card"
+                prefetch={true}
+                data-tour={m.tourId}
+              >
+                <HomeModuleIcon
+                  slot={m.slot}
+                  defaultIcon={m.defaultIcon}
+                  label={label}
+                  eager={m.eager}
+                />
+                <div className="home-module-title">{label}</div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 

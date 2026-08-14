@@ -19,6 +19,7 @@ import {
   FACE_DEFAULT_COLORS,
   FACE_ICON_SLOTS,
   FACE_ICON_UPLOAD,
+  FACE_LABEL_MAX_LENGTH,
   validateFaceContrast,
   contrastRatio,
   FACE_MIN_CONTRAST,
@@ -26,6 +27,7 @@ import {
   type FaceColors,
   type FaceIconMap,
   type FaceIconSlot,
+  type FaceLabelMap,
   type PodFace,
 } from '@/features/pods/faces/faceConfig';
 import { hexToHslTriplet } from '@/features/pods/faces/faceTheme';
@@ -109,6 +111,22 @@ const SLOT_META: Array<{
   ...BOTTOM_NAV_ITEMS.map((n) => ({ slot: n.slot, label: `Nav: ${n.label}` })),
 ];
 
+/** Slots whose menu label can be renamed: the home-grid modules. Nav items
+ *  are icon-only (renames would be invisible) and the logo has no label. */
+const RENAMABLE_MODULES = [...HOME_USER_MODULES, ...HOME_COMMUNITY_MODULES].map(
+  (m) => ({ slot: m.slot, label: m.label }),
+);
+
+/** Drop blank/whitespace renames so only real overrides are stored. */
+function cleanLabels(labels: FaceLabelMap): FaceLabelMap {
+  const out: FaceLabelMap = {};
+  for (const [slot, value] of Object.entries(labels)) {
+    const trimmed = value?.trim();
+    if (trimmed) out[slot as FaceIconSlot] = trimmed;
+  }
+  return out;
+}
+
 /** Merge the chosen pack (base layer) with per-slot uploads (override layer)
  *  into the icon_map the API stores. */
 function buildIconMap(pack: PackChoice, uploads: Uploads): FaceIconMap {
@@ -156,11 +174,13 @@ function FacePreview({
   colors,
   pack,
   uploads,
+  labels,
   podName,
 }: {
   colors: FaceColors;
   pack: PackChoice;
   uploads: Uploads;
+  labels: FaceLabelMap;
   podName: string;
 }) {
   const vars = useMemo(() => {
@@ -239,12 +259,15 @@ function FacePreview({
           display: 'flex', justifyContent: 'space-around',
         }}
       >
-        {PREVIEW_TILES.map((t) => (
-          <div key={t.slot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            {tileIcon(t.slot, t.png, t.label)}
-            <span style={{ fontSize: 10, fontWeight: 700 }}>{t.label}</span>
-          </div>
-        ))}
+        {PREVIEW_TILES.map((t) => {
+          const label = labels[t.slot]?.trim() || t.label;
+          return (
+            <div key={t.slot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              {tileIcon(t.slot, t.png, label)}
+              <span style={{ fontSize: 10, fontWeight: 700 }}>{label}</span>
+            </div>
+          );
+        })}
       </div>
       <div style={{ margin: '0 10px 10px' }}>
         <span
@@ -312,6 +335,7 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
   const [colors, setColors] = useState<Record<FaceColorToken, string>>({ ...FACE_DEFAULT_COLORS });
   const [pack, setPack] = useState<PackChoice>('default');
   const [uploads, setUploads] = useState<Uploads>({});
+  const [labels, setLabels] = useState<FaceLabelMap>({});
   const [savedStatus, setSavedStatus] = useState<'none' | 'draft' | 'published'>('none');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -338,6 +362,7 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
           const parsed = parseIconMap(face.icon_map);
           setPack(parsed.pack);
           setUploads(parsed.uploads);
+          setLabels(face.label_map ?? {});
           setSavedStatus(face.status);
         }
       } catch {
@@ -440,7 +465,12 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
       const res = await fetch(`/api/pods/${podId}/face`, {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ colors, icon_map: buildIconMap(pack, uploads), status }),
+        body: JSON.stringify({
+          colors,
+          icon_map: buildIconMap(pack, uploads),
+          label_map: cleanLabels(labels),
+          status,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.details?.join('; ') || json.error || 'Save failed');
@@ -477,6 +507,7 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
       setColors({ ...FACE_DEFAULT_COLORS });
       setPack('default');
       setUploads({});
+      setLabels({});
       setSavedStatus('none');
       toast({ title: 'Face removed' });
       if (activeFacePodId === podId) await refreshFace();
@@ -629,7 +660,7 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
 
         <div>
           <p className="text-sm font-medium mb-2">Preview</p>
-          <FacePreview colors={colors} pack={pack} uploads={uploads} podName={podName} />
+          <FacePreview colors={colors} pack={pack} uploads={uploads} labels={labels} podName={podName} />
         </div>
       </div>
 
@@ -713,6 +744,35 @@ export default function PodFaceEditor({ podId, podName, isManager }: PodFaceEdit
                 </div>
               </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Rename menu items — the community's own words for each module */}
+      <div>
+        <p className="text-sm font-medium mb-1">Rename menu items</p>
+        <p className="text-xs text-muted-foreground mb-2">
+          Give home-screen buttons your community&apos;s own names (e.g. Bounties →
+          Quests). Leave a field blank to keep the default. Only the button label
+          changes — pages keep their standard titles. Max {FACE_LABEL_MAX_LENGTH}{' '}
+          characters.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+          {RENAMABLE_MODULES.map((m) => (
+            <label key={m.slot} className="block">
+              <span className="mb-0.5 block text-xs font-medium">{m.label}</span>
+              <input
+                type="text"
+                value={labels[m.slot] ?? ''}
+                onChange={(e) =>
+                  setLabels((prev) => ({ ...prev, [m.slot]: e.target.value }))
+                }
+                placeholder={m.label}
+                maxLength={FACE_LABEL_MAX_LENGTH}
+                disabled={!isManager || saving}
+                className="w-full rounded-md border bg-transparent px-2 py-1.5 text-sm disabled:opacity-50"
+              />
+            </label>
           ))}
         </div>
       </div>

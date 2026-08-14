@@ -15,9 +15,11 @@ import {
   validateFaceColors,
   validateFaceContrast,
   validateFaceIconMap,
+  validateFaceLabelMap,
   FACE_ICON_UPLOAD,
   type FaceColors,
   type FaceIconMap,
+  type FaceLabelMap,
 } from '@/features/pods/faces/faceConfig';
 
 export const runtime = 'nodejs';
@@ -105,6 +107,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
   const body = await req.json();
   const colors = body.colors ?? {};
   const iconMap = body.icon_map ?? {};
+  const rawLabelMap = body.label_map ?? {};
   const status = body.status ?? 'draft';
 
   if (status !== 'draft' && status !== 'published') {
@@ -138,6 +141,21 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  const labelCheck = validateFaceLabelMap(rawLabelMap);
+  if (!labelCheck.ok) {
+    return NextResponse.json(
+      { error: 'Invalid label_map', details: labelCheck.errors },
+      { status: 400 },
+    );
+  }
+  // Store trimmed — display code compares/falls back on trimmed values.
+  const labelMap: FaceLabelMap = Object.fromEntries(
+    Object.entries(rawLabelMap as Record<string, string>).map(([slot, label]) => [
+      slot,
+      label.trim(),
+    ]),
+  );
+
   // Contrast is enforced only at publish so drafts can be works-in-progress.
   if (status === 'published') {
     const contrastCheck = validateFaceContrast(colors as FaceColors);
@@ -163,6 +181,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
         pod_id: podId,
         colors,
         icon_map: iconMap,
+        label_map: labelMap,
         status,
         updated_by: wallet,
         updated_at: new Date().toISOString(),

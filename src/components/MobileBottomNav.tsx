@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { BOTTOM_NAV_ITEMS, type NavItemDef } from '@/config/moduleRegistry';
 import { NavSlotIcon } from '@/components/SlotIcon';
+import { useFace } from '@/context/FaceContext';
 
 // Wrapper component with error boundary
 function MobileBottomNavContent() {
@@ -14,6 +15,7 @@ function MobileBottomNavContent() {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
   const { unreadCounts } = useUnifiedNotifications();
+  const { labelMap } = useFace();
 
   useEffect(() => setMounted(true), []);
 
@@ -139,6 +141,7 @@ function MobileBottomNavContent() {
               <Link
                 href={item.href}
                 prefetch={true}
+                aria-label={labelMap[item.slot]?.trim() || item.label}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

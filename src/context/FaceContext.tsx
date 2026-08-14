@@ -20,7 +20,12 @@ import {
   type ReactNode,
 } from 'react';
 import { useUserWallet } from '@/hooks/useUserWallet';
-import type { PodFace, FaceIconMap } from '@/features/pods/faces/faceConfig';
+import type {
+  PodFace,
+  FaceIconMap,
+  FaceIconSlot,
+  FaceLabelMap,
+} from '@/features/pods/faces/faceConfig';
 import { applyFaceColors, clearFaceColors } from '@/features/pods/faces/faceTheme';
 
 const CACHE_KEY = 'pod-face-cache-v1';
@@ -32,6 +37,8 @@ interface FaceContextValue {
   loading: boolean;
   /** Icon remap of the active face ({} when none). */
   iconMap: FaceIconMap;
+  /** Menu-item renames of the active face ({} when none). */
+  labelMap: FaceLabelMap;
   /** Re-fetch after the user switches faces or a leader republishes. */
   refreshFace: () => Promise<void>;
 }
@@ -41,10 +48,17 @@ const FaceContext = createContext<FaceContextValue>({
   activeFacePodId: null,
   loading: false,
   iconMap: {},
+  labelMap: {},
   refreshFace: async () => {},
 });
 
 export const useFace = () => useContext(FaceContext);
+
+/** Resolved menu label for a slot: face rename → registry default. */
+export function useSlotLabel(slot: FaceIconSlot, defaultLabel: string): string {
+  const { labelMap } = useFace();
+  return labelMap[slot]?.trim() || defaultLabel;
+}
 
 function readCache(): PodFace | null {
   try {
@@ -121,6 +135,7 @@ export function FaceProvider({ children }: { children: ReactNode }) {
         activeFacePodId: face?.pod_id ?? null,
         loading,
         iconMap: face?.icon_map ?? {},
+        labelMap: face?.label_map ?? {},
         refreshFace,
       }}
     >

@@ -6,10 +6,12 @@ import { describe, it, expect } from 'vitest';
 import {
   FACE_DEFAULT_COLORS,
   FACE_ICON_SLOTS,
+  FACE_LABEL_MAX_LENGTH,
   contrastRatio,
   validateFaceColors,
   validateFaceContrast,
   validateFaceIconMap,
+  validateFaceLabelMap,
 } from './faceConfig';
 import { hexToHslTriplet, darkenHex, mixHex } from './faceTheme';
 import { ICON_PACKS, resolvePackIcon } from '@/config/iconPacks';
@@ -113,6 +115,48 @@ describe('validateFaceIconMap', () => {
     expect(validateFaceIconMap({ chat: { type: 'upload', value: 'http://x.supabase.co/storage/v1/object/public/pod-faces/p/y.png' } }).ok).toBe(false);
     expect(validateFaceIconMap({ chat: { type: 'sticker', value: 'x' } }).ok).toBe(false);
     expect(validateFaceIconMap({ chat: { type: 'pack', value: 'no-slash' } }).ok).toBe(false);
+  });
+});
+
+describe('validateFaceLabelMap', () => {
+  it('accepts renames for home-grid and nav slots', () => {
+    expect(
+      validateFaceLabelMap({ bounties: 'Quests', 'nav.claims': 'Care' }).ok,
+    ).toBe(true);
+  });
+
+  it('accepts an empty map (no renames)', () => {
+    expect(validateFaceLabelMap({}).ok).toBe(true);
+  });
+
+  it('rejects the logo slot and unknown slots', () => {
+    expect(validateFaceLabelMap({ logo: 'Us' }).ok).toBe(false);
+    expect(validateFaceLabelMap({ settings: 'Config' }).ok).toBe(false);
+  });
+
+  it('rejects empty, whitespace-only, and non-string labels', () => {
+    expect(validateFaceLabelMap({ chat: '' }).ok).toBe(false);
+    expect(validateFaceLabelMap({ chat: '   ' }).ok).toBe(false);
+    expect(validateFaceLabelMap({ chat: 42 }).ok).toBe(false);
+  });
+
+  it('rejects labels over the length cap (trimmed)', () => {
+    expect(
+      validateFaceLabelMap({ chat: 'x'.repeat(FACE_LABEL_MAX_LENGTH) }).ok,
+    ).toBe(true);
+    expect(
+      validateFaceLabelMap({ chat: 'x'.repeat(FACE_LABEL_MAX_LENGTH + 1) }).ok,
+    ).toBe(false);
+  });
+
+  it('rejects control characters', () => {
+    expect(validateFaceLabelMap({ chat: 'Ch\tat' }).ok).toBe(false);
+    expect(validateFaceLabelMap({ chat: `Chat${String.fromCharCode(0)}` }).ok).toBe(false);
+  });
+
+  it('rejects non-object input', () => {
+    expect(validateFaceLabelMap(null).ok).toBe(false);
+    expect(validateFaceLabelMap(['Chat']).ok).toBe(false);
   });
 });
 

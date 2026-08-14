@@ -85,6 +85,16 @@ export const FACE_ICON_UPLOAD = {
 
 export type FaceIconMap = Partial<Record<FaceIconSlot, FaceIconSource>>;
 
+/**
+ * Custom menu names keyed by slot, e.g. { bounties: 'Quests' }. Renames the
+ * home-grid module titles (and bottom-nav aria-labels); the logo slot has no
+ * label so it can't be renamed. Missing slots keep their registry default.
+ */
+export type FaceLabelMap = Partial<Record<FaceIconSlot, string>>;
+
+/** Menu labels render in a fixed-width grid tile — keep them short. */
+export const FACE_LABEL_MAX_LENGTH = 20;
+
 export type FaceStatus = 'draft' | 'published';
 
 export interface PodFace {
@@ -92,6 +102,7 @@ export interface PodFace {
   pod_id: string;
   colors: FaceColors;
   icon_map: FaceIconMap;
+  label_map: FaceLabelMap;
   status: FaceStatus;
   updated_by: string;
   created_at: string;
@@ -222,6 +233,33 @@ export function validateFaceIconMap(iconMap: unknown): FaceValidationResult {
       }
     } else {
       errors.push(`${slot}: icon source type must be 'pack' or 'upload'`);
+    }
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Structural validation of a label_map: known slots (logo excluded — it has
+ * no label), non-empty trimmed strings within the length cap, no control
+ * characters. The client drops blank entries before saving, so anything
+ * empty that reaches the API is a malformed request, not a "reset".
+ */
+export function validateFaceLabelMap(labelMap: unknown): FaceValidationResult {
+  const errors: string[] = [];
+  if (typeof labelMap !== 'object' || labelMap === null || Array.isArray(labelMap)) {
+    return { ok: false, errors: ['label_map must be an object'] };
+  }
+  for (const [slot, label] of Object.entries(labelMap)) {
+    if (!(FACE_ICON_SLOTS as readonly string[]).includes(slot) || slot === 'logo') {
+      errors.push(`Unknown label slot: ${slot}`);
+      continue;
+    }
+    if (typeof label !== 'string' || label.trim().length === 0) {
+      errors.push(`${slot}: label must be a non-empty string`);
+    } else if (label.trim().length > FACE_LABEL_MAX_LENGTH) {
+      errors.push(`${slot}: label must be at most ${FACE_LABEL_MAX_LENGTH} characters`);
+    } else if (/[\u0000-\u001F\u007F]/.test(label)) {
+      errors.push(`${slot}: label contains control characters`);
     }
   }
   return { ok: errors.length === 0, errors };

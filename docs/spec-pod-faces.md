@@ -153,6 +153,24 @@ Slots: the 12 home modules + 4 bottom-nav items + optional `logo`.
 Missing slot → default asset. Phase 2 ships curated packs only; `type: "upload"`
 is reserved for a later phase (see §8).
 
+**`label_map`** (added 2026-08-14, migration `20260814000001`) — slot → custom
+menu name, so a face can rename home-screen buttons in the community's own
+words:
+
+```json
+{
+  "bounties": "Quests",
+  "governance": "Council"
+}
+```
+
+Same slot keys as `icon_map`, minus `logo` (it has no label). Max 20 chars,
+trimmed, no control characters (`validateFaceLabelMap` in `faceConfig.ts`).
+Renames apply to the home-grid module titles and icon alt text; bottom-nav
+items are icon-only, so there a rename only updates the link's `aria-label`.
+Scope is deliberately menu-only: in-page headings, tour copy, and notification
+text keep the standard module names.
+
 ### 4.2 Permission integration (exactly the existing pattern)
 
 | Change | Where |
