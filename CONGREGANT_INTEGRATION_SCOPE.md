@@ -87,7 +87,7 @@ The distinction matters. Today the agent cannot vote because it **has no real wa
 ### Phase 2 — Constitutional Exclusion in Contract Code (the core claim)
 
 > **Status 2026-08-18: deployed.**
-> - `AgentExclusionEligibilityModule` live at `0x4A63A3F309242B0a6807Be5A448FEa4fA3C7e17E`, attached to TN mgmt, TN member, and Treegens member hats. Verified onchain: `getWearerStatus(Kairos) = (eligible=false, standing=true)`, humans unaffected. **Blocked:** Executive Pod (mgmt) + Community Pod (mgmt) hats need the top-hat wearer to run `scripts/attach-agent-exclusion.mjs` (none of the backend keys wear top hat `0x00000749`).
+> - `AgentExclusionEligibilityModule` live at `0x4A63A3F309242B0a6807Be5A448FEa4fA3C7e17E`, attached to **all 5 live hats** (TN mgmt/member, Treegens member via backend admin; Exec mgmt + Community Pod mgmt via top-hat wearer, txs `0x0d11d7b7…`, `0x3e8b1733…`, 2026-08-18). Verified: `isEligible(Kairos) = false` on every hat; humans unaffected. Verify anytime: `node scripts/verify-agent-exclusion.mjs`.
 > - Server mint guards (`src/lib/agentGuard.ts`) wired into mint-poc, mint-advocate, mint-hat, self/mint-batch (agent rows → status `rejected`).
 > - Contract-level guards added to `ProofOfCuriosityV2.sol`, `AdvocateV2.sol`, `SelfMinter.sol` sources (owner-settable `setAgentRegistry`, constructor-compatible) — **these ride the next redeploys; deployed bytecode is covered by the server guards + monitor until then.**
 > - `/constitution` public page + `/api/constitution` monitor live-verify all four denials per registered agent (multicall-batched). All checks green for Kairos as of deploy day.

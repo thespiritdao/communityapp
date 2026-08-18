@@ -48,7 +48,9 @@ const supabase = createClient(
   requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
 );
 
-let adminKey = requireEnv('POD_ADMIN_PRIVATE_KEY');
+// TOP_HAT_PRIVATE_KEY (temporary — remove after use!) overrides the backend
+// admin key for hats only the top-hat wearer can modify.
+let adminKey = process.env.TOP_HAT_PRIVATE_KEY || requireEnv('POD_ADMIN_PRIVATE_KEY');
 if (!adminKey.startsWith('0x')) adminKey = `0x${adminKey}`;
 const account = privateKeyToAccount(adminKey);
 
