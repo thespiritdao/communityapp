@@ -44,6 +44,10 @@ export interface AgentConfig {
   systemPrompt: string | null;
   autoPublishEvents: boolean;
   chatGroupIds: string[];
+  /** Max @mention forum replies per day — pod-governable, not a code constant */
+  maxForumRepliesPerDay: number;
+  /** Max @mention chat replies per day — pod-governable, not a code constant */
+  maxChatRepliesPerDay: number;
 }
 
 export interface AgentContentRequest {

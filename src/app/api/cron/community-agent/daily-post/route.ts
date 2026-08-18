@@ -10,6 +10,7 @@ import { generateAgentContent } from '@/services/communityAgent/agentService';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { AGENT_PSEUDO_WALLET } from '@/services/communityAgent/types';
 import { requireCron } from '@/lib/cronAuth';
+import { agentInsert } from '@/services/communityAgent/agentDbClient';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -75,27 +76,30 @@ export async function GET(req: NextRequest) {
           ? lines[0].replace(/^#+\s*/, '')
           : `${config.agentName}'s Daily — ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
 
-        // Create forum thread via supabaseAdmin (bypasses PoC check)
-        const { data: thread, error: threadError } = await supabaseAdmin
-          .from('forum_threads')
-          .insert({
+        // Create forum thread via the agent's scoped DB role — RLS enforces
+        // attribution + actor_type='agent' (no service-role bypass).
+        const { data: thread, error: threadError } = await agentInsert<{ id: string }>(
+          config.agentWallet,
+          'forum_threads',
+          {
             category_id: config.dailyCategoryId,
             title,
             content: response.content,
             author_address: config.agentWallet,
+            actor_type: 'agent',
             created_at: new Date().toISOString(),
-          })
-          .select('id')
-          .single();
+          },
+          'id',
+        );
 
-        if (threadError) {
+        if (threadError || !thread) {
           console.error(`[DailyPost] Thread creation failed for pod ${config.podId}:`, threadError);
           results.push({ podId: config.podId, status: 'error_thread' });
           continue;
         }
 
-        // Log to community_agent_posts
-        await supabaseAdmin.from('community_agent_posts').insert({
+        // Log to community_agent_posts (also via scoped role)
+        await agentInsert(config.agentWallet, 'community_agent_posts', {
           pod_id: config.podId,
           type: 'daily_discussion',
           thread_id: thread.id,

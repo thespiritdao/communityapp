@@ -110,6 +110,14 @@ The distinction matters. Today the agent cannot vote because it **has no real wa
 
 ### Phase 3 — Demote the Agent's Backend Privilege
 
+> **Status 2026-08-18: deployed.**
+> - `community_agent` Postgres role live (migration `20260818000001_agent_scoped_role.sql`, applied): INSERT-only on forum/chat/agent-posts/events, no UPDATE/DELETE anywhere, no access to votes/treasuries/memberships/profiles. RLS requires attribution to the caller's own registered agent wallet AND `actor_type='agent'`.
+> - Agent writes authenticate via short-lived HS256 JWTs (`agentDbClient.ts`, signed with SUPABASE_JWT_SECRET). Infrastructure failures fall back to service role loudly; RLS refusals never fall back.
+> - All four posting paths (daily-post, process-mentions, chatHandler, weekly-events) migrated off `supabaseAdmin` for content writes. Remaining admin usage is reads/config only.
+> - `actor_type` provenance columns on forum_threads/forum_posts/chat_messages/events/explorer_events, backfilled for Kairos history; explorer_events stamped by DB trigger (`20260818000002`), immune to caller claims.
+> - Rate limits moved to `community_agent_config` (`max_forum_replies_per_day` default 10, `max_chat_replies_per_day` default 20) — pod-governable.
+> - Live-verified 8/8 boundary checks (`scripts/test-agent-scoped-role.mjs`): own-content insert works; mis-attribution, human-masquerade, UPDATE, DELETE, and privileged reads all refused.
+
 **Goal:** Close the gap between the constitutional story (agent has *less* power than members) and the implementation (agent writes via service-role, which has *more*).
 
 **Steps:**

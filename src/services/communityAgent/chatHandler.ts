@@ -10,8 +10,7 @@ import { isAgentActive, getAgentConfig } from './configService';
 import { generateAgentContent } from './agentService';
 import { AGENT_PSEUDO_WALLET } from './types';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
-
-const MAX_CHAT_REPLIES_PER_POD_PER_DAY = 20;
+import { agentInsert } from './agentDbClient';
 
 interface ChatMentionInput {
   content: string;
@@ -55,7 +54,7 @@ export async function handleChatAgentMention(input: ChatMentionInput): Promise<v
     .eq('type', 'chat_reply')
     .gte('created_at', `${today}T00:00:00Z`);
 
-  if ((count || 0) >= MAX_CHAT_REPLIES_PER_POD_PER_DAY) {
+  if ((count || 0) >= config.maxChatRepliesPerDay) {
     console.log(`[ChatHandler] Rate limit reached for pod ${podId} (${count} replies today)`);
     return;
   }
@@ -77,7 +76,6 @@ export async function handleChatAgentMention(input: ChatMentionInput): Promise<v
     },
   });
 
-  // Insert the agent's reply as a chat message (using admin to bypass RLS/auth)
   // Get the required_token from the chat group
   const { data: group } = await supabaseAdmin
     .from('chat_groups')
@@ -85,26 +83,30 @@ export async function handleChatAgentMention(input: ChatMentionInput): Promise<v
     .eq('id', chatGroupId)
     .single();
 
-  const { data: reply, error: replyError } = await supabaseAdmin
-    .from('chat_messages')
-    .insert({
+  // Insert the agent's reply via the agent's scoped DB role — RLS enforces
+  // attribution + actor_type='agent' (no service-role bypass).
+  const { data: reply, error: replyError } = await agentInsert<{ id: string }>(
+    config.agentWallet,
+    'chat_messages',
+    {
       content: response.content,
       sender_wallet_id: config.agentWallet,
       chat_group_id: chatGroupId,
       required_token: group?.required_token || '',
       attachments: '[]',
+      actor_type: 'agent',
       created_at: new Date().toISOString(),
-    })
-    .select('id')
-    .single();
+    },
+    'id',
+  );
 
-  if (replyError) {
+  if (replyError || !reply) {
     console.error(`[ChatHandler] Failed to insert agent reply:`, replyError);
     return;
   }
 
-  // Log to community_agent_posts
-  await supabaseAdmin.from('community_agent_posts').insert({
+  // Log to community_agent_posts (also via scoped role)
+  await agentInsert(config.agentWallet, 'community_agent_posts', {
     pod_id: podId,
     type: 'chat_reply',
     content: response.content,

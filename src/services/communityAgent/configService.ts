@@ -47,6 +47,8 @@ export async function getAgentConfig(podId: string): Promise<AgentConfig | null>
     systemPrompt: cfg.system_prompt || null,
     autoPublishEvents: cfg.auto_publish_events ?? false,
     chatGroupIds: cfg.chat_group_ids || [],
+    maxForumRepliesPerDay: cfg.max_forum_replies_per_day ?? 10,
+    maxChatRepliesPerDay: cfg.max_chat_replies_per_day ?? 20,
   };
 }
 

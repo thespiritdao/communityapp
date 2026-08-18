@@ -10,11 +10,11 @@ import { generateAgentContent } from '@/services/communityAgent/agentService';
 import { extractForumContext } from '@/services/communityAgent/mentionService';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { requireCron } from '@/lib/cronAuth';
+import { agentInsert } from '@/services/communityAgent/agentDbClient';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MAX_REPLIES_PER_POD_PER_DAY = 10;
 const MAX_ATTEMPTS = 3;
 
 // Transient failure: requeue with attempts+1, fail permanently after MAX_ATTEMPTS.
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
           .eq('type', 'mention_reply')
           .gte('created_at', `${today}T00:00:00Z`);
 
-        if ((count || 0) >= MAX_REPLIES_PER_POD_PER_DAY) {
+        if ((count || 0) >= config.maxForumRepliesPerDay) {
           await supabaseAdmin
             .from('community_agent_queue')
             .update({ status: 'failed' })
@@ -129,27 +129,30 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        // Insert reply as a forum post
-        const { data: post, error: postError } = await supabaseAdmin
-          .from('forum_posts')
-          .insert({
+        // Insert reply as a forum post — via the agent's scoped DB role, not
+        // the service role. RLS enforces attribution + actor_type='agent'.
+        const { data: post, error: postError } = await agentInsert<{ id: string }>(
+          config.agentWallet,
+          'forum_posts',
+          {
             thread_id: item.thread_id,
             content: response.content,
             author_address: config.agentWallet,
+            actor_type: 'agent',
             created_at: new Date().toISOString(),
-          })
-          .select('id')
-          .single();
+          },
+          'id',
+        );
 
-        if (postError) {
+        if (postError || !post) {
           console.error(`[ProcessMentions] Post insert failed:`, postError);
           await requeueOrFail(item);
           errored++;
           continue;
         }
 
-        // Log to community_agent_posts
-        await supabaseAdmin.from('community_agent_posts').insert({
+        // Log to community_agent_posts (also via scoped role)
+        await agentInsert(config.agentWallet, 'community_agent_posts', {
           pod_id: item.pod_id,
           type: 'mention_reply',
           thread_id: item.thread_id,

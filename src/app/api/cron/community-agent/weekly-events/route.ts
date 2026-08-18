@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getActiveAgentPods } from '@/services/communityAgent/configService';
 import { generateAgentContent } from '@/services/communityAgent/agentService';
 import { requireCron } from '@/lib/cronAuth';
+import { agentInsert } from '@/services/communityAgent/agentDbClient';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -70,9 +71,10 @@ export async function GET(req: NextRequest) {
           const eventEndDate = new Date(eventDate);
           eventEndDate.setHours(19, 30, 0, 0); // 1.5 hours later
 
-          // Insert as draft event
+          // Insert as draft event — via the agent's scoped DB role, not the
+          // service role. RLS enforces attribution + actor_type='agent'.
           const status = config.autoPublishEvents ? 'published' : 'draft';
-          const { error } = await supabaseAdmin.from('events').insert({
+          const { error } = await agentInsert(config.agentWallet, 'events', {
             title,
             description,
             event_date: eventDate.toISOString(),
@@ -83,6 +85,7 @@ export async function GET(req: NextRequest) {
             price_self_amount: 0,
             organizing_pod_id: config.podId,
             creator_address: config.agentWallet,
+            actor_type: 'agent',
             status,
             event_metadata: {
               generated_by: 'community_agent',
@@ -94,8 +97,8 @@ export async function GET(req: NextRequest) {
           if (!error) created++;
         }
 
-        // Log to community_agent_posts
-        await supabaseAdmin.from('community_agent_posts').insert({
+        // Log to community_agent_posts (also via scoped role)
+        await agentInsert(config.agentWallet, 'community_agent_posts', {
           pod_id: config.podId,
           type: 'event_creation',
           content: `Generated ${created} event suggestions for the week`,
