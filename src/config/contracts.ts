@@ -65,6 +65,9 @@ export const CONTRACT_ADDRESSES = {
   PURCHASE_ROUTER_DECENTRALIZED: process.env
     .NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}`,
 
+  // Agent Registry (on-chain registry of AI agent addresses — Congregant architecture)
+  AGENT_REGISTRY: process.env.NEXT_PUBLIC_AGENT_REGISTRY as `0x${string}`,
+
   // Safe Wallet (for multi-sig operations)
   SAFE_WALLET: process.env.NEXT_PUBLIC_SAFE_WALLET as `0x${string}`,
 

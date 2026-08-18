@@ -25,6 +25,7 @@ import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
 import { getHatId } from '@/lib/hatRegistry';
+import { isRegisteredAgent } from '@/lib/agentGuard';
 import { createClient } from '@supabase/supabase-js';
 import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 
@@ -165,6 +166,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Invalid wallet address format' },
         { status: 400 },
+      );
+    }
+
+    // Constitutional exclusion: registered AI agents wear no governance hat
+    if (await isRegisteredAgent(walletAddress)) {
+      console.error('❌ Mint Hat API: refused — registered agent address:', walletAddress);
+      return NextResponse.json(
+        { success: false, error: 'AI agent addresses cannot receive hats' },
+        { status: 403 },
       );
     }
 

@@ -12,6 +12,7 @@ import { getWalletFromRequest, isPodLeader, isExecutiveLeader } from '@/lib/serv
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { ensureAgentProfile } from '@/services/communityAgent/configService';
 import { deriveAgentWallet } from '@/services/communityAgent/types';
+import { getOrCreateAgentWallet, registerAgentOnchain } from '@/services/communityAgent/agentWalletService';
 
 export const runtime = 'nodejs';
 
@@ -189,8 +190,22 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
   if (updates.community_agent_enabled === true) {
     try {
       const agentCfg = prior?.community_agent_config || {};
-      const agentWallet = agentCfg.agent_wallet || deriveAgentWallet(podId);
       const agentName = agentCfg.agent_name || 'Community Agent';
+
+      // Provision a real CDP smart wallet + on-chain registry entry, falling
+      // back to the legacy derived address if wallet infra isn't configured.
+      let agentWallet = agentCfg.agent_wallet || deriveAgentWallet(podId);
+      if (process.env.AGENT_WALLET_MASTER_KEY) {
+        try {
+          agentWallet = await getOrCreateAgentWallet(podId);
+          registerAgentOnchain(podId, agentWallet).catch((err) =>
+            console.warn('[pod modules] agent registry registration failed (non-critical):', err),
+          );
+        } catch (err) {
+          console.warn('[pod modules] agent wallet provisioning failed, using legacy address:', err);
+        }
+      }
+
       await ensureAgentProfile(agentWallet, agentName);
     } catch (err) {
       console.warn('[pod modules] ensureAgentProfile failed:', err);

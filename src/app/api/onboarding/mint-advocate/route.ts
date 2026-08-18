@@ -20,6 +20,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { requireInternalSecret } from '@/lib/mintAuth';
+import { isRegisteredAgent } from '@/lib/agentGuard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -57,6 +58,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Invalid wallet address format' },
         { status: 400 },
+      );
+    }
+
+    // Constitutional exclusion: registered AI agents cannot hold voting power
+    if (await isRegisteredAgent(walletAddress)) {
+      console.error('❌ Mint Advocate API: refused — registered agent address:', walletAddress);
+      return NextResponse.json(
+        { success: false, error: 'AI agent addresses cannot receive Advocate NFTs' },
+        { status: 403 },
       );
     }
 

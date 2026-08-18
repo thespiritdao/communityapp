@@ -11,6 +11,19 @@
 // Minimal hardhat config for contract compilation
 require('@nomicfoundation/hardhat-ethers');
 
+// Load .env so DEPLOYER_PRIVATE_KEY etc. are available to network configs
+require('dotenv').config();
+
+// Deployer key: DEPLOYER_PRIVATE_KEY, falling back to the repo's existing
+// PRIVATE_KEY / POD_ADMIN_PRIVATE_KEY conventions (see deploy-hat-minter.ts)
+const rawDeployerKey =
+  process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY || process.env.POD_ADMIN_PRIVATE_KEY;
+const deployerKey = rawDeployerKey
+  ? rawDeployerKey.startsWith('0x')
+    ? rawDeployerKey
+    : `0x${rawDeployerKey}`
+  : undefined;
+
 module.exports = {
   defaultNetwork: 'hardhat',
   networks: {
@@ -27,13 +40,13 @@ module.exports = {
     base: {
       url: 'https://mainnet.base.org',
       chainId: 8453,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+      accounts: deployerKey ? [deployerKey] : [],
     },
     // Base Sepolia testnet
     'base-sepolia': {
       url: 'https://sepolia.base.org',
       chainId: 84532,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+      accounts: deployerKey ? [deployerKey] : [],
     },
   },
   solidity: {

@@ -74,6 +74,15 @@ interface SubscriptionInfo {
   remainingDays?: number | null;
 }
 
+interface AgentIdentityInfo {
+  address: string;
+  walletType: 'cdp_smart_wallet' | 'legacy_pseudo';
+  registeredOnchain: boolean;
+  activeOnchain: boolean;
+  registryTxHash: string | null;
+  registryAddress: string | null;
+}
+
 const DEFAULT_CONFIG = {
   agent_name: 'Community Agent',
   daily_post_hour_utc: 12,
@@ -108,6 +117,7 @@ export default function PodCommunityAgentManager({
   const [showConfirm, setShowConfirm] = useState(false);
   const [agentAvatarUrl, setAgentAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [identity, setIdentity] = useState<AgentIdentityInfo | null>(null);
 
   // Load forum categories, chat groups, subscription, and corpus stats
   useEffect(() => {
@@ -136,6 +146,14 @@ export default function PodCommunityAgentManager({
         }
       } catch {
         // Config endpoint may not exist yet
+      }
+
+      // Load agent onchain identity (public endpoint, no auth)
+      try {
+        const idRes = await fetch(`/api/community-agent/identity?podId=${podId}`);
+        if (idRes.ok) setIdentity(await idRes.json());
+      } catch {
+        // Identity endpoint unavailable — block simply won't render
       }
 
       // Load forum categories for this pod
@@ -536,6 +554,50 @@ export default function PodCommunityAgentManager({
             )}
           </div>
         </div>
+
+        {/* Onchain Identity — the agent's "honest mask": a real, publicly
+            inspectable wallet registered as artificial in the AgentRegistry */}
+        {identity && (
+          <div>
+            <Label className="text-xs text-muted-foreground">Onchain Identity</Label>
+            <div
+              className="mt-1 p-3 rounded-lg text-sm"
+              style={{ backgroundColor: '#F5EDD7', border: '1px solid #D1C4A9' }}
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#8B5E3C' }} />
+                <code className="text-xs text-[#3C3C3C] break-all">{identity.address}</code>
+              </div>
+              {identity.walletType === 'cdp_smart_wallet' ? (
+                <p className="text-xs text-[#7C6F5B] mt-1">
+                  Artificial member —{' '}
+                  {identity.registeredOnchain ? (
+                    <a
+                      href={
+                        identity.registryTxHash
+                          ? `https://basescan.org/tx/${identity.registryTxHash}`
+                          : `https://basescan.org/address/${identity.registryAddress}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      view onchain registration
+                    </a>
+                  ) : (
+                    'onchain registration pending'
+                  )}
+                  . This wallet holds no vote, no governance role, and no participation standing —
+                  by constitutional design.
+                </p>
+              ) : (
+                <p className="text-xs text-[#7C6F5B] mt-1">
+                  Legacy internal address — onchain identity migration pending.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="agent-persona" className="text-xs text-muted-foreground">

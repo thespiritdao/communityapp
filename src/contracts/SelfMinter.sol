@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./interfaces/IAgentRegistry.sol";
 
 /// @dev Minimal interface to SelfEpochs (the soulbound $SELF token).
 interface ISelfEpochs {
@@ -54,6 +55,11 @@ contract SelfMinter is AccessControl, ReentrancyGuard {
     /// @notice Consumed batch ids — replay protection for retried sponsored ops.
     mapping(bytes32 => bool) public consumedBatches;
 
+    /// @notice Congregant guard: registered AI agents accrue no $SELF/Tenure.
+    ///         Optional (guard active once set by admin) so existing deploy
+    ///         flows are unchanged. See AgentRegistry / Congregant architecture.
+    IAgentRegistry public agentRegistry;
+
     event SelfMinted(
         bytes32 indexed batchId,
         address indexed to,
@@ -75,6 +81,18 @@ contract SelfMinter is AccessControl, ReentrancyGuard {
         selfEpochs = ISelfEpochs(_selfEpochs);
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(ATTESTOR_ROLE, attestor);
+    }
+
+    /// @notice Set the AgentRegistry used to refuse minting to AI agents
+    function setAgentRegistry(address registry) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        agentRegistry = IAgentRegistry(registry);
+    }
+
+    function _revertIfAgent(address account) internal view {
+        require(
+            address(agentRegistry) == address(0) || !agentRegistry.isRegistered(account),
+            "SelfMinter: agent excluded"
+        );
     }
 
     /// @notice One mint instruction within a batch. `sourceRef` ties the mint
@@ -104,6 +122,7 @@ contract SelfMinter is AccessControl, ReentrancyGuard {
             MintItem calldata it = items[i];
             require(it.to != address(0), "SelfMinter: recipient zero");
             require(it.amount > 0, "SelfMinter: amount zero");
+            _revertIfAgent(it.to);
 
             selfEpochs.mint(it.to, it.communityId, it.epoch, it.amount, "");
 
@@ -133,6 +152,7 @@ contract SelfMinter is AccessControl, ReentrancyGuard {
         require(!consumedBatches[batchId], "SelfMinter: batch consumed");
         require(to != address(0), "SelfMinter: recipient zero");
         require(amount > 0, "SelfMinter: amount zero");
+        _revertIfAgent(to);
         consumedBatches[batchId] = true;
 
         selfEpochs.mint(to, communityId, epoch, amount, "");

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Votes.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "./interfaces/IAgentRegistry.sol";
 
 /**
  * @title ProofOfCuriosityV2
@@ -22,6 +23,7 @@ contract ProofOfCuriosityV2 is ERC721Votes, Ownable {
     error Soulbound();
     error AlreadyHoldsToken();
     error Unauthorized();
+    error AgentExcluded();
 
     // -------------------------------------------------------------------------
     // Events
@@ -37,6 +39,11 @@ contract ProofOfCuriosityV2 is ERC721Votes, Ownable {
     mapping(address => bool) public authorizedMinters;
     string private _baseTokenURI;
     uint256 private _nextTokenId = 1;
+
+    /// @notice Congregant guard: registered AI agents can never hold PoC.
+    ///         Optional (guard active once set by owner) so existing deploy
+    ///         flows are unchanged. See AgentRegistry / Congregant architecture.
+    IAgentRegistry public agentRegistry;
 
     // -------------------------------------------------------------------------
     // Modifiers
@@ -60,6 +67,23 @@ contract ProofOfCuriosityV2 is ERC721Votes, Ownable {
     }
 
     // -------------------------------------------------------------------------
+    // Agent exclusion (Congregant architecture)
+    // -------------------------------------------------------------------------
+
+    /// @notice Set the AgentRegistry used to refuse minting to AI agents
+    function setAgentRegistry(address registry) external onlyOwner {
+        agentRegistry = IAgentRegistry(registry);
+    }
+
+    function _isAgent(address account) internal view returns (bool) {
+        return address(agentRegistry) != address(0) && agentRegistry.isRegistered(account);
+    }
+
+    function _revertIfAgent(address account) internal view {
+        if (_isAgent(account)) revert AgentExcluded();
+    }
+
+    // -------------------------------------------------------------------------
     // Minting
     // -------------------------------------------------------------------------
 
@@ -69,6 +93,7 @@ contract ProofOfCuriosityV2 is ERC721Votes, Ownable {
      */
     function mint(address recipient) external onlyMinter returns (uint256) {
         if (balanceOf(recipient) > 0) revert AlreadyHoldsToken();
+        _revertIfAgent(recipient);
 
         uint256 tokenId = _nextTokenId;
         _nextTokenId++;
@@ -92,6 +117,7 @@ contract ProofOfCuriosityV2 is ERC721Votes, Ownable {
 
             if (recipient == address(0)) continue;
             if (balanceOf(recipient) > 0) continue;
+            if (_isAgent(recipient)) continue;
 
             uint256 tokenId = _nextTokenId;
             _nextTokenId++;

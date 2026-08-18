@@ -29,6 +29,7 @@ import {
   waitForUserOperation,
 } from '@coinbase/coinbase-sdk';
 import { createClient } from '@supabase/supabase-js';
+import { isRegisteredAgent } from '@/lib/agentGuard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -118,8 +119,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, minted: 0, message: 'No mintable rows' });
     }
 
+    // Constitutional exclusion: registered AI agents accrue no $SELF/Tenure.
+    // Agent rows are rejected (not left pending — they would retry forever).
+    const agentRows = [];
+    const humanRows = [];
+    for (const r of rows) {
+      if (await isRegisteredAgent(r.wallet)) agentRows.push(r);
+      else humanRows.push(r);
+    }
+    if (agentRows.length > 0) {
+      console.warn(`[self/mint-batch] rejecting ${agentRows.length} agent-address row(s):`,
+        agentRows.map((r) => r.wallet).join(', '));
+      await supabase
+        .from('self_mint_queue')
+        .update({ status: 'rejected', anomaly_flags: ['agent_address'] })
+        .in('id', agentRows.map((r) => r.id));
+    }
+    if (humanRows.length === 0) {
+      return NextResponse.json({ success: true, minted: 0, message: 'Only agent rows (rejected)' });
+    }
+    const mintableRows = humanRows;
+
     // Build the on-chain items + a deterministic batchId (replay-safe).
-    const items = rows.map((r) => ({
+    const items = mintableRows.map((r) => ({
       to: r.wallet as `0x${string}`,
       communityId: BigInt(r.community_id),
       epoch: Number(r.epoch),
@@ -127,15 +149,15 @@ export async function POST(req: NextRequest) {
       // sourceRef = keccak256(queue row id) — ties the on-chain mint to the row.
       sourceRef: keccak256(toBytes(r.id)) as `0x${string}`,
     }));
-    const idConcat = rows.map((r) => r.id).join('|');
+    const idConcat = mintableRows.map((r) => r.id).join('|');
     const batchId = keccak256(toBytes(`${podId}:${epoch}:${idConcat}`)) as `0x${string}`;
-    const totalHours = rows.reduce((acc, r) => acc + BigInt(r.hours), 0n);
+    const totalHours = mintableRows.reduce((acc, r) => acc + BigInt(r.hours), 0n);
 
     // Prestige (Tenure) is ecosystem-wide PER WALLET — aggregate this batch's
     // hours per recipient so a wallet earning from multiple rows gets one
     // lifetime-hours bump. Recorded in the SAME user op as the mint (atomic).
     const prestigeByWallet = new Map<string, bigint>();
-    for (const r of rows) {
+    for (const r of mintableRows) {
       const w = (r.wallet as string).toLowerCase();
       prestigeByWallet.set(w, (prestigeByWallet.get(w) ?? 0n) + BigInt(r.hours));
     }
@@ -200,7 +222,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Reflect in the ledger: rows -> minted; budget.minted_hours += total.
-    const rowIds = rows.map((r) => r.id);
+    const rowIds = mintableRows.map((r) => r.id);
     await supabase
       .from('self_mint_queue')
       .update({
@@ -232,7 +254,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      minted: rows.length,
+      minted: mintableRows.length,
       totalHours: totalHours.toString(),
       batchId,
       txHash,

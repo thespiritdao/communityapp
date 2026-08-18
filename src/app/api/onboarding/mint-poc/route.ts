@@ -12,6 +12,7 @@ import { base } from 'viem/chains';
 import { Coinbase, toSmartWallet, sendUserOperation, waitForUserOperation } from '@coinbase/coinbase-sdk';
 import { createClient } from '@supabase/supabase-js';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import { isRegisteredAgent } from '@/lib/agentGuard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -123,6 +124,14 @@ export async function POST(request: NextRequest) {
 
     if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return NextResponse.json({ success: false, error: 'Invalid wallet address' }, { status: 400 });
+    }
+
+    // Constitutional exclusion: registered AI agents cannot hold standing-to-be-present
+    if (await isRegisteredAgent(walletAddress)) {
+      return NextResponse.json(
+        { success: false, error: 'AI agent addresses cannot receive Proof of Curiosity' },
+        { status: 403 },
+      );
     }
 
     // NOTE: Intentionally NOT auth-gated. Self-serve membership (including
