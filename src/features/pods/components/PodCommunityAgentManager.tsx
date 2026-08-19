@@ -118,6 +118,8 @@ export default function PodCommunityAgentManager({
   const [agentAvatarUrl, setAgentAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [identity, setIdentity] = useState<AgentIdentityInfo | null>(null);
+  const [transparency, setTransparency] = useState<any | null>(null);
+  const [optingOut, setOptingOut] = useState(false);
 
   // Load forum categories, chat groups, subscription, and corpus stats
   useEffect(() => {
@@ -154,6 +156,16 @@ export default function PodCommunityAgentManager({
         if (idRes.ok) setIdentity(await idRes.json());
       } catch {
         // Identity endpoint unavailable — block simply won't render
+      }
+
+      // Load corpus transparency (auth adds the caller's own opt-out status)
+      try {
+        const tRes = await fetch(`/api/community-agent/transparency?podId=${podId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (tRes.ok) setTransparency(await tRes.json());
+      } catch {
+        // Transparency endpoint unavailable — card simply won't render
       }
 
       // Load forum categories for this pod
@@ -664,6 +676,86 @@ export default function PodCommunityAgentManager({
                 <p className="text-xs text-[#7C6F5B] mt-1">
                   Legacy internal address — onchain identity migration pending.
                 </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* The Situated Mind — what the agent is made of, and each member's
+            right to keep their words out of it (Congregant Phase 5) */}
+        {transparency && (
+          <div>
+            <Label className="text-xs text-muted-foreground">
+              What {config.agent_name || 'the agent'} is made of
+            </Label>
+            <div
+              className="mt-1 p-3 rounded-lg text-sm space-y-2"
+              style={{ backgroundColor: '#F5EDD7', border: '1px solid #D1C4A9' }}
+            >
+              <ul className="text-xs text-[#3C3C3C] space-y-1">
+                <li>• Uploaded documents: ~{transparency.uploadedDocVectors} knowledge chunks</li>
+                <li>
+                  • Pod forum discourse:{' '}
+                  {transparency.forumIngestionEnabled
+                    ? `~${transparency.forumVectors} chunks${transparency.lastForumSyncAt ? `, synced ${new Date(transparency.lastForumSyncAt).toLocaleDateString()}` : ''}`
+                    : 'not ingested'}
+                </li>
+                {transparency.sharedPhilosophyIndex && (
+                  <li>• Shared Temporal Naturalism philosophy library</li>
+                )}
+                <li>
+                  • The agent&apos;s own posts:{' '}
+                  {transparency.includesOwnPosts ? 'fed back into its corpus' : 'excluded (no echo loop)'}
+                </li>
+              </ul>
+
+              {isManager && (
+                <label className="flex items-center gap-2 text-xs text-[#3C3C3C] cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={(config as any).corpus_includes_forum === true}
+                    onChange={(e) => updateField('corpus_includes_forum', e.target.checked)}
+                  />
+                  Ingest this pod&apos;s forum discourse into the agent&apos;s mind
+                  <span className="text-[#7C6F5B]">(applies after Save; members can opt out below)</span>
+                </label>
+              )}
+
+              {transparency.myOptOut !== null && (
+                <div className="flex items-center justify-between gap-2 pt-1 border-t" style={{ borderColor: '#D1C4A9' }}>
+                  <span className="text-xs text-[#7C6F5B]">
+                    {transparency.myOptOut
+                      ? 'Your forum posts are excluded from all agent corpora.'
+                      : 'Your forum posts may be included when a pod ingests its discourse.'}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    disabled={optingOut}
+                    onClick={async () => {
+                      setOptingOut(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const res = await fetch('/api/community-agent/corpus-optout', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session?.access_token}`,
+                          },
+                          body: JSON.stringify({ optOut: !transparency.myOptOut }),
+                        });
+                        if (res.ok) {
+                          setTransparency({ ...transparency, myOptOut: !transparency.myOptOut });
+                        }
+                      } finally {
+                        setOptingOut(false);
+                      }
+                    }}
+                  >
+                    {optingOut ? <Loader2 className="h-3 w-3 animate-spin" /> : transparency.myOptOut ? 'Opt back in' : 'Keep my words out'}
+                  </Button>
+                </div>
               )}
             </div>
           </div>

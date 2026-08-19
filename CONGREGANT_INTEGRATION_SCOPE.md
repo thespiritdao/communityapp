@@ -161,6 +161,15 @@ The distinction matters. Today the agent cannot vote because it **has no real wa
 
 ### Phase 5 — The Situated Mind (discourse ingestion)
 
+> **Status 2026-08-19: deployed (engineering).**
+> - Nightly cron `sync-forum-corpus` (3:00 UTC, vercel.json): incrementally embeds pod forum threads/posts into `agent-{podId}` under consent rules. Deterministic vector IDs (edits re-upsert), deleted posts pruned.
+> - Consent: pod-level `corpus_includes_forum` (default OFF — leader toggle in agent manager, no pod ingests until it chooses); member-level `user_profiles.exclude_from_agent_corpus` (migration `20260818000003`, applied) — self-serve via `/api/community-agent/corpus-optout`, retroactive vector deletion on next sync.
+> - Loop guard: agent's own posts excluded by default (`corpus_includes_own_posts` override).
+> - Identity minimization: vectors carry no author identity — only a keyed HMAC `author_hash` enabling opt-out deletion.
+> - Transparency: `/api/community-agent/transparency` + "What the agent is made of" card (doc chunks, forum chunks + sync date, philosophy index, echo-loop status, personal opt-out control).
+> - Live-tested: sync skips non-consenting pods; transparency endpoint verified against TN.
+> - **Outstanding (editorial, not engineering):** Kairos KB distillation per `Kairos_Spec_v2_Final.md` §3 — TN's own agent namespace is empty (0 vectors); Kairos leans on the shared books index.
+
 **Goal:** Make "the agent's knowledge base is built from the pod's own discourse: its forum threads, documents, and self-descriptions" true, with consent and inspectability.
 
 **Steps:**

@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/community-agent/renewal-referendums",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/community-agent/sync-forum-corpus",
+      "schedule": "0 3 * * *"
     }
   ]
 }
