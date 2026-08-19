@@ -1,5 +1,5 @@
 // src/app/api/chat-messages/route.ts
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { everyoneTagService } from '@/services/everyoneTagService';
@@ -406,14 +406,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // ✅ COMMUNITY AGENT: Check if message mentions a pod's community agent
+    // ✅ COMMUNITY AGENT: Check if message mentions a pod's community agent.
+    // MUST run via after() — a bare fire-and-forget dies when Vercel freezes
+    // the lambda once the response is sent (reply generation takes seconds).
+    // after() keeps the function alive until the work completes without
+    // delaying the user's message send.
     if (data && pod_id) {
-      handleChatAgentMention({
-        content,
-        senderWallet: sender_wallet_id,
-        chatGroupId: chat_group_id,
-        podId: pod_id,
-      }).catch((err) => console.warn('[chat-messages] agent mention handler failed:', err));
+      after(() =>
+        handleChatAgentMention({
+          content,
+          senderWallet: sender_wallet_id,
+          chatGroupId: chat_group_id,
+          podId: pod_id,
+        }).catch((err) => console.warn('[chat-messages] agent mention handler failed:', err)),
+      );
     }
 
     console.log('✅ Chat message POST: Message sent successfully');
