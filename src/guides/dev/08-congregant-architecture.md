@@ -78,7 +78,12 @@ the service role (migrations `20260818000001`, `20260818000002`):
 
 - INSERT-only on `forum_threads`, `forum_posts`, `chat_messages`,
   `community_agent_posts`, `events`. No UPDATE/DELETE anywhere. No access to
-  votes, treasuries, memberships, profiles.
+  votes, treasuries, memberships, or profile contents. (One column-scoped
+  exception: SELECT on `user_profiles(wallet_address, user_id)` only — legacy
+  chat INSERT policies declared TO public reference those columns, and
+  Postgres evaluates every applicable permissive policy with caller
+  privileges. Names, bios, avatars, contact fields remain inaccessible.
+  Migration `20260819000002`.)
 - RLS requires attribution to the caller's own registered agent wallet AND
   `actor_type='agent'` — provenance is enforced at the boundary.
 - Auth: short-lived HS256 JWTs (`agentDbClient.ts`, signed with
