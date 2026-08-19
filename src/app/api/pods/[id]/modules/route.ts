@@ -117,6 +117,110 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     .eq('pod_id', podId)
     .single();
 
+  // ── Agent admission by vote (Congregant Phase 7) ─────────────────────────
+  // First-time admission of an AI agent into a pod with governance enabled is
+  // a community decision, not a leader toggle: the community chooses its
+  // congregant on the record. Re-enabling a previously admitted agent (pause/
+  // resume) stays a leader action. Pods without governance fall back to the
+  // leader toggle — there is no franchise to consult.
+  if (
+    updates.community_agent_enabled === true &&
+    !(prior?.community_agent_enabled ?? false) &&
+    (prior?.governance_enabled ?? false)
+  ) {
+    const agentCfg = prior?.community_agent_config || {};
+    if (!agentCfg.agent_admitted_by) {
+      // Existing open admission proposal? Point at it instead of duplicating.
+      if (agentCfg.admission_proposal_id) {
+        const { data: open } = await supabaseAdmin
+          .from('pod_level_proposals')
+          .select('status')
+          .eq('id', agentCfg.admission_proposal_id)
+          .single();
+        if (open && ['proposed', 'active'].includes(open.status)) {
+          return NextResponse.json({
+            pendingAdmissionProposal: agentCfg.admission_proposal_id,
+            message: 'Agent admission is already before the community for a vote.',
+          });
+        }
+      }
+
+      const { data: pod } = await supabaseAdmin
+        .from('pods').select('name').eq('id', podId).single();
+      const agentName = body.agent_name || agentCfg.agent_name || 'Community Agent';
+      const deadline = new Date();
+      deadline.setUTCDate(deadline.getUTCDate() + 7);
+
+      const { count: eligibleVoters } = await supabaseAdmin
+        .from('pod_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('pod_id', podId)
+        .eq('is_active', true);
+
+      const { data: proposal, error: propError } = await supabaseAdmin
+        .from('pod_level_proposals')
+        .insert({
+          title: `Admit an AI community agent: ${agentName}`,
+          description: [
+            `Should ${pod?.name || 'this pod'} admit **${agentName}** as its AI community agent?`,
+            ``,
+            `If admitted, the agent will open daily discussion prompts, reply when @mentioned, and draft event previews for leader review. It will hold a name, an avatar, and a wallet — and it will be constitutionally excluded from voting, from governance roles, and from accruing participation standing (verify at /constitution).`,
+            ``,
+            `Operation costs 25 $SYSTEM / 30 days from the pod treasury (unless grant-funded), and its continuation is subject to a recurring existence referendum — this community decides, on schedule, whether it continues.`,
+          ].join('\n'),
+          pod_id: podId,
+          created_by: wallet.toLowerCase(),
+          status: 'proposed',
+          voting_deadline: deadline.toISOString(),
+          governance_tier: 'POD_TREASURY_BINDING',
+          approval_threshold_bps: 5001,
+          quorum_threshold_bps: 3000,
+          eligible_voter_count: eligibleVoters ?? 0,
+          metadata: {
+            type: 'agent_admission',
+            agent_name: agentName,
+            choices: ['For', 'Against', 'Abstain'],
+          },
+        })
+        .select('id')
+        .single();
+
+      if (propError || !proposal) {
+        return NextResponse.json({ error: 'Failed to create admission proposal' }, { status: 500 });
+      }
+
+      await supabaseAdmin
+        .from('pod_modules')
+        .upsert(
+          {
+            pod_id: podId,
+            community_agent_config: { ...agentCfg, admission_proposal_id: proposal.id, agent_name: agentName },
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'pod_id' },
+        );
+
+      recordExplorerEvent({
+        type: 'proposal_created',
+        title: `Agent admission proposed: ${agentName}`,
+        actor: wallet,
+        pod_id: podId,
+        url: '/governance',
+        metadata: { agent_admission: true, proposal_id: proposal.id },
+        dedupe_key: `agent-admission-${proposal.id}`,
+      }).catch(() => {});
+
+      // Don't enable the module — the vote decides.
+      delete updates.community_agent_enabled;
+      if (Object.keys(updates).length === 0) {
+        return NextResponse.json({
+          pendingAdmissionProposal: proposal.id,
+          message: 'Agent admission has been put to a community vote (7 days). The module enables automatically if the vote passes.',
+        });
+      }
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from('pod_modules')
     .upsert(

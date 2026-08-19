@@ -11,6 +11,7 @@ import { generateAgentContent } from './agentService';
 import { AGENT_PSEUDO_WALLET } from './types';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { agentInsert } from './agentDbClient';
+import { detectCrisis, crisisResponse, notifyCrisisProtocolFired } from './crisisService';
 
 interface ChatMentionInput {
   content: string;
@@ -62,19 +63,27 @@ export async function handleChatAgentMention(input: ChatMentionInput): Promise<v
   // Extract conversation context
   const context = await extractChatContext(chatGroupId, content);
 
-  // Generate reply
-  const now = new Date();
-  const response = await generateAgentContent({
-    podId,
-    taskType: 'mention_reply',
-    context: {
-      date: now.toISOString().split('T')[0],
-      season: getSeason(now),
-      dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
-      userMessage: context.userMessage,
-      conversationHistory: context.conversationHistory,
-    },
-  });
+  // Crisis protocol (Kairos spec §7): acute-distress language gets a fixed
+  // human-written response — the model is never invoked.
+  let response: { content: string; metadata: Record<string, any> };
+  if (detectCrisis(content) || detectCrisis(context.userMessage)) {
+    response = { content: crisisResponse(config.agentName), metadata: { crisis_protocol: true } };
+    notifyCrisisProtocolFired(podId, 'chat').catch(() => {});
+  } else {
+    // Generate reply
+    const now = new Date();
+    response = await generateAgentContent({
+      podId,
+      taskType: 'mention_reply',
+      context: {
+        date: now.toISOString().split('T')[0],
+        season: getSeason(now),
+        dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
+        userMessage: context.userMessage,
+        conversationHistory: context.conversationHistory,
+      },
+    });
+  }
 
   // Get the required_token from the chat group
   const { data: group } = await supabaseAdmin

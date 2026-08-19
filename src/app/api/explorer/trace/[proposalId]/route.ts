@@ -19,9 +19,9 @@ export const runtime = 'nodejs';
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { proposalId: string } },
+  { params }: { params: Promise<{ proposalId: string }> },
 ): Promise<NextResponse> {
-  const proposalId = params.proposalId;
+  const { proposalId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(proposalId)) {
     return NextResponse.json({ error: 'Invalid proposal id' }, { status: 400 });
   }

@@ -39,6 +39,8 @@ import {
   REFERENDUM_LEAD_DAYS,
   GRANT_REFERENDUM_CADENCE_DAYS,
 } from '@/services/communityAgent/types';
+import { getOrCreateAgentWallet, registerAgentOnchain } from '@/services/communityAgent/agentWalletService';
+import { ensureAgentProfile } from '@/services/communityAgent/configService';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -401,6 +403,77 @@ export async function GET(req: NextRequest) {
         results.enforced.push(proposal.id);
       } catch (e: any) {
         results.errors.push(`enforce ${proposal.id}: ${e.message}`);
+      }
+    }
+
+    // ── ADMISSION ENFORCEMENT (Phase 7): closed agent_admission proposals ──
+    const { data: admissions } = await supabaseAdmin
+      .from('pod_level_proposals')
+      .select('*')
+      .in('status', ['approved', 'rejected'])
+      .filter('metadata->>type', 'eq', 'agent_admission')
+      .filter('metadata->>enforced', 'is', null);
+
+    for (const proposal of admissions ?? []) {
+      try {
+        const podId = proposal.pod_id;
+        const meta = proposal.metadata || {};
+        const { data: modules } = await supabaseAdmin
+          .from('pod_modules')
+          .select('community_agent_config')
+          .eq('pod_id', podId)
+          .single();
+        const cfg = modules?.community_agent_config || {};
+
+        if (proposal.status === 'approved') {
+          // The community chose its congregant — enable the module and
+          // provision the agent's real onchain identity.
+          await supabaseAdmin
+            .from('pod_modules')
+            .update({
+              community_agent_enabled: true,
+              community_agent_config: {
+                ...cfg,
+                agent_admitted_by: proposal.id,
+                admission_proposal_id: null,
+                agent_name: cfg.agent_name || meta.agent_name || 'Community Agent',
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq('pod_id', podId);
+
+          if (process.env.AGENT_WALLET_MASTER_KEY) {
+            try {
+              const agentWallet = await getOrCreateAgentWallet(podId);
+              registerAgentOnchain(podId, agentWallet).catch((err) =>
+                console.warn('[RenewalReferendums] admission registry registration failed:', err),
+              );
+              await ensureAgentProfile(agentWallet, cfg.agent_name || meta.agent_name || 'Community Agent');
+            } catch (err) {
+              console.warn('[RenewalReferendums] admission wallet provisioning failed:', err);
+            }
+          }
+        } else {
+          // Declined — clear the pending pointer; leadership may re-propose.
+          await supabaseAdmin
+            .from('pod_modules')
+            .update({
+              community_agent_config: { ...cfg, admission_proposal_id: null },
+              updated_at: new Date().toISOString(),
+            })
+            .eq('pod_id', podId);
+        }
+
+        await supabaseAdmin
+          .from('pod_level_proposals')
+          .update({
+            ...(proposal.status === 'approved' ? { status: 'executed' } : {}),
+            metadata: { ...meta, enforced: true, enforced_at: new Date().toISOString() },
+          })
+          .eq('id', proposal.id);
+        results.enforced.push(proposal.id);
+      } catch (e: any) {
+        results.errors.push(`admission ${proposal.id}: ${e.message}`);
       }
     }
 

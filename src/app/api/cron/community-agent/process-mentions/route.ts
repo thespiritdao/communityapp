@@ -11,6 +11,7 @@ import { extractForumContext } from '@/services/communityAgent/mentionService';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { requireCron } from '@/lib/cronAuth';
 import { agentInsert } from '@/services/communityAgent/agentDbClient';
+import { detectCrisis, crisisResponse, notifyCrisisProtocolFired } from '@/services/communityAgent/crisisService';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -115,19 +116,27 @@ export async function GET(req: NextRequest) {
         // Extract thread context
         const context = await extractForumContext(item.thread_id, item.trigger_post_id);
 
-        // Generate reply
-        const now = new Date();
-        const response = await generateAgentContent({
-          podId: item.pod_id,
-          taskType: 'mention_reply',
-          context: {
-            date: now.toISOString().split('T')[0],
-            season: getSeason(now),
-            dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
-            userMessage: context.userMessage,
-            conversationHistory: context.conversationHistory,
-          },
-        });
+        // Crisis protocol (Kairos spec §7): acute-distress language gets a
+        // fixed human-written response — the model is never invoked.
+        let response: { content: string; metadata: Record<string, any> };
+        if (detectCrisis(context.userMessage)) {
+          response = { content: crisisResponse(config.agentName), metadata: { crisis_protocol: true } };
+          notifyCrisisProtocolFired(item.pod_id, 'forum').catch(() => {});
+        } else {
+          // Generate reply
+          const now = new Date();
+          response = await generateAgentContent({
+            podId: item.pod_id,
+            taskType: 'mention_reply',
+            context: {
+              date: now.toISOString().split('T')[0],
+              season: getSeason(now),
+              dayOfWeek: now.toLocaleDateString('en-US', { weekday: 'long' }),
+              userMessage: context.userMessage,
+              conversationHistory: context.conversationHistory,
+            },
+          });
+        }
 
         // Insert reply as a forum post — via the agent's scoped DB role, not
         // the service role. RLS enforces attribution + actor_type='agent'.

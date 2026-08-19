@@ -205,6 +205,14 @@ The distinction matters. Today the agent cannot vote because it **has no real wa
 
 ### Phase 7 — Procedural Safeguards & Boundary Governance
 
+> **Status 2026-08-19: deployed.**
+> - **Draft approval (7.1)**: verified pre-existing and complete — agent events insert as drafts, leaders review/edit/publish/reject (`AgentEventDrafts`).
+> - **Admission by vote (7.2)**: first-time agent enablement in governance-enabled pods creates a 7-day `agent_admission` proposal instead of toggling; enforcement in the referendum cron enables + provisions wallet/registry on approval. Pods without governance keep the leader toggle (no franchise to consult). Kairos backfilled `agent_admitted_by: legacy-pre-constitution`.
+> - **Amendment procedure (7.3)**: `src/guides/user/16-ai-agents-and-the-constitution.md` — strata table, admission, existence referendum, corpus rights, safeguards, and the lawful path to redraw the boundary (constitutional tier, 67% + 50% quorum, deliberate contract-level execution). Embeddable into Sensemaker via `npm run embed:spiritdao`.
+> - **Crisis protocol (7.4)**: `crisisService.ts` wired into forum + chat mention replies — fixed human-written response w/ 988 (model never invoked), discreet leader notification (no content/identity). 11/11 detection unit checks pass incl. idiom + philosophical-mortality negatives.
+> - **Drift monitor (7.5)**: monthly Haiku judge scores outputs against Kairos spec §8 rubric + authority_creep; report stored in config, leaders notified on flags.
+> - **Operational fix discovered during testing**: the agent crons (daily-post, process-mentions, weekly-events, check-subscriptions) were NEVER scheduled — Kairos posted twice ever, last 2026-05-04. All four now registered in vercel.json; Kairos resumes daily posts on next deploy.
+
 **Goal:** Close the paper's §5 safeguards and §7 contestability commitments.
 
 **Steps:**

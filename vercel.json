@@ -47,6 +47,26 @@
     {
       "path": "/api/cron/anchor-ledger",
       "schedule": "0 4 * * 1"
+    },
+    {
+      "path": "/api/cron/community-agent/drift-monitor",
+      "schedule": "0 5 1 * *"
+    },
+    {
+      "path": "/api/cron/community-agent/daily-post",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/community-agent/process-mentions",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/community-agent/weekly-events",
+      "schedule": "0 14 * * 0"
+    },
+    {
+      "path": "/api/cron/community-agent/check-subscriptions",
+      "schedule": "0 0 * * *"
     }
   ]
 }
