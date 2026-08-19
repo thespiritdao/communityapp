@@ -140,6 +140,15 @@ export const rateLimiters = {
    * Why: Prevents bounty spam
    */
   bountyCreate: makeLimiter('bounty:create', 10, 3600),
+
+  /**
+   * Public ledger export (Congregant Phase 6 field instrument)
+   *
+   * Limit: 60 requests per minute per IP
+   * Why: Generous enough for a researcher paginating the full ledger,
+   * tight enough to stop scraping abuse of the DB.
+   */
+  explorerExport: makeLimiter('explorer:export', 60, 60),
 };
 
 /**

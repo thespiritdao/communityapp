@@ -185,6 +185,12 @@ The distinction matters. Today the agent cannot vote because it **has no real wa
 
 ### Phase 6 — Ledger as Field Instrument
 
+> **Status 2026-08-19: deployed.**
+> - **Trace lineage**: `/explorer/trace/{proposalId}` + API — deliberation (thread + opener's actor_type) → proposal (creator, tier, IPFS manifest) → votes (all human, /constitution cross-link) → resource movement (renewal/treasury tx). Answers the paper's "did the agent's prompt open the thread that became the proposal that won the vote?"
+> - **Public export**: `/api/explorer/export` (v1) — keyset-paginated, rate-limited (60/min/IP), actor_type/pod/period filters; `?anchors=1` returns anchor records. Attribution unified since Phase 3 (DB-stamped actor_type).
+> - **Merkle anchoring**: `LedgerAnchor` contract live at `0xDbcE1A7cA8a3C887D4E112FE36994D545e032b21` (owner: pod-admin EOA); weekly cron (Mondays 4:00 UTC) roots each period's events (documented leaf formula in `src/lib/ledgerMerkle.ts`); `ledger_anchors` table (migration `20260819000001`, applied).
+> - **First anchor committed**: 396 events (entire platform history 2025-08-14 → 2026-08-19) at root `0x8c8605af…8480`, tx `0xbdf7cecb…ca092`. **End-to-end verified**: an independent reimplementation using only the public export API reproduces the onchain root exactly.
+
 **Goal:** Upgrade the Pulse feed from app feature to the paper's research-grade instrument: "parasocieties should be built to be studiable by their own members."
 
 **Steps:**

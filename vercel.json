@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/community-agent/sync-forum-corpus",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/anchor-ledger",
+      "schedule": "0 4 * * 1"
     }
   ]
 }

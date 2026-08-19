@@ -68,6 +68,10 @@ export const CONTRACT_ADDRESSES = {
   // Agent Registry (on-chain registry of AI agent addresses — Congregant architecture)
   AGENT_REGISTRY: process.env.NEXT_PUBLIC_AGENT_REGISTRY as `0x${string}`,
 
+  // Ledger Anchor (Merkle roots of the activity ledger — Congregant architecture)
+  LEDGER_ANCHOR: (process.env.NEXT_PUBLIC_LEDGER_ANCHOR ||
+    '0xDbcE1A7cA8a3C887D4E112FE36994D545e032b21') as `0x${string}`,
+
   // Safe Wallet (for multi-sig operations)
   SAFE_WALLET: process.env.NEXT_PUBLIC_SAFE_WALLET as `0x${string}`,
 
