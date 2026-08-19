@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/close-proposals",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/community-agent/renewal-referendums",
+      "schedule": "0 6 * * *"
     }
   ]
 }

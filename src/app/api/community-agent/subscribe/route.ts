@@ -76,6 +76,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Only pod leaders can subscribe' }, { status: 403 });
     }
 
+    // Existence referendum gate (Congregant Phase 4): once a pod's renewals
+    // are decided by vote, payment requires an approved, unconsumed
+    // agent_renewal proposal. The first-ever subscription (no referendum has
+    // run yet) is exempt — the referendum cycle begins with it.
+    const { data: moduleRow } = await supabaseAdmin
+      .from('pod_modules')
+      .select('community_agent_config')
+      .eq('pod_id', podId)
+      .single();
+    const agentCfg = moduleRow?.community_agent_config || {};
+    const referendumHasRun = (agentCfg.renewal_history ?? []).length > 0
+      || agentCfg.active_renewal_proposal_id
+      || agentCfg.renewal_rejected_proposal_id;
+
+    if (agentCfg.renewal_by_vote !== false && referendumHasRun) {
+      if (agentCfg.renewal_rejected_proposal_id && !agentCfg.approved_renewal_proposal_id) {
+        return NextResponse.json(
+          {
+            error:
+              'The community voted not to renew this agent. A new renewal proposal must pass before payment can be made.',
+          },
+          { status: 403 },
+        );
+      }
+      if (!agentCfg.approved_renewal_proposal_id) {
+        return NextResponse.json(
+          {
+            error:
+              'Renewal requires an approved existence referendum. Wait for the current referendum to close, or create a renewal proposal in governance.',
+          },
+          { status: 403 },
+        );
+      }
+    }
+
     // Verify the transaction exists and is confirmed on-chain
     const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
     if (!receipt || receipt.status !== 'success') {
@@ -115,7 +150,8 @@ export async function POST(req: NextRequest) {
 
     expiresAt.setDate(expiresAt.getDate() + SUBSCRIPTION_DURATION_DAYS);
 
-    // Upsert subscription record
+    // Upsert subscription record (metadata-free columns stay compatible;
+    // the authorizing referendum, if any, is recorded alongside)
     const { error: upsertError } = await supabaseAdmin
       .from('community_agent_subscriptions')
       .upsert(
@@ -135,6 +171,24 @@ export async function POST(req: NextRequest) {
     if (upsertError) {
       console.error('[Subscribe] Upsert failed:', upsertError);
       return NextResponse.json({ error: 'Failed to record subscription' }, { status: 500 });
+    }
+
+    // Consume the referendum authorization — one approved vote funds exactly
+    // one renewal period.
+    if (agentCfg.approved_renewal_proposal_id) {
+      await supabaseAdmin
+        .from('pod_modules')
+        .update({
+          community_agent_config: {
+            ...agentCfg,
+            approved_renewal_proposal_id: null,
+            renewal_rejected_proposal_id: null,
+            last_renewal_proposal_id: agentCfg.approved_renewal_proposal_id,
+            last_renewal_tx: txHash,
+          },
+          updated_at: now.toISOString(),
+        })
+        .eq('pod_id', podId);
     }
 
     console.log(`[Subscribe] Pod ${pod.name} subscribed until ${expiresAt.toISOString()}`);

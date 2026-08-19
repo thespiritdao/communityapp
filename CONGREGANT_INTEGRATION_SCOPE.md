@@ -135,6 +135,14 @@ The distinction matters. Today the agent cannot vote because it **has no real wa
 
 ### Phase 4 — The Existence Referendum
 
+> **Status 2026-08-18: deployed.**
+> - Daily cron `/api/cron/community-agent/renewal-referendums` (registered in vercel.json, 6:00 UTC): opens `agent_renewal` pod proposals (POD_TREASURY_BINDING tier, system-attributed `system:existence-referendum`, activity summary included) — treasury pods 7 days before expiry, grant-funded pods on a 90-day cadence. Voted/tallied/closed by the existing generic governance machinery.
+> - Enforcement in same cron: approved+grant → next cycle scheduled; approved+treasury → payment authorized (leader-executed — server never moves treasury funds); rejected → `paused_by_referendum` silences the agent (grant) or blocks re-subscription (treasury). No farewell post by design.
+> - `/api/community-agent/subscribe` gated: once a referendum has run, payment requires an approved unconsumed `agent_renewal` proposal (one vote = one renewal period). First-ever subscription exempt.
+> - `EXEMPT_POD_IDS` → `GRANT_FUNDED_POD_IDS`: grant funding waives payment only — TN + Exec agents face the referendum like everyone else. **TN's first existence referendum: proposal opens 2026-08-25, vote closes 2026-09-01** (seeded on first live cron run).
+> - UI: Existence Referendum block in PodCommunityAgentManager (open-vote link, execute-renewal CTA, outcome history).
+> - Live-tested on dev server: first run seeds schedule, second run no-ops (idempotent).
+
 **Goal:** Turn subscription renewal from a leader payment into the recurring, public, human-only vote the paper names.
 
 **Steps:**

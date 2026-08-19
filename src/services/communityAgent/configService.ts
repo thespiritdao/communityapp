@@ -54,11 +54,21 @@ export async function getAgentConfig(podId: string): Promise<AgentConfig | null>
 
 /**
  * Check if the community agent is fully active for a pod
- * (module enabled + subscription valid OR exempt)
+ * (module enabled + subscription valid OR grant-funded + not paused by an
+ * existence referendum).
  */
 export async function isAgentActive(podId: string): Promise<boolean> {
   const config = await getAgentConfig(podId);
   if (!config) return false;
+
+  // Existence referendum outcome overrides everything: a community that voted
+  // not to renew its agent has silenced it, grant-funded or not.
+  const { data: modules } = await supabaseAdmin
+    .from('pod_modules')
+    .select('community_agent_config')
+    .eq('pod_id', podId)
+    .single();
+  if (modules?.community_agent_config?.paused_by_referendum) return false;
 
   const sub = await getSubscriptionStatus(podId);
   return sub.isActive || sub.isExempt;

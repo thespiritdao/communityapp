@@ -17,8 +17,22 @@ export function deriveAgentWallet(podId: string): string {
 export const TN_POD_ID = 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0';
 export const EXEC_POD_ID = 'e35c9e25-c5f6-4b97-a1d3-4c2e5b6d8f90';
 
-/** Pods exempt from subscription payment */
-export const EXEMPT_POD_IDS = [TN_POD_ID, EXEC_POD_ID];
+/**
+ * Pods whose agent operation is funded by DAO grant rather than a treasury
+ * subscription payment. Grant funding waives the PAYMENT only — every agent,
+ * grant-funded or not, is subject to the recurring existence referendum
+ * (Congregant Phase 4). No pod's agent runs by default forever.
+ */
+export const GRANT_FUNDED_POD_IDS = [TN_POD_ID, EXEC_POD_ID];
+
+/** @deprecated Use GRANT_FUNDED_POD_IDS — "exempt" meant payment only, never referendum */
+export const EXEMPT_POD_IDS = GRANT_FUNDED_POD_IDS;
+
+/** Days before renewal/expiry that the existence referendum opens */
+export const REFERENDUM_LEAD_DAYS = 7;
+
+/** Default referendum cadence for grant-funded agents (days) */
+export const GRANT_REFERENDUM_CADENCE_DAYS = 90;
 
 export type AgentTaskType =
   | 'daily_discussion'

@@ -449,6 +449,76 @@ export default function PodCommunityAgentManager({
         </div>
       )}
 
+      {/* Existence Referendum — the agent's continuation is decided by the
+          community it serves (Congregant Phase 4) */}
+      {(() => {
+        const rc = config as any;
+        const lastRenewal = (rc.renewal_history ?? [])[((rc.renewal_history ?? []).length - 1)];
+        const hasReferendumState =
+          rc.active_renewal_proposal_id || rc.approved_renewal_proposal_id ||
+          rc.renewal_rejected_proposal_id || rc.paused_by_referendum ||
+          rc.next_referendum_at || lastRenewal;
+        if (!hasReferendumState) return null;
+        return (
+          <div
+            className="p-3 rounded-lg space-y-2 text-sm"
+            style={{
+              backgroundColor: rc.paused_by_referendum ? '#F5E6E6' : '#F5EDD7',
+              border: `1px solid ${rc.paused_by_referendum ? '#D9A9A9' : '#D1C4A9'}`,
+            }}
+          >
+            <div className="text-xs font-medium text-[#3C3C3C]">Existence Referendum</div>
+
+            {rc.paused_by_referendum && (
+              <p className="text-xs" style={{ color: '#8B3A3A' }}>
+                The community voted not to renew this agent. It is no longer operating.
+                A new renewal proposal in Governance can reinstate it.
+              </p>
+            )}
+
+            {rc.active_renewal_proposal_id && (
+              <p className="text-xs text-[#7C6F5B]">
+                A referendum on this agent&apos;s continuation is open now —{' '}
+                <a href="/governance" className="underline">cast your vote in Governance</a>.
+              </p>
+            )}
+
+            {rc.approved_renewal_proposal_id && !rc.active_renewal_proposal_id && (
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-[#3F7A5A]">
+                  The community voted to renew. {isManager ? 'Execute the payment to extend operation.' : 'Awaiting payment by pod leadership.'}
+                </p>
+                {isManager && (
+                  <Button size="sm" onClick={() => setShowConfirm(true)} disabled={subscribing} style={{ backgroundColor: '#2F5D50' }}>
+                    {subscribing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Execute renewal'}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {rc.renewal_rejected_proposal_id && !rc.approved_renewal_proposal_id && !rc.paused_by_referendum && (
+              <p className="text-xs" style={{ color: '#8B3A3A' }}>
+                The last referendum did not pass — the agent stops when the current period ends.
+              </p>
+            )}
+
+            {rc.next_referendum_at && !rc.active_renewal_proposal_id && (
+              <p className="text-xs text-[#7C6F5B]">
+                Next referendum: {new Date(rc.next_referendum_at).toLocaleDateString()}
+              </p>
+            )}
+
+            {lastRenewal && (
+              <p className="text-xs text-[#7C6F5B]">
+                Last referendum: {lastRenewal.result === 'approved' ? 'renewed' : 'declined'}
+                {lastRenewal.tally ? ` (${lastRenewal.tally.for} for, ${lastRenewal.tally.against} against)` : ''}
+                {lastRenewal.closed_at ? ` on ${new Date(lastRenewal.closed_at).toLocaleDateString()}` : ''}
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Burn Confirmation Dialog */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
