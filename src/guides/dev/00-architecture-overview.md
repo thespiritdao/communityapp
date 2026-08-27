@@ -21,7 +21,9 @@ communities**: a 501(c)(3) nonprofit DAO. It is a token-gated platform for a
 **Pods**, a participation-and-utility token economy, social and content features
 (forum, chat, video, events, knowledge base), and an AI agent layer, on top of
 the Base L2 blockchain. It runs **open enrollment**: new communities and members
-can join, it is not invitation-only.
+can join, it is not invitation-only. For a product-level summary (license,
+ownership, status, dependencies, and interoperability), see the
+[App Specification](spec.md).
 
 It is a **Progressive Web App** built with Next.js (App Router). The blockchain
 is a system of record for identity, roles, tokens, and votes. **Supabase
