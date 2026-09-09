@@ -12,6 +12,7 @@ import {
 } from '@/services/inviteCodeService';
 import { useIsInitialized, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 import { EmbeddedWalletAuth } from '@/wallet/components/EmbeddedWalletAuth';
+import { cdpFetch } from '@/features/identity/lib/cdpSession';
 
 export default function Page() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -515,13 +516,11 @@ function PageContent() {
       console.log('   Invite code:', inviteCode);
       console.log('   Wallet:', walletAddress);
 
-      const validateResponse = await fetch('/api/invite/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inviteCode,
-          walletAddress,
-        }),
+      // cdpFetch attaches the Coinbase access token so the server can prove
+      // this wallet belongs to the signed-in user.
+      const validateResponse = await cdpFetch('/api/invite/validate', {
+        inviteCode,
+        walletAddress,
       });
 
       console.log('📋 Validation API response status:', validateResponse.status);
@@ -553,16 +552,12 @@ function PageContent() {
     console.log('📝 Completing onboarding for wallet:', walletAddress);
 
     try {
-      const completeResponse = await fetch('/api/onboarding/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          isFirstUser: isFirstUserAccount,
-          transactionHashes: {
-            hat: txHash,
-          },
-        }),
+      const completeResponse = await cdpFetch('/api/onboarding/complete', {
+        walletAddress,
+        isFirstUser: isFirstUserAccount,
+        transactionHashes: {
+          hat: txHash,
+        },
       });
 
       const completeResult = await completeResponse.json();
@@ -700,11 +695,7 @@ function PageContent() {
     console.log(`📧 Post-auth email backfill: ${resolvedEmail} (was missing at auth time)`);
     emailBackfillInFlightRef.current = true;
 
-    fetch('/api/auth/backfill-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ walletAddress, email: resolvedEmail }),
-    })
+    cdpFetch('/api/auth/backfill-email', { walletAddress, email: resolvedEmail })
       .then((res) => res.json())
       .then((data) => {
         console.log('✅ Email backfill result:', data);

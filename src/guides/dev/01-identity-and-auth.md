@@ -58,8 +58,10 @@ Service access to these tables goes through
 
 ## Identity resolution
 
-Sign-in calls **`POST /api/auth/onchainkit`**. The server resolves the incoming
-wallet through a **4-step lookup**:
+Sign-in calls **`POST /api/auth/onchainkit`** with the CDP end-user access token
+attached. The server first proves the caller controls the claimed wallet
+(`cdp.endUser.validateAccessToken`; the address must be one of the user's EVM
+accounts), then resolves the incoming wallet through a **4-step lookup**:
 
 1. **Known wallet**: the address already exists in `user_wallets`. Issue the
    Supabase JWT and proceed.

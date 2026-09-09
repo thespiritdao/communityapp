@@ -7,6 +7,7 @@ import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import styled from 'styled-components';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
@@ -302,10 +303,8 @@ export default function OrderDetailPage() {
       console.log('🔐 Ensuring Supabase authentication for order access...');
       try {
         // Get or create auth tokens via API
-        const authResponse = await fetch('/api/auth/onchainkit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: (signingAddress ?? address)?.toLowerCase() }),
+        const authResponse = await requestSupabaseSession({
+          address: (signingAddress ?? address)?.toLowerCase() ?? '',
         });
 
         if (!authResponse.ok) {

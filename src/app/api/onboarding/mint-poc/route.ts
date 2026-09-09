@@ -13,6 +13,7 @@ import { Coinbase, toSmartWallet, sendUserOperation, waitForUserOperation } from
 import { createClient } from '@supabase/supabase-js';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { isRegisteredAgent } from '@/lib/agentGuard';
+import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -120,10 +121,20 @@ const POC_ABI = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress } = await request.json();
+    const body = await request.json();
+    const { walletAddress } = body ?? {};
 
     if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return NextResponse.json({ success: false, error: 'Invalid wallet address' }, { status: 400 });
+    }
+
+    // Self-serve membership (including "join without an invite code") stays
+    // open — there is no Supabase session yet at this point in onboarding —
+    // but the caller must prove their Coinbase session owns the wallet the
+    // token is minted to. Abuse is further bounded by the balance dedupe below.
+    const verified = await verifyCdpWalletOwnership(request, walletAddress, body);
+    if (!verified.ok) {
+      return NextResponse.json({ success: false, error: verified.error }, { status: verified.status });
     }
 
     // Constitutional exclusion: registered AI agents cannot hold standing-to-be-present
@@ -133,11 +144,6 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
-
-    // NOTE: Intentionally NOT auth-gated. Self-serve membership (including
-    // "join without an invite code") is a supported signup path, so PoC minting
-    // is open by design. Abuse is bounded by the balance dedupe below (a wallet
-    // that already holds a PoC token is skipped).
 
     const contractAddress = process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY as `0x${string}` | undefined;
     const privateKey = process.env.POD_ADMIN_PRIVATE_KEY;

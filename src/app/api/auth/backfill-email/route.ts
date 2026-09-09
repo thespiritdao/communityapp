@@ -4,18 +4,26 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { walletAddress, email } = await req.json();
+    const body = await req.json();
+    const { walletAddress, email } = body ?? {};
 
     if (!walletAddress || !email) {
       return NextResponse.json(
         { error: 'walletAddress and email are required' },
         { status: 400 },
       );
+    }
+
+    // The caller must prove control of the wallet whose profile they are editing.
+    const verified = await verifyCdpWalletOwnership(req, walletAddress, body);
+    if (!verified.ok) {
+      return NextResponse.json({ error: verified.error }, { status: verified.status });
     }
 
     const normalizedAddress = walletAddress.toLowerCase();

@@ -15,6 +15,7 @@
 import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
+import { cdpFetch } from '@/features/identity/lib/cdpSession';
 import { useHybridPodPermission } from '@/hooks/useHybridPodPermission';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { usePodPermission } from '@/hooks/usePodPermission';
@@ -199,13 +200,9 @@ export default function WhoamiPage() {
     setEnterCodeError(null);
     setEnterCodeSuccess(null);
     try {
-      const res = await fetch('/api/auth/link-confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: enterCode.trim().toUpperCase(),
-          newWallet: cdpWallet,
-        }),
+      const res = await cdpFetch('/api/auth/link-confirm', {
+        code: enterCode.trim().toUpperCase(),
+        newWallet: cdpWallet,
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);

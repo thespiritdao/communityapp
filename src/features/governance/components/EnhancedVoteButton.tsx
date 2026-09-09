@@ -15,6 +15,7 @@ import type { EnhancedProposal } from '../hooks/useEnhancedProposals';
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
 import { supabase } from '@/utils/supabaseClient';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import { encodeFunctionData } from 'viem';
 
 interface EnhancedVoteButtonProps {
@@ -142,13 +143,8 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
 
       if (!sessionData?.session) {
         // Authenticate with Supabase using wallet address
-        const authResponse = await fetch('/api/auth/onchainkit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            address: signingAddress ?? address,
-            isEmbedded: true,
-          }),
+        const authResponse = await requestSupabaseSession({
+          address: (signingAddress ?? address) as string,
         });
 
         if (!authResponse.ok) {

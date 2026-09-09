@@ -16,8 +16,10 @@ import {
   isFirstUser,
 } from '@/services/inviteCodeService';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
 
-export const runtime = 'edge';
+// nodejs (not edge): @coinbase/cdp-sdk needs the Node crypto runtime.
+export const runtime = 'nodejs';
 
 // ============================================================
 // Request Types
@@ -60,6 +62,19 @@ export async function POST(request: NextRequest) {
           error: 'Invalid wallet address format',
         },
         { status: 400 },
+      );
+    }
+
+    // The caller must prove control of the wallet the referral is recorded for.
+    const verified = await verifyCdpWalletOwnership(
+      request,
+      walletAddress,
+      body as unknown as Record<string, unknown>,
+    );
+    if (!verified.ok) {
+      return NextResponse.json(
+        { success: false, error: verified.error },
+        { status: verified.status },
       );
     }
 

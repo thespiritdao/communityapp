@@ -19,6 +19,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
 import {
   findUserByWallet,
   insertCanonicalWallet,
@@ -32,14 +33,15 @@ export const maxDuration = 60;
 /**
  * Embedded Wallet Authentication Endpoint
  *
- * For embedded wallets, we trust the wallet address from Coinbase's SDK.
- * No signature verification needed since Coinbase manages the private keys.
+ * Coinbase authenticates the person (email / Google / Apple) and holds the
+ * keys, but that trust lives between Coinbase and the browser. This route
+ * must independently prove that the browser calling it actually holds that
+ * Coinbase session for the claimed address — otherwise anyone who knows a
+ * member's wallet address could obtain their Supabase session.
  *
- * This is secure because:
- * - User authenticated with Coinbase (email/social login + OTP)
- * - Wallet created and managed by Coinbase infrastructure
- * - Private keys never exposed to user or our app
- * - CDP SDK handles all security
+ * Proof = the CDP end-user access token (sent in `x-cdp-access-token`),
+ * validated server-side via `cdp.endUser.validateAccessToken`, whose EVM
+ * accounts must include `address`. See src/lib/cdpAuth.ts. FAILS CLOSED.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -60,6 +62,17 @@ export async function POST(req: NextRequest) {
     const normalizedAddress = address.toLowerCase();
     console.log(`🔍 Auth API: Processing auth for ${normalizedAddress}`);
     console.log(`   Type: ${isEmbedded ? 'Embedded Wallet' : 'External Wallet'}`);
+
+    // ── Proof of wallet control ──────────────────────────────────
+    // The caller must present a valid Coinbase end-user access token whose
+    // accounts include `address`. Without this, the address in the body is
+    // just a claim.
+    const verified = await verifyCdpWalletOwnership(req, address, body);
+    if (!verified.ok) {
+      console.warn(`❌ Auth API: wallet ownership check failed (${verified.status}): ${verified.error}`);
+      return NextResponse.json({ error: verified.error }, { status: verified.status });
+    }
+    console.log(`✅ Auth API: CDP user ${verified.userId} proved control of ${normalizedAddress}`);
 
     // ── Resolution step 1: known CDP wallet → known user ──────────
     // The fastest, most reliable path: if the incoming CDP wallet is

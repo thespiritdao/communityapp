@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { cdpFetch } from '@/features/identity/lib/cdpSession';
 import { supabase } from '@/utils/supabaseClient';
 import { useAuthContext } from './AuthProvider';
 
@@ -55,13 +56,11 @@ export function LinkNewDeviceModal() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/link-confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: code.trim().toUpperCase(),
-          newWallet: cdpWallet,
-        }),
+      // cdpFetch attaches the Coinbase access token so the server can prove
+      // the wallet being linked belongs to this device's signed-in user.
+      const res = await cdpFetch('/api/auth/link-confirm', {
+        code: code.trim().toUpperCase(),
+        newWallet: cdpWallet,
       });
       const json = await res.json();
       if (!res.ok) {

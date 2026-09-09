@@ -1,6 +1,7 @@
 // src/features/marketplace/services/productService.ts
 import { useAuthContext } from '@/features/identity';
 import { supabase } from '@/lib/supabase';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import {
   getUserIdentity,
   getAccessibleProducts,
@@ -89,15 +90,7 @@ export const createProduct = async (
 
       // If no session, try to authenticate using wallet address
       try {
-        const authResponse = await fetch('/api/auth/onchainkit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            address: ownerAddress,
-          }),
-        });
+        const authResponse = await requestSupabaseSession({ address: ownerAddress });
 
         if (!authResponse.ok) {
           throw new Error(`Authentication failed: ${authResponse.status}`);

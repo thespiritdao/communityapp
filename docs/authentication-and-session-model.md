@@ -35,7 +35,11 @@ completes the Coinbase flow.
 Client (CDP SDK)              Server (/api/auth/onchainkit)
 ─────────────────────────────────────────────────────────────
 1. User logs in with        2. Receive { address, email,
-   Coinbase (OTP / OAuth)      isEmbedded }
+   Coinbase (OTP / OAuth);     isEmbedded } + header
+   client attaches the CDP     x-cdp-access-token
+   access token              2b. cdp.endUser.validateAccessToken
+   (getAccessToken())           → user's EVM accounts must
+                                include `address`, else 401/403
                              3. Look up user_profiles by email
                                 first, fall back to wallet
                              4a. Existing → reuse user_id
@@ -51,15 +55,41 @@ Client (CDP SDK)              Server (/api/auth/onchainkit)
    every Supabase + API call
 ```
 
-### Why we don't verify a signature for embedded wallets
+### How we prove the caller controls the embedded wallet (added 2026-09-08)
 
-For embedded wallets, the private key is held by Coinbase — the user
-never sees it. Coinbase verified the user's identity (email OTP or
-OAuth) before issuing the wallet. We trust that verification.
+Coinbase verifies the person (email OTP / OAuth) and holds the key, but
+that trust lives between Coinbase and the browser. It says nothing about
+whether the browser calling *our* endpoint holds that Coinbase session.
+Until 2026-09-08 the route accepted any `address` in the body and issued
+a JWT for it, so anyone who knew a member's wallet could obtain their
+session.
 
-For external wallets, signature verification IS required and happens
-in `walletVerificationService.ts` via a separate connector-specific
-flow. The `isEmbedded` flag from CDP tells us which path to expect.
+Now every route that acts on a claimed wallet requires the **CDP end-user
+access token**:
+
+- Client: `getAccessToken()` from `@coinbase/cdp-core`, attached as the
+  `x-cdp-access-token` header by the helpers in
+  `src/features/identity/lib/cdpSession.ts` (`requestSupabaseSession`,
+  `cdpFetch`). Never call these routes with a bare `fetch`.
+- Server: `verifyCdpWalletOwnership(req, address, body)` in
+  `src/lib/cdpAuth.ts` calls `cdp.endUser.validateAccessToken` and checks
+  the claimed address is one of the user's EVM accounts (EOA or smart
+  account). Fails closed: missing token → 401, wrong wallet → 403, missing
+  server credentials → 503.
+- Routes guarded: `auth/onchainkit`, `auth/link-confirm` (the wallet being
+  linked), `auth/backfill-email`, `onboarding/complete`,
+  `onboarding/mint-poc`, `invite/validate`.
+- Server credentials: `CDP_API_KEY_ID` + `CDP_API_KEY_SECRET` (a CDP
+  Secret API Key). Falls back to `CDP_API_KEY` +
+  `EXECUTIVE_MINTING_PRIVATE_KEY`.
+
+CDP access tokens expire after 15 minutes, so this is a check at the
+moment of login/onboarding, not a replacement for the Supabase session.
+
+For external wallets, signature verification happens in
+`walletVerificationService.ts` and `auth/link-external/*` (nonce +
+`verifyMessage`). The `isEmbedded` flag from CDP tells us which path to
+expect.
 
 ### Why email lookup before wallet lookup
 

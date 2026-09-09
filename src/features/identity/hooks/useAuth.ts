@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 
 /**
  * Set when /api/auth/onchainkit responds with requiresLinking: true,
@@ -179,17 +180,11 @@ export function useAuth(): UseAuthReturn {
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
-            // For embedded wallets, we trust the wallet address from Coinbase
-            // No signature verification needed - Coinbase manages the private keys
-            response = await fetch('/api/auth/onchainkit', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                address: walletAddress,
-                email: email, // Pass email if available from CDP
-                // Embedded wallet - no signature needed
-                isEmbedded: true,
-              }),
+            // The server proves we control this wallet by validating the CDP
+            // access token that requestSupabaseSession attaches.
+            response = await requestSupabaseSession({
+              address: walletAddress,
+              email, // Pass email if available from CDP
             });
 
             if (!response.ok) {

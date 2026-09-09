@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import type { ICartProduct } from '../../models';
 
@@ -15,11 +16,7 @@ export async function ensureSupabaseAuth(address: string): Promise<void> {
   console.log('🔐 Ensuring Supabase authentication for order creation...');
 
   try {
-    const authResponse = await fetch('/api/auth/onchainkit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: address.toLowerCase() }),
-    });
+    const authResponse = await requestSupabaseSession({ address: address.toLowerCase() });
 
     if (!authResponse.ok) {
       throw new Error(`Auth API failed: ${authResponse.status}`);

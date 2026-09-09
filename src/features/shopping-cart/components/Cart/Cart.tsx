@@ -42,6 +42,7 @@ import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from '@/config/wagmi.client';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import {
   Dialog,
   DialogContent,
@@ -1147,12 +1148,8 @@ export default function Cart({
       // Ensure user is authenticated with Supabase before creating orders
       console.log('ðŸ” Ensuring Supabase authentication for order creation...');
       try {
-        const authResponse = await fetch('/api/auth/onchainkit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            address: address!.toLowerCase(),
-          }),
+        const authResponse = await requestSupabaseSession({
+          address: address!.toLowerCase(),
         });
 
         if (!authResponse.ok) {

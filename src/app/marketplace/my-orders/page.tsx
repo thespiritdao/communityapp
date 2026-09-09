@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import styled from 'styled-components';
 import { Card, CardContent } from '@/components/ui/card';
 import { Package, Clock, Truck, CheckCircle } from 'lucide-react';
@@ -288,10 +289,8 @@ export default function MyOrdersPage() {
       // /api/auth/onchainkit issues the session for the device's CDP wallet.
       console.log('🔐 Ensuring Supabase authentication for my orders...');
       try {
-        const authResponse = await fetch('/api/auth/onchainkit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: (signingAddress ?? address).toLowerCase() }),
+        const authResponse = await requestSupabaseSession({
+          address: (signingAddress ?? address).toLowerCase(),
         });
 
         if (!authResponse.ok) {

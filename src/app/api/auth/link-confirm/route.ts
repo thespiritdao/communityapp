@@ -3,15 +3,17 @@
 // wallet to the user account that issued the code, then returns a
 // Supabase JWT so the new device can authenticate going forward.
 //
-// This endpoint does NOT require existing authentication — the code
-// itself is the credential. The endpoint validates that the code was
-// issued by an already-authenticated user.
+// This endpoint does NOT require an existing Supabase session — the code
+// is the credential for "which account". The caller must additionally
+// prove control of `newWallet` with a CDP access token (src/lib/cdpAuth.ts)
+// so a leaked code cannot be used to attach an attacker's wallet.
 //
 // See docs/spec-platform-identity-multi-wallet.md.
 
 import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
 import {
   consumeLinkCode,
   getCanonicalWallet,
@@ -42,6 +44,12 @@ export async function POST(req: NextRequest) {
       { error: 'invalid wallet address' },
       { status: 400 },
     );
+  }
+
+  // Prove the caller's Coinbase session owns the wallet being linked.
+  const verified = await verifyCdpWalletOwnership(req, newWallet, body as Record<string, unknown>);
+  if (!verified.ok) {
+    return NextResponse.json({ error: verified.error }, { status: verified.status });
   }
 
   const result = await consumeLinkCode({ code, newWallet });

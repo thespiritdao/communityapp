@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, parseAbi } from 'viem';
+import { cdpFetch } from '@/features/identity/lib/cdpSession';
 
 interface OnboardingHatMintingProps {
   walletAddress: `0x${string}`;
@@ -108,11 +109,9 @@ export function OnboardingHatMinting({
         setTxStatus('minting-poc');
         setCurrentStep('Minting membership token...');
 
-        const pocResponse = await fetch('/api/onboarding/mint-poc', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress }),
-        });
+        // cdpFetch attaches the Coinbase access token: the server mints only
+        // to a wallet the signed-in user actually controls.
+        const pocResponse = await cdpFetch('/api/onboarding/mint-poc', { walletAddress });
         const pocResult = await pocResponse.json();
         if (!pocResult.success) throw new Error(pocResult.error || 'Membership token minting failed');
 
