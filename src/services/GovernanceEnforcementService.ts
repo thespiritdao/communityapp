@@ -62,7 +62,7 @@ export class GovernanceEnforcementService {
       const { data: member, error: dbError } = await supabase
         .from('pod_members')
         .select('revoked_by_governance, membership_type')
-        .eq('wallet_address', walletAddress.toLowerCase())
+        .eq('wallet', walletAddress.toLowerCase())
         .eq('pod_id', EXEC_POD_ID)
         .maybeSingle();
 
@@ -115,7 +115,7 @@ export class GovernanceEnforcementService {
         await supabase
           .from('pod_members')
           .update({ revoked_by_governance: true })
-          .eq('wallet_address', walletAddress.toLowerCase())
+          .eq('wallet', walletAddress.toLowerCase())
           .eq('pod_id', EXEC_POD_ID);
       }
 
@@ -157,7 +157,7 @@ export class GovernanceEnforcementService {
       const { data: member } = await supabase
         .from('pod_members')
         .select('revoked_by_governance, membership_type')
-        .eq('wallet_address', walletAddress.toLowerCase())
+        .eq('wallet', walletAddress.toLowerCase())
         .eq('pod_id', podId)
         .maybeSingle();
 
@@ -301,7 +301,7 @@ export class GovernanceEnforcementService {
           revoked_by_governance: true,
           revoked_at: new Date().toISOString(),
         })
-        .eq('wallet_address', proposal.target_wallet)
+        .eq('wallet', String(proposal.target_wallet).toLowerCase())
         .eq('pod_id', EXEC_POD_ID);
 
       // Update proposal status

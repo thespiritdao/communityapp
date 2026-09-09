@@ -291,9 +291,9 @@ async function getUserHatIdInPod(
       .from('pod_members')
       .select('hat_id, role')
       .eq('pod_id', podId)
-      .eq('wallet_address', userAddress)
-      .eq('status', 'active')
-      .single();
+      .eq('wallet', userAddress.toLowerCase())
+      .eq('is_active', true)
+      .maybeSingle();
 
     if (error || !member) {
       console.log('[PodFeatureAccess] User not found in pod_members table');

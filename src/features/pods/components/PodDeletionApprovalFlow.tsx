@@ -784,8 +784,9 @@ export const PodDeletionApprovalFlow: React.FC<
         try {
           const { data: members, error: membersError } = await supabase
             .from('pod_members')
-            .select('wallet_address')
-            .eq('pod_id', pod.id);
+            .select('wallet')
+            .eq('pod_id', pod.id)
+            .eq('is_active', true);
 
           if (!membersError && members && members.length > 0) {
             console.log(
@@ -793,7 +794,7 @@ export const PodDeletionApprovalFlow: React.FC<
             );
             for (const member of members) {
               await unifiedNotificationService.createNotification({
-                recipient_address: member.wallet_address,
+                recipient_address: member.wallet,
                 sender_address: 'system',
                 notification_type: 'proposal_executed',
                 title: `Pod Deleted: ${pod.name}`,

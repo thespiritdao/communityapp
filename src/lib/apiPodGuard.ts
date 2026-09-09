@@ -33,6 +33,29 @@ export function requireWallet(req: Request): string | NextResponse {
 }
 
 /**
+ * Authenticate the JWT AND require that a body/query-supplied address is the
+ * caller's own wallet. Use on routes that used to trust a client-supplied
+ * "who am I" field (submitterAddress, voter, sender_wallet, ...). Returns the
+ * caller's lowercased wallet, or a 401/403 Response.
+ *
+ * Usage:
+ *   const walletOrDenied = requireWalletMatch(req, body.submitterAddress);
+ *   if (walletOrDenied instanceof Response) return walletOrDenied;
+ */
+export function requireWalletMatch(
+  req: Request,
+  claimedAddress: string | null | undefined,
+): string | NextResponse {
+  const walletOrDenied = requireWallet(req);
+  if (walletOrDenied instanceof Response) return walletOrDenied;
+  const wallet = walletOrDenied;
+  if (!claimedAddress || claimedAddress.toLowerCase() !== wallet) {
+    return deny('The supplied address does not match your session wallet', 403);
+  }
+  return wallet;
+}
+
+/**
  * Authenticate AND enforce a granular pod permission (management hat OR a
  * role hat granting it). Returns the caller's wallet on success, or a
  * 401/403 Response.

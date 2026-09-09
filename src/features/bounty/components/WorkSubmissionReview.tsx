@@ -19,6 +19,7 @@ import { ExternalLink, CheckCircle, XCircle, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import type { FrontendWorkSubmission, FrontendBounty } from '../types/bounty';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 interface WorkSubmissionReviewProps {
   podId: string;
@@ -112,7 +113,7 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
 
       const response = await fetch('/api/bounty/work/review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           submissionId: selectedSubmission.id,
           reviewerAddress: address,

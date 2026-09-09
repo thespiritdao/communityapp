@@ -41,7 +41,7 @@ async function verifyExecutiveRole(walletAddress: string): Promise<boolean> {
     const { data: member } = await supabase
       .from('pod_members')
       .select('revoked_by_governance')
-      .eq('wallet_address', walletAddress.toLowerCase())
+      .eq('wallet', walletAddress.toLowerCase())
       .eq('pod_id', '00000001-0000-0000-0000-000000000001') // Executive Pod ID
       .single();
 

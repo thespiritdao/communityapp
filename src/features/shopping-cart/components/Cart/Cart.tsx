@@ -43,6 +43,7 @@ import { wagmiConfig } from '@/config/wagmi.client';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
 import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
+import { getAuthHeaders } from '@/lib/authHeaders';
 import {
   Dialog,
   DialogContent,
@@ -1232,7 +1233,7 @@ export default function Cart({
 
         const notificationResponse = await fetch('/api/notifications', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
           body: JSON.stringify({
             type: 'purchase_completed',
             buyerAddress: address,

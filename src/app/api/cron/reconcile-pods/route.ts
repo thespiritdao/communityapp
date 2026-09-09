@@ -69,11 +69,13 @@ const POD_MANAGER_ABI = [
 ] as const;
 
 async function notifyExecutivePod(title: string, message: string, contextUrl: string) {
+  // pod_members keys members by `wallet`; revoked_by_governance defaults to false.
   const { data: members, error } = await supabaseAdmin
     .from('pod_members')
-    .select('wallet_address')
+    .select('wallet')
     .eq('pod_id', EXEC_POD_ID)
-    .is('revoked_by_governance', null);
+    .eq('is_active', true)
+    .or('revoked_by_governance.is.null,revoked_by_governance.eq.false');
 
   if (error || !members?.length) {
     console.warn('reconcile-pods: no EP members found for notification');
@@ -81,7 +83,7 @@ async function notifyExecutivePod(title: string, message: string, contextUrl: st
   }
 
   await Promise.allSettled(
-    members.map(({ wallet_address }: { wallet_address: string }) =>
+    members.map(({ wallet: wallet_address }: { wallet: string }) =>
       fetch(`${BASE_URL}/api/notifications/send`, {
         method: 'POST',
         headers: {

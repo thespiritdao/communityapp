@@ -8,6 +8,7 @@ import { useBalance } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { Gift, X, DollarSign, Loader2 } from 'lucide-react';
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 interface GiftModalProps {
   recipientAddress: string;
@@ -176,7 +177,7 @@ export function GiftModal({
       // Fire-and-forget: notify recipient by email
       fetch('/api/gifts/notify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           recipient_wallet: recipientAddress,
           sender_wallet: address,

@@ -195,8 +195,9 @@ export function usePodAccessControl(
             .from('pod_members')
             .select('role')
             .eq('pod_id', options.requirePodMember)
-            .eq('wallet_address', address.toLowerCase())
-            .single();
+            .eq('wallet', address.toLowerCase())
+            .eq('is_active', true)
+            .maybeSingle();
 
           isPodMember = !!membership;
 

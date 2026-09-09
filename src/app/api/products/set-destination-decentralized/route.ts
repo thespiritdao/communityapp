@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http, createWalletClient } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
+
+export const runtime = 'nodejs';
 
 const PURCHASE_ROUTER_DECENTRALIZED_ABI = [
   {
@@ -50,7 +52,6 @@ export async function POST(request: NextRequest) {
       destinationAddress,
       podId,
       userAddress,
-      userPrivateKey, // User provides their own key for the transaction
     } = await request.json();
 
     if (!productId || !fundDestinationType || !userAddress) {
@@ -62,6 +63,11 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // userAddress must be the authenticated caller. This route never accepts
+    // a private key: it only prepares calldata for the caller's own wallet.
+    const walletOrDenied = requireWalletMatch(request, userAddress);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     console.log(
       '🎯 DECENTRALIZED: User setting their own product destination:',
@@ -146,62 +152,22 @@ export async function POST(request: NextRequest) {
       console.log('✅ User has pod management permission for:', podId);
     }
 
-    // If user provided their private key, use it for the transaction
-    if (userPrivateKey) {
-      console.log('🔑 Using user-provided private key for transaction');
-
-      const account = privateKeyToAccount(userPrivateKey as `0x${string}`);
-      const walletClient = createWalletClient({
-        account,
-        chain: base,
-        transport: http(),
-      });
-
-      const txHash = await walletClient.writeContract({
-        address: purchaseRouterAddress,
-        abi: PURCHASE_ROUTER_DECENTRALIZED_ABI,
-        functionName: 'setProductDestination',
-        args: [
-          productId,
-          destinationTypeEnum,
-          (destinationAddress ||
-            '0x0000000000000000000000000000000000000000') as `0x${string}`,
-          podId || '',
-        ],
-      });
-
-      console.log('🎯 Product destination transaction:', txHash);
-
-      // Wait for transaction to be mined
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-      });
-      console.log('✅ Product destination set successfully:', receipt);
-
-      return NextResponse.json({
-        success: true,
-        transactionHash: txHash,
-        blockNumber: receipt.blockNumber.toString(),
-        message: 'Product destination set via decentralized contract',
-      });
-    } else {
-      // Return transaction data for frontend to execute
-      return NextResponse.json({
-        success: true,
-        requiresUserTransaction: true,
-        contractAddress: purchaseRouterAddress,
-        functionName: 'setProductDestination',
-        args: [
-          productId,
-          destinationTypeEnum,
-          (destinationAddress ||
-            '0x0000000000000000000000000000000000000000') as `0x${string}`,
-          podId || '',
-        ],
-        abi: PURCHASE_ROUTER_DECENTRALIZED_ABI,
-        message: 'Transaction data ready for user execution',
-      });
-    }
+    // Return transaction data for the caller's own wallet to execute.
+    return NextResponse.json({
+      success: true,
+      requiresUserTransaction: true,
+      contractAddress: purchaseRouterAddress,
+      functionName: 'setProductDestination',
+      args: [
+        productId,
+        destinationTypeEnum,
+        (destinationAddress ||
+          '0x0000000000000000000000000000000000000000') as `0x${string}`,
+        podId || '',
+      ],
+      abi: PURCHASE_ROUTER_DECENTRALIZED_ABI,
+      message: 'Transaction data ready for user execution',
+    });
   } catch (error) {
     console.error('❌ Error setting product destination:', error);
     return NextResponse.json(

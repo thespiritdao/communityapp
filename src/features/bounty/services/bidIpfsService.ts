@@ -5,6 +5,8 @@
  * The IPFS hash is then stored on-chain via the placeBid() function.
  */
 
+import { getAuthHeaders } from '@/lib/authHeaders';
+
 export interface BidMetadata {
   experience: string;
   planOfAction: string;
@@ -41,7 +43,7 @@ export async function uploadBidToIPFS(bidData: BidMetadata): Promise<string> {
 
     const response = await fetch('/api/bounty/ipfs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
       body: JSON.stringify({
         action: 'upload',
         metadata: bidData,
@@ -84,7 +86,7 @@ export async function fetchBidFromIPFS(ipfsHash: string): Promise<BidMetadata> {
 
     const response = await fetch('/api/bounty/ipfs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
       body: JSON.stringify({
         action: 'fetch',
         ipfsHash,

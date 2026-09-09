@@ -28,11 +28,14 @@ async function notifyExecutivePod(notification: {
 }) {
   try {
     // Fetch active EP members
+    // pod_members keys members by `wallet` (not wallet_address) and
+    // revoked_by_governance defaults to false (not null).
     const { data: members, error: membersError } = await supabase
       .from('pod_members')
-      .select('wallet_address')
+      .select('wallet')
       .eq('pod_id', EXEC_POD_ID)
-      .is('revoked_by_governance', null);
+      .eq('is_active', true)
+      .or('revoked_by_governance.is.null,revoked_by_governance.eq.false');
 
     if (membersError || !members?.length) {
       console.warn('⚠️ No EP members found for notification:', membersError?.message);
@@ -66,7 +69,7 @@ async function notifyExecutivePod(notification: {
 
     // Send in-app notification to each EP member
     await Promise.allSettled(
-      members.map(({ wallet_address }) =>
+      members.map(({ wallet: wallet_address }) =>
         fetch(`${BASE_URL}/api/notifications/send`, {
           method: 'POST',
           headers: {

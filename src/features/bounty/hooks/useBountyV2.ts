@@ -10,6 +10,7 @@ import type { BountyFormV2Data } from '../components/BountyFormV2';
 // Import the contract ABI
 import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import PodBountyServiceABI from '@/abis/PodBountyService.json';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 const BountyManagerV5ABI = BountyManagerV5Artifact.abi;
 
@@ -96,7 +97,7 @@ export const useBountyV2 = (): UseBountyV2Return => {
   const uploadToIPFS = async (metadata: any): Promise<string> => {
     const response = await fetch('/api/bounty/ipfs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
       body: JSON.stringify({ action: 'upload', metadata }),
     });
 

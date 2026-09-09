@@ -4,9 +4,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +22,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // The voter must be the authenticated caller — this route writes the
+    // DB mirror of an on-chain vote with the service role, so it cannot
+    // take `voter` on faith.
+    const walletOrDenied = requireWalletMatch(request, voter);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 

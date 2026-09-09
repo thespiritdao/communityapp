@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { getAuthHeaders } from '@/lib/authHeaders';
 import {
   Card,
   CardContent,
@@ -136,7 +137,7 @@ export const DisputeManagementDashboard: React.FC<
 
       const response = await fetch('/api/bounty/dispute/evidence', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           disputeId,
           submitterAddress: address,
@@ -185,7 +186,7 @@ export const DisputeManagementDashboard: React.FC<
 
       const response = await fetch('/api/bounty/dispute/resolve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           disputeId,
           proposerAddress: address,

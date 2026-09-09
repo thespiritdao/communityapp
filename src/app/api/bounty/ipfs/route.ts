@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireWallet } from '@/lib/apiPodGuard';
 
 const PINATA_API_URL = 'https://api.pinata.cloud';
 const PINATA_JWT = process.env.PINATA_JWT;
 
+export const runtime = 'nodejs';
+
 /**
  * API Route for IPFS operations
- * Handles bounty metadata upload/fetch via Pinata
+ * Handles bounty metadata upload/fetch via Pinata.
+ *
+ * POST (upload / pin / unpin / fetch) requires a signed-in member — this
+ * spends the shared Pinata quota. GET ?hash= stays public (read-only proxy).
  */
 
 export async function POST(request: NextRequest) {
   try {
+    const walletOrDenied = requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+
     console.log('🔍 IPFS Route Debug:');
     console.log('  PINATA_JWT exists:', !!PINATA_JWT);
     console.log(

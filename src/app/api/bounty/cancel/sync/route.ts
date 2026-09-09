@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+export const runtime = 'nodejs';
 
 /**
  * POST /api/bounty/cancel/sync
@@ -50,6 +53,10 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // cancelerAddress must be the authenticated caller.
+    const walletOrDenied = requireWalletMatch(request, cancelerAddress);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     // Get bounty details
     const { data: bounty, error: bountyError } = await supabase

@@ -108,8 +108,8 @@ export class UnifiedVerificationService {
           )
         `)
         .eq('pod_id', podId)
-        .eq('wallet_address', userAddress)
-        .eq('status', 'active');
+        .eq('wallet', userAddress.toLowerCase())
+        .eq('is_active', true);
 
       if (error) throw error;
 
@@ -360,8 +360,8 @@ export class UnifiedVerificationService {
         .from('pod_members')
         .select('role_id, pod_role_permissions!inner(role_name)')
         .eq('pod_id', podId)
-        .eq('wallet_address', userAddress)
-        .eq('status', 'active');
+        .eq('wallet', userAddress.toLowerCase())
+        .eq('is_active', true);
 
       if (error) throw error;
 

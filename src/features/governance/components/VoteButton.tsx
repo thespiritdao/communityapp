@@ -12,6 +12,7 @@ import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 
 const DAOGovernorABI = DAOGovernorABIJson as Abi;
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 interface VoteButtonProps {
   proposalId: string; // BigInt as string to preserve precision for large proposal IDs
@@ -169,7 +170,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
         console.log('🔄 Syncing vote to database...');
         const syncResponse = await fetch('/api/governance/sync-vote', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
           body: JSON.stringify({
             proposalId: proposalId,
             voter: smartAccount,

@@ -6,11 +6,14 @@ import {
   getCurrentEpoch,
   queueBountyCompletion,
 } from '@/features/self/services/selfEarnTriggers';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +42,11 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // reviewerAddress must be the authenticated caller; an approval here
+    // queues $SELF earnings and updates escrow state via the service role.
+    const walletOrDenied = requireWalletMatch(request, reviewerAddress);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     if (!['approved', 'rejected', 'revision_requested'].includes(status)) {
       return NextResponse.json(

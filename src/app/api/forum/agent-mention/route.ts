@@ -8,16 +8,40 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { checkForAgentMention, getPodIdForThread } from '@/services/communityAgent/mentionService';
 import { isAgentActive } from '@/services/communityAgent/configService';
+import { requireWallet } from '@/lib/apiPodGuard';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = await req.json();
-    const { threadId, postId, content } = body;
+    // Only the post's author may ask the agent to reply to it, and the
+    // content we scan is the stored post, not whatever the client sends.
+    const walletOrDenied = requireWallet(req);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const wallet = walletOrDenied;
 
-    if (!threadId || !postId || !content) {
+    const body = await req.json();
+    const { threadId, postId } = body;
+
+    if (!threadId || !postId) {
       return NextResponse.json({ queued: false, reason: 'missing_params' });
+    }
+
+    const { data: post } = await supabaseAdmin
+      .from('forum_posts')
+      .select('id, thread_id, author_address, content, is_deleted')
+      .eq('id', postId)
+      .maybeSingle();
+
+    if (!post || post.thread_id !== threadId || post.is_deleted) {
+      return NextResponse.json({ queued: false, reason: 'post_not_found' });
+    }
+    if (String(post.author_address).toLowerCase() !== wallet) {
+      return NextResponse.json({ queued: false, reason: 'not_author' }, { status: 403 });
+    }
+    const content: string = post.content ?? '';
+    if (!content) {
+      return NextResponse.json({ queued: false, reason: 'empty_post' });
     }
 
     // Resolve which pod this thread belongs to

@@ -22,6 +22,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Scale } from 'lucide-react';
 import type { FrontendBounty, FrontendBid } from '../types/bounty';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 interface DisputeFilingDialogProps {
   bounty: FrontendBounty;
@@ -123,7 +124,7 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
 
       const response = await fetch('/api/bounty/dispute/file', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           bountyId: bounty.id,
           bidId: bid?.id || null,

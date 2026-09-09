@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { getAuthHeaders } from '@/lib/authHeaders';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,7 +183,7 @@ export const WorkSubmissionForm: React.FC<WorkSubmissionFormProps> = ({
 
       const response = await fetch('/api/bounty/work/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           bountyId: bounty.id,
           bidId: bid.id,

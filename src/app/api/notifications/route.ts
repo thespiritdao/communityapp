@@ -6,6 +6,9 @@ import {
   formatUserDisplayName,
 } from '@/features/marketplace/utils/marketplaceNotificationHelpers';
 import { sendServerNotification } from '@/lib/serverNotifications';
+import { requireWallet } from '@/lib/apiPodGuard';
+
+export const runtime = 'nodejs';
 
 /**
  * Marketplace Notifications API Route
@@ -28,6 +31,19 @@ import { sendServerNotification } from '@/lib/serverNotifications';
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticated members only; each case below also requires that the
+    // "sender" of the notification is the caller (no spoofed senders).
+    const walletOrDenied = requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const callerWallet = walletOrDenied;
+    const mustBeCaller = (addr: unknown) =>
+      typeof addr === 'string' && addr.toLowerCase() === callerWallet
+        ? null
+        : NextResponse.json(
+            { error: 'The sender address must match your session wallet' },
+            { status: 403 },
+          );
+
     const body = await request.json();
     const { type, ...notificationData } = body;
 
@@ -56,6 +72,8 @@ export async function POST(request: NextRequest) {
             { status: 400 },
           );
         }
+        const buyerDenied = mustBeCaller(buyerAddress);
+        if (buyerDenied) return buyerDenied;
 
         console.log('🛒 Creating purchase notification for:', {
           buyerAddress,
@@ -176,6 +194,8 @@ export async function POST(request: NextRequest) {
             { status: 400 },
           );
         }
+        const mentionDenied = mustBeCaller(senderAddress);
+        if (mentionDenied) return mentionDenied;
 
         console.log('👤 Creating user mention notification');
 
@@ -227,6 +247,8 @@ export async function POST(request: NextRequest) {
             { status: 400 },
           );
         }
+        const managerDenied = mustBeCaller(managerAddress);
+        if (managerDenied) return managerDenied;
 
         console.log('📦 Creating order status update notification');
 

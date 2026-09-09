@@ -27,6 +27,7 @@ import { useBountyV2 } from '../hooks/useBountyV2';
 import { useBountyPermissions } from '@/features/bounty/hooks/useBountyPermissions'; // NEW: Database permission check
 import { useBountyManagementAccess } from '../hooks/useBountyManagementAccess';
 import { RegisterPodButton } from '@/features/pods/components/RegisterPodButton';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 export interface BountyFormV2Data {
   title: string;
@@ -213,7 +214,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       console.log('📤 Uploading metadata to IPFS...');
       const response = await fetch('/api/bounty/ipfs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({ action: 'upload', metadata }),
       });
 

@@ -3,12 +3,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { syncHistoricalVotes } from '@/features/governance/services/voteEventSync';
+import { requireCron } from '@/lib/cronAuth';
 
+// Operator-only backfill: requires the CRON_SECRET bearer (fails closed).
 export async function POST(request: NextRequest) {
   try {
-    // Optional: Add authentication check here
-    // const session = await getServerSession();
-    // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const denied = requireCron(request);
+    if (denied) return denied;
 
     const body = await request.json();
     const { fromBlock, toBlock } = body;
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
 // GET route to sync recent votes (last 50k blocks)
 export async function GET(request: NextRequest) {
   try {
+    const denied = requireCron(request);
+    if (denied) return denied;
+
     const { createPublicClient, http } = await import('viem');
     const { base } = await import('viem/chains');
 

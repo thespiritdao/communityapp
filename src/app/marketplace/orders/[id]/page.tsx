@@ -8,6 +8,7 @@ import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
 import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
+import { getAuthHeaders } from '@/lib/authHeaders';
 import styled from 'styled-components';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
@@ -451,6 +452,7 @@ export default function OrderDetailPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(await getAuthHeaders()),
           },
           body: JSON.stringify({
             type: 'order_status_updated',

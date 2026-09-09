@@ -15,11 +15,13 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
  */
 async function notifyExecutivePod(donations: any[]) {
   try {
+    // pod_members keys members by `wallet`; revoked_by_governance defaults to false.
     const { data: members, error } = await supabase
       .from('pod_members')
-      .select('wallet_address')
+      .select('wallet')
       .eq('pod_id', EXEC_POD_ID)
-      .is('revoked_by_governance', null);
+      .eq('is_active', true)
+      .or('revoked_by_governance.is.null,revoked_by_governance.eq.false');
 
     if (error || !members?.length) {
       console.warn('⚠️ No EP members found for settlement notification');
@@ -33,7 +35,7 @@ async function notifyExecutivePod(donations: any[]) {
       .join(', ');
 
     await Promise.allSettled(
-      members.map(({ wallet_address }: { wallet_address: string }) =>
+      members.map(({ wallet: wallet_address }: { wallet: string }) =>
         fetch(`${BASE_URL}/api/notifications/send`, {
           method: 'POST',
           headers: {

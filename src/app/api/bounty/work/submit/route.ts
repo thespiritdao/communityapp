@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +39,10 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // submitterAddress must be the authenticated caller (service-role write).
+    const walletOrDenied = requireWalletMatch(request, submitterAddress);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     if (!submissionTitle?.trim() || !submissionDescription?.trim()) {
       return NextResponse.json(

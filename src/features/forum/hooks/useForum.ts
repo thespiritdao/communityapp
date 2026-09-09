@@ -10,6 +10,7 @@ import { useAuthContext } from '@/features/identity/components/AuthProvider';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { extractMentionedWalletsEnhanced } from '@/utils/mentions';
 import { getClientHatId } from '@/lib/hatRegistryClient';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 // Debug mode flag - set to false in production
 const DEBUG = true;
@@ -721,11 +722,16 @@ export function useForum() {
 
       // --- Agent mention detection (fire-and-forget) ---
       if (data?.id) {
-        fetch('/api/forum/agent-mention', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ threadId, postId: data.id, content }),
-        }).catch(() => {});
+        getAuthHeaders()
+          .then((auth) =>
+            fetch('/api/forum/agent-mention', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...auth },
+              // The server re-reads the stored post; only ids are needed.
+              body: JSON.stringify({ threadId, postId: data.id }),
+            }),
+          )
+          .catch(() => {});
       }
 
       console.log('Post successfully created:', data);

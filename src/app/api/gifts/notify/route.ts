@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendTokensReceivedEmail } from '@/lib/donationEmail';
 import { createClient } from '@supabase/supabase-js';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+export const runtime = 'nodejs';
+
 /**
  * POST /api/gifts/notify
  * Called client-side after a peer gift transaction succeeds.
  * Sends an email to the recipient and optionally looks up the sender's name.
+ * The sender must be the authenticated caller (this sends email on their behalf).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +23,9 @@ export async function POST(request: NextRequest) {
     if (!recipient_wallet || !sender_wallet || !amount || !token) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    const walletOrDenied = requireWalletMatch(request, sender_wallet);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     // Look up sender name for the email
     const { data: senderProfile } = await supabase

@@ -20,6 +20,7 @@ import { AlertTriangle, XCircle, ArrowLeft } from 'lucide-react';
 import type { FrontendBounty } from '../types/bounty';
 import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 
@@ -59,7 +60,7 @@ export const BountyCancellationDialog: React.FC<
 
       const response = await fetch('/api/bounty/cancel/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({
           bountyId: bounty.id,
           onchainId: bounty.onchain_id,

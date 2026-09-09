@@ -2,6 +2,7 @@
 import { useAuthContext } from '@/features/identity';
 import { supabase } from '@/lib/supabase';
 import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
+import { getAuthHeaders } from '@/lib/authHeaders';
 import {
   getUserIdentity,
   getAccessibleProducts,
@@ -263,6 +264,7 @@ export const createProduct = async (
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                ...(await getAuthHeaders()),
               },
               body: JSON.stringify({
                 productId: data.id.toString(),
