@@ -52,6 +52,8 @@ SpiritDAO is open enrollment: download the app, connect with a community, or org
 
 **Contacting members:** Members reach each other through in-app Direct Messages. To contact someone, open their profile and use the Message button. Your email address stays private (it is used for your own login and notifications, not shown to other members or used for member-to-member contact).
 
+**Location (optional):** Further down the Identity page, **Location** lets you choose to appear on your pods' shared maps. It is off unless you turn it on, stored approximately (about 1 km) by default, visible only to people who share a pod with you, and removable any time. See [Journal and Places](19-journal-and-places.md).
+
 **Why this matters:**
 - Other members can find you
 - Builds trust in community

@@ -85,6 +85,9 @@ admin EOA.
 | `/gifts` | Token gifting: **primarily $SYSTEM** (see note below) |
 | `/notifications` | In-app notifications + `/send` web-push |
 | `/conference` | LiveKit tokens, room lifecycle, host-action |
+| `/pods/[id]/places` | Places add-on: `GET` (active members) pins + links + opted-in member locations; `POST`/`PATCH` and `/[placeId]` `PUT`/`DELETE`, `/[placeId]/image` (pod leader, `placesManage` grantee, or Exec) |
+| `/account/location` | The caller's own opt-in location (`GET`/`PUT`/`DELETE`); session wallet only |
+| `/geocode` | Address search proxy (Nominatim); session required |
 | `/hat-registry` | **Public** hat-ID lookup (cached) |
 | `/invite` | Invite-code validation |
 | `/onboarding` | Mint Proof of Curiosity + Advocate credential |

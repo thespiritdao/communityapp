@@ -116,8 +116,9 @@ grep for sibling routes when wiring a new event type.
 `chat_enabled`, `forum_enabled`, `treasury_enabled`, `governance_enabled`,
 `events_enabled`, `bounties_enabled`, `marketplace_enabled`,
 `knowledge_base_enabled`, `sub_pods_enabled`, `surveys_enabled`,
-`passwords_enabled`, `community_agent_enabled`), plus a `community_agent_config`
-JSON column.
+`passwords_enabled`, `community_agent_enabled`, `custom_appearance_enabled`,
+`external_wallet_linking_enabled`, `places_enabled`), plus per-module
+`*_config` JSON columns (for example `community_agent_config`, `places_config`).
 
 The admin UI (`src/features/pods/components/PodModulesManager.tsx`) presents these
 in **three tiers**, but the tiers are a **client-side grouping only**
@@ -127,8 +128,28 @@ field**:
 | Tier | Modules |
 |------|---------|
 | **Core** | Chat, Forum, Treasury, Governance, Events, Bounties, Marketplace, Knowledge Base, Sub-Pods |
-| **Add-ons** | Surveys, Password Vault |
+| **Add-ons** | Surveys, Password Vault, Custom Appearance (Pod Faces), External Wallet Linking (Exec-granted), Places |
 | **Paid** | Community AI Agent |
+
+Enabling an add-on also **syncs a matching role permission** onto the pod's
+roles in the same request (`surveys_enabled` → `surveyManage` on leader roles,
+`places_enabled` → `placesManage` on leader roles, and so on). Leaders can then
+delegate that permission to any role.
+
+### Places (members-only shared map)
+
+| Table | Purpose | Read policy |
+|-------|---------|-------------|
+| `pod_places` | One row per pin: title, kind (asset / partner / site / resource / vision / other), status (existing / proposed / retired), optional `lat`/`lng`, `precision` (exact / approximate), cover image path, metadata | Active pod members only (`is_pod_member_current_user(pod_id)`); no client write policies, writes go through `/api/pods/[id]/places` |
+| `pod_place_links` | Connections from a pin to a thread, event, member, pod, or another place, with an optional label | Same scope as the parent pin |
+| `member_locations` | A member's opt-in location (Identity → Location). Approximate rows are coarsened to two decimals server-side | Own row, plus members who share an active pod while `share_with_pods` is true |
+
+Cover images live in the **private** storage bucket `place-images` and are
+served only as short-lived signed URLs from the places route, so members-only
+holds for images too.
+
+`forum_categories.display_mode` (`discussion` | `journal`) controls the
+category's presentation only; permissions and storage are unchanged.
 
 The **Paid** tier (Community AI Agent) is **not** hard-gated by the module toggle.
 It is enforced by a **separate subscription flow**: **25 $SYSTEM / month**, paid

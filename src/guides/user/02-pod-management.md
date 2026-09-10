@@ -148,7 +148,7 @@ Control who can join:
 
 Pod modules come in three kinds:
 - **Core** (included): Chat, Forum, Treasury, Governance, Events, Bounties, Marketplace, Knowledge Base, Sub-Pods
-- **Add-ons**: Surveys, Password Vault, Custom Appearance (see the [Pod Faces guide](18-pod-faces.md))
+- **Add-ons**: Surveys, Password Vault, Custom Appearance (see the [Pod Faces guide](18-pod-faces.md)), Places — a members-only shared map of your community's land, partners, sites and ideas (see the [Journal and Places guide](19-journal-and-places.md))
 - **Paid**: Community AI Agent (a monthly $SYSTEM subscription)
 
 **Forum Module:**

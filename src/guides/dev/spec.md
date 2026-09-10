@@ -52,6 +52,7 @@ Every community on the platform gets:
 - [Bounties](04-bounties-system.md) and a [Marketplace](07-marketplace-shopping.md)
 - [Forum](06-forum-discussions.md), [chat and direct messages](14-chat-and-messages.md), [video conferencing](08-video-chat-conferencing.md), and [events with a calendar](05-events-calendar.md)
 - Knowledge base, [surveys](11-surveys.md), and a [password vault](12-password-vault.md)
+- [Journal and Places](19-journal-and-places.md): journal-mode forum categories and a members-only shared map of a community's assets, partners, sites and proposed ideas, with member opt-in locations
 - [Community Agent (Kairos)](13-community-agent.md), a per-pod AI agent, and [Sensemaker](07-ai-agents.md), a public Q&A assistant
 
 ---

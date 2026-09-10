@@ -459,6 +459,24 @@ Please share your thoughts below!
 
 ---
 
+## Journal Mode
+
+Any pod forum category can be presented as a **journal** instead of a
+discussion board. Permissions and storage do not change; the category reads
+like a dated log:
+
+- Entries newest first, grouped by month
+- The first photo attached to an entry becomes its cover
+- Author, date, and a short excerpt on each entry
+- The formatting editor is on by default when you reply
+
+Pod leaders switch a category from **Manage → Forum** (choose *Journal* when
+creating it, or use the switch button on an existing category). Combine it
+with a Pod Face that renames the **Forum** button to **Journal** and your
+community sees that word everywhere, including the forum page heading.
+
+Full walkthrough: [Journal and Places](19-journal-and-places.md).
+
 ## Best Practices
 
 ### For Thread Creators
