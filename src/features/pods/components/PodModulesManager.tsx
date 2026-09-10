@@ -73,6 +73,8 @@ interface PodModules {
   passwords_enabled: boolean;
   external_wallet_linking_enabled: boolean;
   custom_appearance_enabled: boolean;
+  places_enabled: boolean;
+  places_config?: any;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -283,6 +285,7 @@ export default function PodModulesManager({
     passwords_enabled: false,
     external_wallet_linking_enabled: false,
     custom_appearance_enabled: false,
+    places_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -325,6 +328,8 @@ export default function PodModulesManager({
           external_wallet_linking_enabled:
             data.external_wallet_linking_enabled ?? false,
           custom_appearance_enabled: data.custom_appearance_enabled ?? false,
+          places_enabled: data.places_enabled ?? false,
+          places_config: data.places_config,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
