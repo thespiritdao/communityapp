@@ -9,6 +9,7 @@ import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTok
 import { TenureBand } from '@/features/identity/components/TenureBand';
 import { LinkedWalletsSection } from '@/features/identity/components/LinkedWalletsSection';
 import { AppearanceSection } from '@/features/identity/components/AppearanceSection';
+import { LocationSection } from '@/features/identity/components/LocationSection';
 import { InviteFriendsSection } from '@/features/identity/components/InviteFriendsSection';
 import { DeleteAccountSection } from '@/features/identity/components/DeleteAccountSection';
 import '@/features/identity/styles/identityStyles.css';
@@ -190,6 +191,9 @@ function IdentityPageContent() {
 
       {/* Pod Faces — wear a community's published look */}
       <AppearanceSection />
+
+      {/* Location — opt-in sharing with your pods (Places module) */}
+      <LocationSection />
 
       {/* Invite Friends — unified: personal link + pod-enroll link + email */}
       <InviteFriendsSection walletAddress={address} />

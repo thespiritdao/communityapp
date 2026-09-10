@@ -286,6 +286,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
         passwordsAccess: roles.some((r) => r.permissions?.passwordsAccess),
         passwordsManage: roles.some((r) => r.permissions?.passwordsManage),
         agentManage: roles.some((r) => r.permissions?.agentManage),
+        appearanceManage: roles.some((r) => r.permissions?.appearanceManage),
+        placesManage: roles.some((r) => r.permissions?.placesManage),
       };
 
       setUserRoles(roles);

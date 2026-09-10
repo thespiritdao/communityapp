@@ -185,7 +185,10 @@ const nextConfig = {
                 https://ipfs.io
                 https://api.stripe.com
                 https://*.livekit.cloud
-                wss://*.livekit.cloud;
+                wss://*.livekit.cloud
+                https://tiles.openfreemap.org;
+              worker-src 'self' blob:;
+              child-src 'self' blob:;
               img-src 'self' data: blob: https:
                 https://ipfs.io
                 https://gateway.pinata.cloud

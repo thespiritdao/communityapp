@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EnhancedToggle } from '@/components/ui/enhanced-toggle';
-import { Users, Plus, Settings, Trash2, MessageSquare } from 'lucide-react';
+import { Users, Plus, Settings, Trash2, MessageSquare, BookOpen } from 'lucide-react';
+
+type DisplayMode = 'discussion' | 'journal';
 
 interface PodForumManagerProps {
   podId: string;
@@ -29,6 +31,8 @@ interface ForumCategory {
   access_level: 'managers' | 'members' | 'both';
   required_token: string | null;
   created_at: string;
+  /** 'journal' renders dated entries; absent/null = 'discussion'. */
+  display_mode?: DisplayMode | null;
 }
 
 export default function PodForumManager({
@@ -48,6 +52,7 @@ export default function PodForumManager({
   const [accessLevel, setAccessLevel] = useState<
     'managers' | 'members' | 'both'
   >('both');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('discussion');
 
   // Load existing forum categories for this pod
   useEffect(() => {
@@ -121,25 +126,41 @@ export default function PodForumManager({
 
       console.log('Creating forum category with required_token:', requiredToken);
 
-      const { data, error } = await supabase
+      const baseRow = {
+        name: newCategoryName,
+        description: newCategoryDescription || null,
+        pod_id: podId,
+        required_token: requiredToken,
+        access_level: accessLevel,
+        is_active: true,
+        created_by_address: evmAddress.toLowerCase(),
+      };
+
+      // display_mode arrived with migration 20260910000003; if the column is
+      // not applied yet, retry without it and warn.
+      let { data, error } = await supabase
         .from('forum_categories')
-        .insert({
-          name: newCategoryName,
-          description: newCategoryDescription || null,
-          pod_id: podId,
-          required_token: requiredToken,
-          access_level: accessLevel,
-          is_active: true,
-          created_by_address: evmAddress.toLowerCase(),
-        })
+        .insert({ ...baseRow, display_mode: displayMode })
         .select()
         .single();
+
+      if (error && error.message?.includes('does not exist')) {
+        console.warn(
+          'forum_categories.display_mode is not available yet (apply migration 20260910000003); creating as a discussion category.',
+        );
+        ({ data, error } = await supabase
+          .from('forum_categories')
+          .insert(baseRow)
+          .select()
+          .single());
+      }
 
       if (error) throw error;
 
       setCategories([data, ...categories]);
       setNewCategoryName('');
       setNewCategoryDescription('');
+      setDisplayMode('discussion');
       setCreating(false);
     } catch (error) {
       console.error('Error creating forum category:', error);
@@ -169,6 +190,36 @@ export default function PodForumManager({
       );
     } catch (error) {
       console.error('Error toggling category status:', error);
+    }
+  };
+
+  const toggleDisplayMode = async (categoryId: string, current: DisplayMode) => {
+    if (!isManager) return;
+    const next: DisplayMode = current === 'journal' ? 'discussion' : 'journal';
+    try {
+      const { error } = await supabase
+        .from('forum_categories')
+        .update({ display_mode: next })
+        .eq('id', categoryId);
+
+      if (error) {
+        if (error.message?.includes('does not exist')) {
+          console.warn(
+            'forum_categories.display_mode is not available yet (apply migration 20260910000003).',
+          );
+          alert('Journal mode needs a database update that has not been applied yet.');
+          return;
+        }
+        throw error;
+      }
+
+      setCategories(
+        categories.map((cat) =>
+          cat.id === categoryId ? { ...cat, display_mode: next } : cat,
+        ),
+      );
+    } catch (error) {
+      console.error('Error changing category presentation:', error);
     }
   };
 
@@ -288,6 +339,24 @@ export default function PodForumManager({
               </select>
             </div>
 
+            <div>
+              <Label htmlFor="displayMode" className="text-sm font-medium">
+                Presentation
+              </Label>
+              <select
+                id="displayMode"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1 text-sm"
+                value={displayMode}
+                onChange={(e) => setDisplayMode(e.target.value as DisplayMode)}
+              >
+                <option value="discussion">Discussion — threads sorted by activity</option>
+                <option value="journal">Journal — dated entries, newest first, rich editor</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                A journal is a shared, dated record — good for envisioning, field notes, and updates. You can switch later.
+              </p>
+            </div>
+
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={createForumCategory}
@@ -338,6 +407,15 @@ export default function PodForumManager({
                     <span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full text-gray-600 whitespace-nowrap">
                       {getAccessLevelLabel(category.access_level)}
                     </span>
+                    {category.display_mode === 'journal' && (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap flex items-center gap-1"
+                        style={{ backgroundColor: '#F5EDD7', color: '#8B5E3C', border: '1px solid #D1C4A9' }}
+                      >
+                        <BookOpen className="h-3 w-3" />
+                        Journal
+                      </span>
+                    )}
                   </div>
 
                   {/* Description if exists */}
@@ -355,6 +433,25 @@ export default function PodForumManager({
 
                     {isManager && (
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          title={
+                            category.display_mode === 'journal'
+                              ? 'Switch to discussion presentation'
+                              : 'Switch to journal presentation'
+                          }
+                          onClick={() =>
+                            toggleDisplayMode(
+                              category.id,
+                              category.display_mode === 'journal' ? 'journal' : 'discussion',
+                            )
+                          }
+                        >
+                          <BookOpen className="h-3 w-3 mr-1" />
+                          {category.display_mode === 'journal' ? 'Discussion' : 'Journal'}
+                        </Button>
                         <EnhancedToggle
                           checked={category.is_active}
                           onCheckedChange={() =>

@@ -47,6 +47,7 @@ the SpiritDAO Community App. New contributors should start here.
 | [spec-platform-identity-multi-wallet](spec-platform-identity-multi-wallet.md) | **Active spec** — Platform multi-wallet identity layer (CDP per-device wallets) |
 | [spec-identity-comparison-audit](spec-identity-comparison-audit.md) | **Active spec** — Proactive audit of identity-comparison patterns across the codebase |
 | [spec-vault-multi-wallet-identity](spec-vault-multi-wallet-identity.md) | Superseded — folded into platform identity spec |
+| [spec-pod-places-and-journal](spec-pod-places-and-journal.md) | **Built 2026-09-10 (Phases 1–2)** — Journal mode for forum categories; Places add-on module (members-only map, `placesManage` permission, `pod_places` / `pod_place_links`, private `place-images` bucket); Identity location opt-in (`member_locations`). Migrations `20260910000001..3` apply by hand. Phase 3 (events ↔ places, proposed→proposal) open. |
 | [spec-treegens-planting-verification](spec-treegens-planting-verification.md) | Future (Phase 2): MGRO planting verification — photo → verify → mint |
 | [spec-inter-pod-agreements](spec-inter-pod-agreements.md) | Future: formal agreements between pods |
 | [spec-contributor-compensation](spec-contributor-compensation.md) | Future: role archetypes + $SELF payroll |

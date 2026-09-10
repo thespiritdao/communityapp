@@ -24,6 +24,7 @@ import { useForumUserProfiles } from '@/features/forum/hooks/useForumUserProfile
 import { getCurrentSession } from '@/features/identity';
 import { Loader2, Bookmark, MessageSquare, Clock } from 'lucide-react';
 import styles from '@/features/forum/styles/Forum.module.css';
+import { useSlotLabel } from '@/context/FaceContext';
 
 interface Category {
   id: string;
@@ -48,6 +49,7 @@ interface Thread {
 }
 
 export default function ForumPage() {
+  const forumLabel = useSlotLabel('forum', 'Forum');
   const router = useRouter();
   const { address, isConnected } = useCDPStatus();
   const { loadThreads } = useForum();
@@ -302,7 +304,12 @@ export default function ForumPage() {
         <div className="bottom-nav-spacing">
           {/* Top row: Forum title + "New Thread" button */}
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold" style={{ color: '#2F5D50' }}>SpiritDAO Forums</h1>
+            {/* Deliberate one-heading exception to "Faces leave page headings
+                standard": a pod that renamed the Forum button (e.g. "Journal")
+                sees that name here too, so the button and the page agree. */}
+            <h1 className="text-3xl font-bold" style={{ color: '#2F5D50' }}>
+              {forumLabel === 'Forum' ? 'SpiritDAO Forums' : forumLabel}
+            </h1>
             <Button
               className={styles.newThreadButton}
               onClick={() => {

@@ -13,7 +13,7 @@
 // run on the Node.js runtime (no `export const runtime = 'edge'`).
 
 import { NextResponse } from 'next/server';
-import { getWalletFromRequest, isPodLeader } from '@/lib/serverPodAuth';
+import { getWalletFromRequest, isPodLeader, isPodMember, isExecutiveLeader } from '@/lib/serverPodAuth';
 import { PodAccessControlService } from '@/features/pods/services/PodAccessControlService';
 import type { HatPermissions } from '@/services/hatPermissionsService';
 
@@ -83,6 +83,24 @@ export async function requirePodPermission(
     return deny(check.error || `Missing required permission: ${String(permission)}`, 403);
   }
   return wallet;
+}
+
+/**
+ * Authenticate AND require active membership of the pod (any role, leader,
+ * or Executive Leader). Use for members-only READ routes such as the pod
+ * map. Returns the caller's wallet, or a 401/403 Response.
+ */
+export async function requirePodMember(
+  req: Request,
+  podId: string,
+): Promise<string | NextResponse> {
+  const walletOrDenied = requireWallet(req);
+  if (walletOrDenied instanceof Response) return walletOrDenied;
+  const wallet = walletOrDenied;
+
+  if (await isPodMember(podId, wallet)) return wallet;
+  if (await isExecutiveLeader(wallet)) return wallet;
+  return deny('Members only: you are not an active member of this pod', 403);
 }
 
 /**

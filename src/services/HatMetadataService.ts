@@ -853,6 +853,7 @@ export class HatMetadataService {
           surveyRespond: false,
           passwordsAccess: false,
           passwordsManage: false,
+          placesManage: false,
         },
         metadata: null,
       };

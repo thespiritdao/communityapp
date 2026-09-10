@@ -1028,3 +1028,155 @@
 	}
 
 }
+
+/* ── Journal mode (docs/spec-pod-places-and-journal.md Phase 1) ─────────── */
+.journalList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.journalMonth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.journalMonthHeader {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8B5E3C;
+  margin: 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(209, 196, 169, 0.5);
+}
+
+.journalEntries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.journalEntry {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(209, 196, 169, 0.4);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.journalEntry:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.journalCover {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+  background: #F5EDD7;
+}
+
+.journalCover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.journalBody {
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.journalDate {
+  font-size: 0.72rem;
+  color: #8B5E3C;
+  letter-spacing: 0.02em;
+}
+
+.journalTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  color: #212121;
+  line-height: 1.3;
+}
+
+.journalExcerpt {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #555;
+}
+
+.journalMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #757575;
+}
+
+.journalAuthor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #555;
+  font-weight: 500;
+}
+
+.journalAuthor img,
+.journalAvatarFallback {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.journalAvatarFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e0e0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.journalReplies {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.journalBadge {
+  font-size: 0.65rem;
+  padding: 1px 8px;
+  border-radius: 12px;
+  background: #F5EDD7;
+  color: #8B5E3C;
+  border: 1px solid #D1C4A9;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .journalEntry {
+    grid-template-columns: 180px 1fr;
+  }
+  .journalCover {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 120px;
+  }
+}

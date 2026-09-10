@@ -7,8 +7,9 @@ import { ForumTextInput } from './ForumTextInput';
 import { RichTextEditor } from './RichTextEditor';
 import styles from '../styles/Forum.module.css';
 
-// Toggle between simple (with @mentions autocomplete) and rich (with formatting)
-const USE_RICH_EDITOR = false; // Set to true to enable formatting, false for @mention autocomplete
+// Editor choice is per category: journal categories (forum_categories.display_mode
+// = 'journal') default to the rich editor with formatting; discussion categories
+// keep the simple textarea with @mention autocomplete.
 
 type ReplyFormProps = {
   threadId: string;
@@ -51,6 +52,37 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
 
   // Add a new state variable at the top:
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [useRichEditor, setUseRichEditor] = useState(false);
+
+  // Journal categories get the rich editor by default. Tolerates a missing
+  // display_mode column (migration not yet applied → discussion behaviour).
+  useEffect(() => {
+    if (!categoryId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('forum_categories')
+          .select('display_mode')
+          .eq('id', categoryId)
+          .single();
+        if (cancelled) return;
+        if (error) {
+          if (!error.message?.includes('does not exist')) {
+            console.warn('Could not read category display_mode:', error.message);
+          }
+          setUseRichEditor(false);
+          return;
+        }
+        setUseRichEditor(data?.display_mode === 'journal');
+      } catch {
+        if (!cancelled) setUseRichEditor(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId]);
 
   // Ensure the form is ready only when the user has a valid wallet
   useEffect(() => {
@@ -121,7 +153,7 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
         </div>
       )}
       <form className={styles.replyForm} onSubmit={handleSubmit}>
-        {USE_RICH_EDITOR ? (
+        {useRichEditor ? (
           <RichTextEditor
             value={content}
             onChange={(value) => setContent(value)}

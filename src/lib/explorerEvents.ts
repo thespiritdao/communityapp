@@ -24,7 +24,8 @@ export type ExplorerCategory =
   | 'marketplace'
   | 'forum'
   | 'knowledge'
-  | 'surveys';
+  | 'surveys'
+  | 'places';
 
 export type ExplorerEventType =
   // pods
@@ -108,7 +109,11 @@ export type ExplorerEventType =
   | 'agent_enabled'
   // surveys
   | 'survey_published'
-  | 'survey_response_submitted';
+  | 'survey_response_submitted'
+  // places (pod shared map)
+  | 'place_added'
+  | 'place_updated'
+  | 'place_removed';
 
 export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
   pod_created: 'pods',
@@ -192,6 +197,10 @@ export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
 
   survey_published: 'surveys',
   survey_response_submitted: 'surveys',
+
+  place_added: 'places',
+  place_updated: 'places',
+  place_removed: 'places',
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────

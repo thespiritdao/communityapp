@@ -513,6 +513,9 @@ export class PodRolePermissionsService {
           // Custom Appearance is opt-in like the vault: leaders get
           // appearanceManage via the modules toggle sync when enabled.
           appearanceManage: false,
+          // Places is opt-in too: leaders get placesManage via the modules
+          // toggle sync when the add-on is enabled.
+          placesManage: false,
         },
         max_holders: 5,
         created_by: createdBy,
@@ -550,6 +553,8 @@ export class PodRolePermissionsService {
           // Members never get appearanceManage by default — wearing a
           // face is open to all members; designing it is delegated.
           appearanceManage: false,
+          // Members view the map; managing pins is delegated.
+          placesManage: false,
         },
         max_holders: 10000,
         created_by: createdBy,

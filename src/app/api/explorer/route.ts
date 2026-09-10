@@ -47,6 +47,8 @@ const TAB_TO_CATEGORY: Record<string, string> = {
   marketplace: 'marketplace',
   forum: 'forum',
   knowledge: 'knowledge',
+  surveys: 'surveys',
+  places: 'places',
 };
 
 export async function GET(req: NextRequest) {

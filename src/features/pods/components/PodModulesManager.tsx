@@ -33,6 +33,7 @@ import {
   KeyRound,
   Wallet,
   Palette,
+  MapPin,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
@@ -226,6 +227,17 @@ const ADDON_MODULES: ModuleInfo[] = [
     color: '#6A5F7A',
     bgColor: '#EDEAF0',
     configComponent: 'appearance',
+    createsTab: false,
+  },
+  {
+    key: 'places_enabled',
+    label: 'Places',
+    description:
+      "A shared, members-only map of your community's places — land and assets, partner organisations, gathering sites, resources and proposed ideas — each with details and links to journal entries, events and people. Managing pins is granted via the placesManage role permission; every member can view.",
+    icon: MapPin,
+    color: '#3F7A5A',
+    bgColor: '#D1E6DC',
+    configComponent: null,
     createsTab: false,
   },
 ];

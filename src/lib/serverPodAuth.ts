@@ -50,6 +50,27 @@ export async function isPodLeader(
   return !!member;
 }
 
+/**
+ * Is this wallet an active member (any role, including leader) of the pod?
+ * DB-backed: `pod_members.is_active` OR listed in `pods.pod_leads`.
+ */
+export async function isPodMember(
+  podId: string,
+  wallet: string,
+): Promise<boolean> {
+  const w = wallet.toLowerCase();
+  const { data: member } = await supabaseAdmin
+    .from('pod_members')
+    .select('id')
+    .eq('pod_id', podId)
+    .eq('wallet', w)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+  if (member) return true;
+  return isPodLeader(podId, w);
+}
+
 /** Does this wallet wear the Executive Pod Leader hat on-chain? */
 export async function isExecutiveLeader(wallet: string): Promise<boolean> {
   try {

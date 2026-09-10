@@ -10,6 +10,7 @@ import { FeaturedContent } from '@/features/forum/components/FeaturedContent';
 import { ForumSearch } from '@/features/forum/components/ForumSearch';
 import { ThreadSortControls, type SortOption } from '@/features/forum/components/ThreadSortControls';
 import ThreadCard from '@/features/forum/components/ThreadCard';
+import JournalEntryList from '@/features/forum/components/JournalEntryList';
 import { useForumUserProfiles } from '@/features/forum/hooks/useForumUserProfiles';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import styles from '@/features/forum/styles/Forum.module.css';
@@ -94,6 +95,11 @@ export default function CategoryPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>('newest');
+  // 'journal' renders dated entries (JournalEntryList); 'discussion' is the classic list.
+  const [displayMode, setDisplayMode] = useState<'discussion' | 'journal'>('discussion');
+  const isJournal = displayMode === 'journal';
+  // Journal mode always reads newest-first regardless of the sort control.
+  const effectiveSort: SortOption = isJournal ? 'newest' : sortOption;
 
   // Batch fetch user profiles for threads (prevents N+1 queries)
   const uniqueAuthors = useMemo(() => {
@@ -111,21 +117,40 @@ export default function CategoryPage() {
       setHasMore(true);
 
       try {
-        // 1) Fetch category name
-        const { data: catData, error: catError } = await supabase
+        // 1) Fetch category name + display mode (tolerate a missing
+        //    display_mode column — migration 20260910000003 may not be applied)
+        let catData: { name: string; display_mode?: string | null } | null = null;
+        const catRes = await supabase
           .from('forum_categories')
-          .select('name')
+          .select('name, display_mode')
           .eq('id', categoryId)
           .single();
-
-        if (catError) {
-          console.warn('Could not fetch category name:', catError.message);
-        } else if (catData) {
+        if (catRes.error && catRes.error.message?.includes('does not exist')) {
+          const fallback = await supabase
+            .from('forum_categories')
+            .select('name')
+            .eq('id', categoryId)
+            .single();
+          if (fallback.error) {
+            console.warn('Could not fetch category name:', fallback.error.message);
+          } else {
+            catData = fallback.data;
+          }
+        } else if (catRes.error) {
+          console.warn('Could not fetch category name:', catRes.error.message);
+        } else {
+          catData = catRes.data;
+        }
+        if (catData) {
           setCategoryName(catData.name);
+          const mode = catData.display_mode === 'journal' ? 'journal' : 'discussion';
+          setDisplayMode(mode);
         }
 
         // 2) Fetch first page of threads (with fallback for missing columns)
-        const { data, error } = await fetchThreadPage(categoryId, sortOption, 0, THREADS_PER_PAGE - 1);
+        const sortForFetch: SortOption =
+          catData?.display_mode === 'journal' ? 'newest' : sortOption;
+        const { data, error } = await fetchThreadPage(categoryId, sortForFetch, 0, THREADS_PER_PAGE - 1);
 
         if (error) {
           setError(error.message);
@@ -155,7 +180,7 @@ export default function CategoryPage() {
     const end = start + THREADS_PER_PAGE - 1;
 
     try {
-      const { data, error } = await fetchThreadPage(categoryId, sortOption, start, end);
+      const { data, error } = await fetchThreadPage(categoryId, effectiveSort, start, end);
 
       if (error) {
         console.error('Error loading more threads:', error);
@@ -195,33 +220,58 @@ export default function CategoryPage() {
       <ForumContainer>
         <h2 className={styles.categoryTitle}>
           {categoryName || `Category: ${categoryId}`}
+          {isJournal && (
+            <span className={styles.journalBadge} style={{ marginLeft: 8, verticalAlign: 'middle' }}>
+              Journal
+            </span>
+          )}
         </h2>
 
         {/* Search + Sort + Create */}
         <div style={{ marginBottom: 16 }}>
           <ForumSearch categoryId={categoryId} placeholder={`Search in ${categoryName || 'this category'}...`} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-          <ThreadSortControls active={sortOption} onChange={setSortOption} />
+        <div style={{ display: 'flex', justifyContent: isJournal ? 'flex-end' : 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+          {/* Journal mode is always newest-first; the sort control is hidden. */}
+          {!isJournal && <ThreadSortControls active={sortOption} onChange={setSortOption} />}
           <button
             className={styles.newThreadButton}
             onClick={() => router.push(`/forum/create-thread?categoryId=${categoryId}`)}
           >
-            Create Thread
+            {isJournal ? 'New Entry' : 'Create Thread'}
           </button>
         </div>
 
-        {/* Featured Content */}
-        {typeof categoryId === 'string' && (
+        {/* Featured Content (discussion mode only) */}
+        {!isJournal && typeof categoryId === 'string' && (
           <FeaturedContent categoryId={categoryId} limit={3} />
         )}
 
         {threads.length === 0 ? (
           <p className={styles.emptyState}>
-            No threads found in this category.
+            {isJournal ? 'No entries yet. Write the first one.' : 'No threads found in this category.'}
           </p>
         ) : (
           <>
+            {isJournal ? (
+              <JournalEntryList
+                entries={threads.map((thread: any) => {
+                  const profile = profileMap?.[thread.author_address];
+                  return {
+                    id: thread.id,
+                    title: thread.title,
+                    content: thread.content,
+                    author_address: thread.author_address,
+                    author_first_name: profile?.first_name || null,
+                    author_last_name: profile?.last_name || null,
+                    author_profile_picture: profile?.profile_picture || null,
+                    created_at: thread.created_at,
+                    reply_count: thread.reply_count ?? 0,
+                    is_pinned: thread.is_pinned,
+                  };
+                })}
+              />
+            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {threads.map((thread: any) => {
                 const profile = profileMap?.[thread.author_address];
@@ -246,6 +296,7 @@ export default function CategoryPage() {
                 );
               })}
             </div>
+            )}
 
             {/* Load More Button */}
             {hasMore && (

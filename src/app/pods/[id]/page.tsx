@@ -37,6 +37,7 @@ import dynamic from 'next/dynamic';
 import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
 import ActiveSurveysBanner from '@/features/surveys/components/ActiveSurveysBanner';
 import { PodConferenceSection } from '@/features/conference/components/PodConferenceSection';
+import { PodPlacesSection } from '@/features/places/components/PodPlacesSection';
 import '../../../features/home/styles/HomePage.css';
 
 // Lazy load the agreement signing modal (fixes SSR issues)
@@ -488,6 +489,19 @@ export default function PodDetailPage() {
           {/* Active Surveys Banner */}
           {id && address && (
             <ActiveSurveysBanner podId={String(id)} />
+          )}
+
+          {/* Places — members-only shared map (add-on module). Renders
+              nothing unless places_enabled and the viewer is a member. */}
+          {id && address && (
+            <PodPlacesSection
+              podId={String(id)}
+              walletAddress={address}
+              isMember={
+                isLeader ||
+                allMembers.some((m) => m.toLowerCase() === address.toLowerCase())
+              }
+            />
           )}
 
           {/* Quick Meeting Section */}

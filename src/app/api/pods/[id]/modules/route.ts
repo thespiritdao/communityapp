@@ -31,6 +31,7 @@ const ALLOWED_KEYS = [
   'passwords_enabled',
   'external_wallet_linking_enabled',
   'custom_appearance_enabled',
+  'places_enabled',
 ] as const;
 
 // Keys that only the Executive Pod may toggle (not ordinary pod leaders).
@@ -465,6 +466,34 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       }
     } catch (permErr) {
       console.warn('Could not sync appearance permissions:', permErr);
+    }
+  }
+
+  // When places_enabled changes, sync placesManage onto leader roles only.
+  // Viewing the map is open to every active member (RLS); managing pins is
+  // a delegable capability. Module off → flag off everywhere.
+  if ('places_enabled' in updates) {
+    try {
+      const { data: roles } = await supabaseAdmin
+        .from('pod_role_permissions')
+        .select('id, permissions, role_name')
+        .eq('pod_id', podId);
+
+      if (roles) {
+        for (const role of roles) {
+          const perms = typeof role.permissions === 'string'
+            ? JSON.parse(role.permissions)
+            : { ...(role.permissions || {}) };
+          const isLeaderRole = /leader/i.test(role.role_name ?? '');
+          perms.placesManage = updates.places_enabled && isLeaderRole;
+          await supabaseAdmin
+            .from('pod_role_permissions')
+            .update({ permissions: perms })
+            .eq('id', role.id);
+        }
+      }
+    } catch (permErr) {
+      console.warn('Could not sync places permissions:', permErr);
     }
   }
 

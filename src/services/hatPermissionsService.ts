@@ -105,6 +105,7 @@ export interface HatPermissions {
   passwordsManage?: boolean; // 🆕 Create/edit/delete vault entries, grant access to newcomers
   agentManage?: boolean; // 🆕 Configure pod's AI agent (persona, channels, posting cadence). Subscription billing stays leader-only.
   appearanceManage?: boolean; // 🆕 Design/publish the pod's custom app face (colors + main-screen icons). See docs/spec-pod-faces.md
+  placesManage?: boolean; // 🆕 Add/edit/remove pins on the pod's shared map (Places add-on). Viewing is open to all members. See docs/spec-pod-places-and-journal.md
 }
 
 export interface HatRole {
@@ -143,6 +144,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       surveyRespond: true,
       passwordsAccess: true,
       passwordsManage: true,
+      placesManage: true,
     },
   },
   // Legacy management roles (maintained for compatibility)

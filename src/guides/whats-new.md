@@ -5,12 +5,47 @@ recent first.
 
 ---
 
+## September 2026 — Journal and Places
+
+### A journal, not just a forum
+Any pod forum category can now be set to **journal mode**: entries newest
+first, grouped by month, with cover photos and excerpts, and the formatting
+editor on by default. Pair it with a Pod Face rename of the Forum button and
+your community has a *Journal* everywhere it looks. Leaders: Manage → Forum.
+
+### Places: a members-only shared map
+A new **Places** add-on (Manage → Modules → Add-Ons) puts a map on your pod's
+page. Pin your land and assets, partner organisations, gathering sites,
+resources, and the places you are still envisioning. Each pin carries a
+description, a photo, and connections to journal entries, people and other
+pins. Proposed pins draw dashed; sensitive ones can be approximate. Managing
+pins is a delegable role permission (**Places Manage**); every member can
+view. Members can also choose, from **Identity → Location**, to appear on
+their pods' maps, approximately by default.
+
+See the new [Journal and Places guide](19-journal-and-places.md).
+
+### Under the hood
+Sign-in now proves control of your wallet to our server, and a ring of
+older API routes require your session before they act on your behalf.
+
+---
+
 ## August 2026 — Pod Faces: your community, your look
 
+### Menu renaming (added mid-August)
+By community request, faces can now **rename the home-screen menu items** too:
+Bounties can become *Quests*, Governance can become *Council* — whatever fits
+your community's vocabulary (up to 20 characters per button). Renames live in
+the same Face editor, show in the live preview, and travel with the face:
+members wearing your look see your names; everyone else sees the standard
+ones. Page headings and notifications keep the standard names so guides and
+instructions still make sense.
+
 ### Communities can now skin the app
-Pods can design a **custom appearance** — a color scheme and icon style — and
-publish it as their pod's **face**. Members choose whether to wear it; nothing
-is ever forced. Highlights:
+Pods can design a **custom appearance** — a color scheme, icon style, and
+custom menu names — and publish it as their pod's **face**. Members choose
+whether to wear it; nothing is ever forced. Highlights:
 
 - **Leaders design** in the pod's Manage → Modules → **Custom Appearance**
   editor: five starter palettes, per-color fine-tuning, two curated icon sets,

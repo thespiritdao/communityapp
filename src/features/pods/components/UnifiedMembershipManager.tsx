@@ -36,6 +36,7 @@ import {
   ChevronDown,
   ChevronUp,
   Palette,
+  MapPin,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,6 +111,7 @@ export const UnifiedMembershipManager: React.FC<
     passwordsManage: false,
     agentManage: false,
     appearanceManage: false,
+    placesManage: false,
   });
 
   // Pod module state — drives which add-on / paid permission groups
@@ -120,6 +122,7 @@ export const UnifiedMembershipManager: React.FC<
     passwords_enabled: false,
     community_agent_enabled: false,
     custom_appearance_enabled: false,
+    places_enabled: false,
   });
 
   // Permission section collapse state — mirrors the Modules tab UX
@@ -150,6 +153,7 @@ export const UnifiedMembershipManager: React.FC<
             json.modules?.community_agent_enabled ?? false,
           custom_appearance_enabled:
             json.modules?.custom_appearance_enabled ?? false,
+          places_enabled: json.modules?.places_enabled ?? false,
         });
       } catch {
         /* non-fatal */
@@ -213,6 +217,7 @@ export const UnifiedMembershipManager: React.FC<
       passwordsManage: perms.passwordsManage ?? false,
       agentManage: perms.agentManage ?? false,
       appearanceManage: perms.appearanceManage ?? false,
+      placesManage: perms.placesManage ?? false,
     };
   };
 
@@ -606,6 +611,13 @@ export const UnifiedMembershipManager: React.FC<
                 show: moduleFlags.custom_appearance_enabled,
                 perms: [
                   { key: 'appearanceManage', label: 'Appearance Manage', description: "Design and publish the pod's custom app face (colors and icons)", icon: Palette, color: '#6A5F7A' },
+                ],
+              },
+              {
+                title: 'Places',
+                show: moduleFlags.places_enabled,
+                perms: [
+                  { key: 'placesManage', label: 'Places Manage', description: "Add, edit and remove pins on the pod's shared map. Every member can view it.", icon: MapPin, color: '#3F7A5A' },
                 ],
               },
             ];
