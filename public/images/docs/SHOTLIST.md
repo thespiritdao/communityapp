@@ -2,7 +2,7 @@
 
 *Generated from `public/images/docs/manifest.json` by `scripts/docs-screenshots.mjs plan`. Edit the manifest, not this file.*
 
-**87 shots** — 43 P1, 33 P2, 11 P3. Do P1 first across all guides; the docs are useful with P1 alone.
+**86 shots** — 42 P1, 33 P2, 11 P3. Do P1 first across all guides; the docs are useful with P1 alone.
 
 ## Capture standard
 
@@ -211,7 +211,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Right after pressing a vote button: the confirming state or the 'You voted' badge.
 - **Crop:** Tight crop around the vote controls.
 
-### ⬜ `05-create-proposal.png` — P2 — should have
+### ✅ `05-create-proposal.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 3: Fill Proposal Form`
 - **Caption:** Create proposal: title, description, tier.
@@ -219,7 +219,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Create Proposal form with tier selector visible and fields filled.
 - **Crop:** Viewport.
 
-### ⬜ `06-governance-settings.png` — P2 — should have
+### ✅ `06-governance-settings.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Proposal Thresholds`
 - **Caption:** Per-pod governance settings: quorum, approval, and voting window.
@@ -232,7 +232,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Bounties  `04-bounties-system.md` → folder `bounties/`
 
-### ⬜ `01-bounty-board.png` — P1 — must have
+### ✅ `01-bounty-board.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### View All Bounties`
 - **Caption:** The bounty board.
@@ -240,7 +240,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Public tab with two or more open bounties.
 - **Crop:** Viewport.
 
-### ⬜ `02-bounty-detail.png` — P1 — must have
+### ✅ `02-bounty-detail.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### View Bounty Details`
 - **Caption:** A bounty: value, deadline, requirements, and Apply.
@@ -280,7 +280,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Review panel with a submission open and the three actions visible.
 - **Crop:** Viewport.
 
-### ⬜ `07-create-bounty.png` — P1 — must have
+### ✅ `07-create-bounty.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Step 2: Fill Bounty Details`
 - **Caption:** Create a bounty: pod, who can apply, title, category, amount.
@@ -309,7 +309,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Events & Calendar  `05-events-calendar.md` → folder `events/`
 
-### ⬜ `01-events-list.png` — P1 — must have
+### ✅ `01-events-list.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Event List View`
 - **Caption:** Upcoming events.
@@ -318,7 +318,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/eventsapp.PNG (check)
 
-### ⬜ `02-event-detail.png` — P1 — must have
+### ✅ `02-event-detail.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Event Details`
 - **Caption:** An event: when, where, price, and Register.
@@ -326,7 +326,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Event page with the Register button visible.
 - **Crop:** Viewport.
 
-### ⬜ `03-register-modal.png` — P1 — must have
+### ✅ `03-register-modal.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Registration Steps`
 - **Caption:** Registering: choose $SELF or $SYSTEM for paid events.
@@ -334,7 +334,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Registration modal open on a paid event showing the token choice.
 - **Crop:** Viewport.
 
-### ⬜ `04-checkin-qr.png` — P2 — should have
+### ✅ `04-checkin-qr.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Check-In Process`
 - **Caption:** Your check-in QR code.
@@ -342,7 +342,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** The QR code view for a registration.
 - **Crop:** Tight crop around the QR card.
 
-### ⬜ `05-create-event.png` — P2 — should have
+### ✅ `05-create-event.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 2: Fill Event Details`
 - **Caption:** Create an event: title, date, location, capacity, price.
@@ -350,7 +350,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Form filled with sample values.
 - **Crop:** Viewport.
 
-### ⬜ `06-calendar-month.png` — P2 — should have
+### ✅ `06-calendar-month.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Calendar Views`
 - **Caption:** The community calendar, month view.
@@ -358,7 +358,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Month view with a few events.
 - **Crop:** Viewport. Desktop width (1280) is fine here.
 
-### ⬜ `07-organizer-manage.png` — P3 — nice to have
+### ✅ `07-organizer-manage.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `### As Event Organizer`
 - **Caption:** Organizer tools: attendees, check-in, completion.
@@ -370,7 +370,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Forum  `06-forum-discussions.md` → folder `forum/`
 
-### ⬜ `01-categories.png` — P1 — must have
+### ✅ `01-categories.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### View All Categories`
 - **Caption:** Forum categories, including pod forums you can access.
@@ -378,7 +378,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Category list with thread counts.
 - **Crop:** Viewport.
 
-### ⬜ `02-category-threads.png` — P2 — should have
+### ✅ `02-category-threads.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### View Category Threads`
 - **Caption:** Threads in a category with sort controls.
@@ -386,7 +386,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** A category with several threads and the sort control visible.
 - **Crop:** Viewport.
 
-### ⬜ `03-new-thread-editor.png` — P1 — must have
+### ✅ `03-new-thread-editor.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Step 2: Write Thread`
 - **Caption:** New thread: title, formatting toolbar, body.
@@ -394,7 +394,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Editor with the toolbar visible and a couple of lines typed.
 - **Crop:** Viewport.
 
-### ⬜ `04-reply-mention.png` — P2 — should have
+### ✅ `04-reply-mention.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Reply to Thread`
 - **Caption:** Replying with an @mention: type @ and pick a member.
@@ -402,7 +402,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Reply box with the @mention autocomplete dropdown open.
 - **Crop:** Tight crop around the reply box.
 
-### ⬜ `05-moderation-menu.png` — P3 — nice to have
+### ✅ `05-moderation-menu.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `### Moderation Actions`
 - **Caption:** Moderation actions on a thread.
@@ -410,7 +410,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Moderation menu open (pin, lock, delete).
 - **Crop:** Tight crop.
 
-### ⬜ `06-poll.png` — P3 — nice to have
+### ✅ `06-poll.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `### Polls (If Enabled)`
 - **Caption:** A poll inside a thread.
@@ -418,7 +418,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** A thread with a poll and results bars visible.
 - **Crop:** Tight crop.
 
-### ⬜ `07-journal-mode.png` — P1 — must have
+### ✅ `07-journal-mode.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Journal Mode`
 - **Caption:** A category in journal mode: entries by month with covers.
@@ -430,7 +430,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Marketplace  `07-marketplace-shopping.md` → folder `marketplace/`
 
-### ⬜ `01-storefront.png` — P1 — must have
+### ✅ `01-storefront.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### View Marketplace`
 - **Caption:** The Artifacts marketplace.
@@ -442,28 +442,20 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 ### ⬜ `02-product-detail.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Product Details`
-- **Caption:** A product: price in $SELF or $SYSTEM, availability, add to cart.
+- **Caption:** An artifact's detail view: full description, both prices, availability.
 - **Screen:** `/market` as *member*
-- **What to show:** Product detail open.
+- **What to show:** Click an artifact's image, title, or 'View details' to open the detail modal; capture it showing the image, full description, $SYSTEM and $SELF prices, and the availability count.
 - **Crop:** Viewport.
 
-### ⬜ `03-cart.png` — P1 — must have
+### ✅ `03-cart.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### View Cart`
-- **Caption:** Your cart.
+- **Caption:** The cart: items, token choice and Purchase in one panel.
 - **Screen:** `/market` as *member*
-- **What to show:** Cart open with one or two items.
+- **What to show:** Cart open with one or two items, scrolled so the subtotal, the $SYSTEM/$SELF selector and the Purchase button are all visible in one frame — checkout is not a separate screen.
 - **Crop:** Viewport.
 
-### ⬜ `04-checkout-token.png` — P1 — must have
-
-- **Where in the doc:** after-body of `### Step 2: Select Payment Token`
-- **Caption:** Checkout: pay with $SELF (burn) or $SYSTEM.
-- **Screen:** `/market` as *member*
-- **What to show:** Checkout step with the token selector visible.
-- **Crop:** Tight crop.
-
-### ⬜ `05-orders.png` — P2 — should have
+### ✅ `05-orders.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### View Your Orders`
 - **Caption:** Your orders and their status.
@@ -471,7 +463,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Orders list with at least one order.
 - **Crop:** Viewport.
 
-### ⬜ `06-create-product.png` — P2 — should have
+### ✅ `06-create-product.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 3: Fill Product Details`
 - **Caption:** Creating a product.
@@ -479,7 +471,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Product creation form filled.
 - **Crop:** Viewport.
 
-### ⬜ `07-order-management.png` — P3 — nice to have
+### ✅ `07-order-management.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `### Order Management Dashboard`
 - **Caption:** Order management for fulfilment.

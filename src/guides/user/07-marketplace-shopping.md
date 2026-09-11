@@ -161,57 +161,30 @@ Some products require you to hold specific tokens or NFTs to purchase:
 
 ## Checkout Process
 
-### Step 1: Review Cart
-1. Open cart
-2. Verify all items correct
-3. Check sizes and quantities
-4. Review total price
+Checkout happens entirely inside the cart. There is no separate checkout
+page: review, token choice and payment are one panel.
 
-### Step 2: Select Payment Token
-**Choose Token:**
-- $SYSTEM: capital-backed utility token (≈ $1 each); routes to creator or pod treasury
-- $SELF: soulbound participation token; paying with it **burns** it and mints you a receipt
+**1. Review your items.** Open the cart and check the items, sizes and
+quantities. The subtotal updates to match the token you pick.
 
-**Check Your Balance:**
-- Balance shown at top
-- Red if insufficient
-- Need to acquire more tokens first
+**2. Choose how to pay.** At the bottom of the cart, pick the token:
 
-### Step 3: Complete Purchase
+- **$SYSTEM** — the capital-backed utility token (about $1 each). It is
+  transferred to the artifact's creator or to a pod treasury.
+- **$SELF** — the soulbound participation token. Paying with $SELF **burns**
+  it and mints you a receipt. A confirmation step shows exactly what will be
+  burned before anything happens.
 
-**Transaction Flow:**
+The subtotal shows the price in whichever token is selected.
 
-**If Sufficient Allowance:**
-- Click "Purchase" button
-- Single transaction
-- Approve in wallet
-- Wait for confirmation
+**3. Purchase.** The button reads **Purchase**, or **Approve & Purchase** when
+the token still needs approval; either way it is one signature and the gas is
+sponsored, so there is nothing to pay for the transaction itself.
 
-**If Needs Approval:**
-- Click "Approve & Purchase" button
-- Combined transaction
-- Approves token spending + purchases
-- Sign once in wallet
-- Gasless if using Smart Wallet
-
-**Using Smart Wallet (Recommended):**
-- No gas fees
-- Faster confirmation
-- Cleaner experience
-- Sponsored by DAO
-
-**Using Standard Wallet:**
-- May have small gas fee
-- Confirm network is Base
-- Ensure sufficient ETH for gas
-
-### Step 4: Confirmation
-After successful purchase:
-- Cart clears automatically
-- Success notification shown
-- Order record created
-- Fulfillment team notified
-- Transaction hash provided
+**4. Confirmation.** On success the cart clears, an order record is created,
+and the fulfilment team is notified. If something goes wrong, the cart shows
+the reason in red rather than failing silently — the most common one is simply
+not holding enough of the chosen token.
 
 ---
 

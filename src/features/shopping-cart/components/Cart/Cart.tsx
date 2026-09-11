@@ -654,6 +654,9 @@ export default function Cart({
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isProcessingOrders, setIsProcessingOrders] = useState(false);
+  // Visible checkout failure. Every failure path used to be console-only, so a
+  // reverted purchase looked like nothing had happened at all.
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState(false);
   const [purchaseDetails, setPurchaseDetails] = useState<{
     itemCount: number;
@@ -1024,13 +1027,54 @@ export default function Cart({
   // (with a confirmation modal showing what gets burned); every other token
   // uses the existing router calls.
   const handleCDPTransaction = useCallback(async () => {
+    setCheckoutError(null);
+
+    // Pre-flight: a product that pays into a pod treasury only works if the
+    // router's treasury factory can resolve that pod. When it cannot, the
+    // user operation reverts with "Treasury not deployed" during gas
+    // estimation — opaque and indistinguishable from a balance problem.
+    try {
+      const treasuryProducts = (products || []).filter(
+        (p: any) => p.fund_destination_type === 'pod_treasury' && p.pod_id,
+      );
+      if (treasuryProducts.length > 0 && !useFallbackRouting) {
+        const routerAddress = process.env
+          .NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}` | undefined;
+        const client = getPublicClient(wagmiConfig);
+        if (routerAddress && client) {
+          const factory = (await client.readContract({
+            address: routerAddress,
+            abi: [{ name: 'treasuryFactory', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'address' }] }] as const,
+            functionName: 'treasuryFactory',
+          })) as `0x${string}`;
+          for (const p of treasuryProducts) {
+            const deployed = (await client.readContract({
+              address: factory,
+              abi: [{ name: 'isPodTreasuryDeployed', type: 'function', stateMutability: 'view', inputs: [{ name: 'podId', type: 'string' }], outputs: [{ name: '', type: 'bool' }] }] as const,
+              functionName: 'isPodTreasuryDeployed',
+              args: [String(p.pod_id)],
+            })) as boolean;
+            if (!deployed) {
+              console.error('[cart] router factory cannot resolve treasury for pod', p.pod_id, 'factory', factory);
+              setCheckoutError(
+                `"${p.title || 'An item in your cart'}" pays into a pod treasury the store cannot resolve, so this purchase would be rejected on-chain. This is a configuration problem on our side — please let an admin know.`,
+              );
+              return;
+            }
+          }
+        }
+      }
+    } catch (preflightErr) {
+      console.warn('[cart] treasury pre-flight skipped:', preflightErr);
+    }
+
     if (isSelfPayment(selectedToken?.symbol)) {
       // Prepare the burn (fetch holdings + select ids); modal opens on success.
       await selfPay.prepare(products, address as string);
       return;
     }
     await executeCalls(totalCalls);
-  }, [selectedToken, selfPay, products, address, executeCalls, totalCalls]);
+  }, [selectedToken, selfPay, products, address, executeCalls, totalCalls, useFallbackRouting]);
 
   // Confirm handler for the $SELF modal — sends the prepared payWithSelf call.
   const handleConfirmSelfPayment = useCallback(async () => {
@@ -1291,6 +1335,30 @@ export default function Cart({
     setIsSuccess(false);
     setApproveTxSuccess(false);
 
+    // Surface something the buyer can act on. The bundler reports every
+    // on-chain revert as "useroperation reverted: <reason>", so map the
+    // reasons we know and fall back to the raw reason otherwise.
+    const raw = String(error?.message || '');
+    const reason = (raw.match(/useroperation reverted:\s*([^\n"]+)/i)?.[1] || '').trim();
+    let friendly: string;
+    if (/Treasury not deployed/i.test(raw)) {
+      friendly =
+        'This item pays into a pod treasury that the store cannot resolve, so the purchase was rejected. This is a configuration problem on our side, not with your wallet or balance — please let an admin know.';
+    } else if (/transfer amount exceeds balance|insufficient|exceeds balance/i.test(raw)) {
+      friendly = `You don't have enough ${selectedToken?.symbol || 'tokens'} to complete this purchase.`;
+    } else if (/allowance|exceeds allowance/i.test(raw)) {
+      friendly = 'Token approval was missing or too small. Try the purchase again.';
+    } else if (/User rejected|Request denied|user denied/i.test(raw)) {
+      friendly = 'You cancelled the transaction.';
+    } else if (/No permission to manage|permission|unauthorized/i.test(raw)) {
+      friendly = 'This purchase routes funds to a pod treasury you are not permitted to route to.';
+    } else if (reason) {
+      friendly = `The network rejected this purchase: ${reason}`;
+    } else {
+      friendly = error?.message || 'The purchase failed. Please try again.';
+    }
+    setCheckoutError(friendly);
+
     console.group('âŒ Combined Transaction Error');
     console.error('ðŸ“‹ Error Details:', {
       name: error.name,
@@ -1423,6 +1491,24 @@ export default function Cart({
                 onTokenChange={setSelectedToken}
                 tokenOptions={DEFAULT_TOKEN_OPTIONS}
               />
+
+              {checkoutError && (
+                <div
+                  role="alert"
+                  style={{
+                    marginTop: '0.75rem',
+                    padding: '0.75rem 0.9rem',
+                    borderRadius: 8,
+                    border: '1px solid #f3c2bd',
+                    background: '#fdeceb',
+                    color: '#8a2318',
+                    fontSize: '0.875rem',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {checkoutError}
+                </div>
+              )}
 
               {/* CDP-native transaction button (replaces OnchainKit Transaction) */}
               {totalCalls && totalCalls.length > 0 ? (
