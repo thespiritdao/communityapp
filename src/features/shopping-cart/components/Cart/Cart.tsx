@@ -657,6 +657,60 @@ export default function Cart({
   // Visible checkout failure. Every failure path used to be console-only, so a
   // reverted purchase looked like nothing had happened at all.
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  // podId → treasury address, read from the router's own factory. The stored
+  // products.destination_address goes stale; the contract compares against the
+  // live value, so we resolve it rather than trusting the database.
+  const [treasuryOverrides, setTreasuryOverrides] = useState<Record<string, string>>({});
+
+  // Resolve each pod-treasury product's treasury from the router's own factory
+  // as soon as the cart has contents, so the purchase call is built with the
+  // address the contract will actually compare against.
+  useEffect(() => {
+    const pods = [
+      ...new Set(
+        (products || [])
+          .filter((p: any) => p.fund_destination_type === 'pod_treasury' && p.pod_id)
+          .map((p: any) => String(p.pod_id)),
+      ),
+    ];
+    if (pods.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const routerAddress = process.env
+          .NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}` | undefined;
+        const client = getPublicClient(wagmiConfig);
+        if (!routerAddress || !client) return;
+
+        const factory = (await client.readContract({
+          address: routerAddress,
+          abi: [{ name: 'treasuryFactory', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'address' }] }] as const,
+          functionName: 'treasuryFactory',
+        })) as `0x${string}`;
+
+        const next: Record<string, string> = {};
+        for (const podId of pods) {
+          const addr = (await client.readContract({
+            address: factory,
+            abi: [{ name: 'getTreasuryForPod', type: 'function', stateMutability: 'view', inputs: [{ name: 'podId', type: 'string' }], outputs: [{ name: '', type: 'address' }] }] as const,
+            functionName: 'getTreasuryForPod',
+            args: [podId],
+          })) as string;
+          if (addr && addr !== '0x0000000000000000000000000000000000000000') {
+            next[podId] = addr;
+          }
+        }
+        if (!cancelled && Object.keys(next).length > 0) setTreasuryOverrides(next);
+      } catch (err) {
+        console.warn('[cart] could not resolve pod treasuries:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [products]);
   const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState(false);
   const [purchaseDetails, setPurchaseDetails] = useState<{
     itemCount: number;
@@ -918,6 +972,7 @@ export default function Cart({
         address,
         products,
         useFallbackRouting,
+        treasuryOverrides,
       );
       console.log('âœ… TransactionData prepared successfully:', {
         totalCallsLength: result.totalCalls.length,
@@ -944,6 +999,7 @@ export default function Cart({
     address,
     products,
     useFallbackRouting,
+    treasuryOverrides,
   ]);
 
   // Extract calls from prepared transaction data

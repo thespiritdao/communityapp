@@ -138,6 +138,8 @@ export const generatePurchaseCalls = (
   address: string,
   products: ICartProduct[],
   useFallbackRouting = false,
+  /** podId → treasury address resolved live from the router's factory. */
+  treasuryOverrides?: Record<string, string>,
 ): TransactionCall[] => {
   try {
     // Validate paymaster setup first
@@ -233,10 +235,21 @@ export const generatePurchaseCalls = (
 
         // Handle destination address based on type
         if (firstProduct.fund_destination_type === 'pod_treasury') {
-          // For pod treasury, MUST use destination_address
-          destinationAddress =
-            firstProduct.destination_address || destinationAddress;
           podId = firstProduct.pod_id || '';
+          // PurchaseRouterDecentralized requires the destination to equal
+          // treasuryFactory.getTreasuryForPod(podId) exactly, so a stored
+          // address that has gone stale (pod redeployed its treasury, or the
+          // router repointed at another factory) reverts the whole purchase
+          // with "Treasury address mismatch". Prefer the live value the cart
+          // resolved on-chain; fall back to the stored one.
+          const resolved = treasuryOverrides?.[podId];
+          if (resolved && resolved.toLowerCase() !== String(firstProduct.destination_address).toLowerCase()) {
+            console.warn(
+              `🏛️ Pod ${podId} treasury resolves on-chain to ${resolved}; stored destination_address is ${firstProduct.destination_address}. Using the on-chain value.`,
+            );
+          }
+          destinationAddress =
+            resolved || firstProduct.destination_address || destinationAddress;
         } else if (firstProduct.fund_destination_type === 'wallet') {
           // For wallet, use creator_wallet
           destinationAddress =
@@ -349,6 +362,8 @@ export const prepareTransactionData = (
   address: string,
   products: ICartProduct[],
   useFallbackRouting = false,
+  /** podId → treasury address resolved live from the router's factory. */
+  treasuryOverrides?: Record<string, string>,
 ): TransactionData => {
   try {
     // CRITICAL: Check if any products need treasury routing FIRST
@@ -408,6 +423,7 @@ export const prepareTransactionData = (
             address,
             products,
             useFallbackRouting,
+            treasuryOverrides,
           )
         : [];
 

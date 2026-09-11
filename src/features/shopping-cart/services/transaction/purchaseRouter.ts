@@ -57,10 +57,19 @@ export interface FundRoutingInfo {
   podId: string;
 }
 
+/**
+ * @param treasuryOverrides podId → treasury address resolved live from the
+ *   router's treasury factory. PurchaseRouterDecentralized requires the
+ *   destination to equal `treasuryFactory.getTreasuryForPod(podId)` exactly,
+ *   and `products.destination_address` goes stale whenever a pod redeploys its
+ *   treasury or the router is repointed at a different factory — which reverts
+ *   the purchase with "Treasury address mismatch". Prefer the live value.
+ */
 export function determineFundRouting(
   products: ICartProduct[],
   userAddress: string,
   useFallbackRouting: boolean,
+  treasuryOverrides?: Record<string, string>,
 ): FundRoutingInfo {
   const typeMap: Record<string, number> = {
     burn: 0,
@@ -95,9 +104,15 @@ export function determineFundRouting(
           destinationAddress = firstProduct.creator_wallet || userAddress;
           podId = '';
         } else {
-          // For pod treasury, ONLY use the destination_address (treasury address)
-          destinationAddress = firstProduct.destination_address;
           podId = firstProduct.pod_id;
+          // Live treasury address wins over the stored one (see doc comment).
+          const resolved = treasuryOverrides?.[podId];
+          if (resolved && resolved !== firstProduct.destination_address) {
+            console.warn(
+              `🏛️ Treasury for pod ${podId} resolved on-chain to ${resolved}; stored destination_address is ${firstProduct.destination_address}. Using the on-chain value.`,
+            );
+          }
+          destinationAddress = resolved || firstProduct.destination_address;
         }
       } else if (firstProduct.fund_destination_type === 'wallet') {
         // For wallet routing, use creator_wallet
