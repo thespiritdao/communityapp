@@ -38,6 +38,15 @@ interface MonitorData {
 export default function ConstitutionPage() {
   const [data, setData] = useState<MonitorData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // ?agent=0x… narrows the monitor to one agent, so a pod can link to the
+  // proof for its own agent rather than to a list. Read from the URL directly
+  // rather than useSearchParams, which would need a Suspense boundary here.
+  const [focusAddress, setFocusAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get('agent');
+    setFocusAddress(raw && /^0x[0-9a-fA-F]{40}$/.test(raw) ? raw.toLowerCase() : null);
+  }, []);
 
   useEffect(() => {
     fetch('/api/constitution')
@@ -46,10 +55,18 @@ export default function ConstitutionPage() {
       .catch((err) => setError(err.message));
   }, []);
 
+  const allAgents = data?.agents ?? [];
+  const shown = focusAddress
+    ? allAgents.filter((a) => a.address.toLowerCase() === focusAddress)
+    : allAgents;
+  const focusMissing = !!focusAddress && !!data && shown.length === 0;
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#FBF6E9' }}>
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-semibold text-[#3C3C3C]">The Constitutional Boundary</h1>
+    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#FBF6E9' }}>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 pb-28 sm:py-8">
+        <h1 className="text-xl sm:text-2xl font-semibold text-[#3C3C3C] text-balance">
+          The Constitutional Boundary
+        </h1>
         <p className="mt-2 text-sm text-[#7C6F5B] leading-relaxed">
           SpiritDAO&apos;s AI agents are members of community life — named, addressable, funded by
           pod treasuries — but they are excluded from sovereignty. That exclusion is not a promise
@@ -72,19 +89,46 @@ export default function ConstitutionPage() {
 
         {data && (
           <>
-            <div className="mt-4 text-xs text-[#7C6F5B]">
-              Agent registry:{' '}
-              <a href={data.registryUrl} target="_blank" rel="noopener noreferrer" className="underline">
-                {data.registry}
-              </a>{' '}
-              · {data.agentCount} registered agent{data.agentCount === 1 ? '' : 's'} · checked{' '}
-              {new Date(data.checkedAt).toLocaleString()}
+            {/* A 42-character address in a run of prose is what pushed this
+                page sideways on a phone. Give it its own line and let it break. */}
+            <div className="mt-4 text-xs text-[#7C6F5B] space-y-1">
+              <div>
+                Agent registry:{' '}
+                <a
+                  href={data.registryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline break-all"
+                >
+                  {data.registry}
+                </a>
+              </div>
+              <div>
+                {data.agentCount} registered agent{data.agentCount === 1 ? '' : 's'} · checked{' '}
+                {new Date(data.checkedAt).toLocaleString()}
+              </div>
             </div>
 
-            {data.agents.map((agent) => (
+            {focusMissing && (
+              <div className="mt-6 p-4 rounded-lg text-sm" style={{ backgroundColor: '#F5E6E6', color: '#8B3A3A' }}>
+                No agent with that address is in the registry. Showing every registered agent
+                instead.
+              </div>
+            )}
+
+            {focusAddress && !focusMissing && allAgents.length > 1 && (
+              <div className="mt-4 text-xs text-[#7C6F5B]">
+                Showing one agent ·{' '}
+                <a href="/constitution" className="underline">
+                  view all {allAgents.length}
+                </a>
+              </div>
+            )}
+
+            {(focusMissing ? allAgents : shown).map((agent) => (
               <div
                 key={agent.address}
-                className="mt-6 rounded-xl p-4"
+                className="mt-6 rounded-xl p-3 sm:p-4"
                 style={{ backgroundColor: '#F5EDD7', border: '1px solid #D1C4A9' }}
               >
                 <div className="flex items-center gap-2">
@@ -93,8 +137,10 @@ export default function ConstitutionPage() {
                   ) : (
                     <ShieldAlert className="h-5 w-5 flex-shrink-0 text-red-600" />
                   )}
-                  <div>
-                    <div className="font-medium text-[#3C3C3C]">
+                  {/* min-w-0 lets the address and pod name wrap instead of
+                      stretching the row past the viewport. */}
+                  <div className="min-w-0">
+                    <div className="font-medium text-[#3C3C3C] break-words">
                       {agent.name}{' '}
                       <span className="font-normal text-xs text-[#7C6F5B]">
                         · {agent.podName} · {agent.active ? 'active' : 'deactivated'}
@@ -123,7 +169,7 @@ export default function ConstitutionPage() {
                       {check.holds === null && (
                         <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-[#B8A88A]" />
                       )}
-                      <span className="text-[#3C3C3C]">
+                      <span className="text-[#3C3C3C] min-w-0 break-words">
                         {check.label}
                         <span className="text-xs text-[#7C6F5B]">
                           {' '}

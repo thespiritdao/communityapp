@@ -708,7 +708,14 @@ export default function PodCommunityAgentManager({
                     'onchain registration pending'
                   )}
                   . This wallet holds no vote, no governance role, and no participation standing —
-                  by constitutional design.
+                  by constitutional design.{' '}
+                  <a
+                    href={`/constitution?agent=${identity.address}`}
+                    className="underline"
+                  >
+                    Verify these exclusions for {config.agent_name || 'this agent'}
+                  </a>
+                  .
                 </p>
               ) : (
                 <p className="text-xs text-[#7C6F5B] mt-1">
