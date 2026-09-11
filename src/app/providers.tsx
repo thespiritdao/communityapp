@@ -4,6 +4,7 @@
 import React, { type ReactNode } from 'react';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { Toaster } from 'react-hot-toast';
 import { CommunityProvider } from '@/context/CommunityContext';
 import { FaceProvider } from '@/context/FaceContext';
 import { UnifiedNotificationProvider } from '@/context/UnifiedNotificationContext';
@@ -100,6 +101,15 @@ export function Providers({ children }: ProvidersProps) {
                   </TourManager>
                   {/* PWA Install Prompt */}
                   <InstallPrompt />
+                  {/* Renders every toast() in the app. Without this nothing
+                      from useToast ever appeared, so saves and failures alike
+                      were silent — and console.log is stripped in production,
+                      leaving no trace either. Offset clears the bottom nav. */}
+                  <Toaster
+                    position="bottom-center"
+                    containerStyle={{ bottom: 96 }}
+                    toastOptions={{ duration: 4000 }}
+                  />
                 </UnifiedNotificationProvider>
                 </FaceProvider>
               </CommunityProvider>

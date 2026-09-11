@@ -416,6 +416,20 @@ export const EligibilityCriteriaBuilder: React.FC<
     onCriteriaChange(updatedCriteria);
   };
 
+  // The parent loads a role's saved criteria after this mounts, and useState
+  // only reads its argument once — so existing requirements never appeared and
+  // a leader editing a configured role saw an empty list. Adopt them when they
+  // arrive, without clobbering edits already made in this session.
+  const initialSignature = JSON.stringify(initialCriteria ?? []);
+  useEffect(() => {
+    setCriteria((current) =>
+      current.length === 0 && (initialCriteria?.length ?? 0) > 0
+        ? initialCriteria
+        : current,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSignature]);
+
   // Auto-populate agreement text when agreement_signed is selected
   const populateAgreementText = async (
     criteriaType: 'leadership' | 'membership' = 'membership',
