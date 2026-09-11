@@ -53,6 +53,7 @@ export function LinkedWalletsSection({
   // Wallets that announced themselves over EIP-6963. Each carries its own
   // provider, so we never have to touch the contested window.ethereum.
   const [detected, setDetected] = useState<Array<{ id: string; name: string }>>([]);
+  const [choosing, setChoosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -195,8 +196,24 @@ export function LinkedWalletsSection({
       setSuccess(`Linked ${truncateAddress(externalAddress)}.`);
       await fetchWallets();
     } catch (e: any) {
-      // wagmi/user-rejection surfaces as shortMessage on some errors.
-      setError(e?.shortMessage || e?.message || 'Could not link the wallet.');
+      // Wallet extensions report a locked or empty wallet as a bare
+      // "Internal error" (-32603), which tells the user nothing. Name the
+      // likely cause instead.
+      const raw = `${e?.shortMessage || ''} ${e?.message || ''}`.trim();
+      const code = e?.code ?? e?.cause?.code;
+      if (code === 4001 || /user rejected|user denied/i.test(raw)) {
+        setError('You dismissed the wallet prompt, so nothing was linked.');
+      } else if (
+        code === -32603 ||
+        /internal error/i.test(raw) ||
+        /no accounts|locked|unauthorized/i.test(raw)
+      ) {
+        setError(
+          'Your wallet is locked or has no account set up yet. Unlock it (or finish creating an account in it), then try again.',
+        );
+      } else {
+        setError(e?.shortMessage || e?.message || 'Could not link the wallet.');
+      }
     } finally {
       // Always disconnect the external wallet from the isolated config so it
       // does not linger between attempts.
@@ -369,34 +386,66 @@ export function LinkedWalletsSection({
               browser&apos;s built-in wallet, then reload this page.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {detected.map((w) => (
-                <button
-                  key={w.id}
-                  type="button"
-                  onClick={() => handleLink(w.id)}
-                  disabled={linking}
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  // One wallet: just use it. Several: let the user say which.
+                  if (detected.length === 1) handleLink(detected[0].id);
+                  else setChoosing((v) => !v);
+                }}
+                disabled={linking}
+                style={{
+                  background: '#C6933F',
+                  color: '#FFFFFF',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  letterSpacing: '0.02em',
+                  cursor: linking ? 'default' : 'pointer',
+                  opacity: linking ? 0.7 : 1,
+                }}
+              >
+                {linking ? 'Linking...' : 'Link external wallet'}
+              </button>
+
+              {choosing && detected.length > 1 && (
+                <div
                   style={{
-                    background: '#C6933F',
-                    color: '#FFFFFF',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    letterSpacing: '0.02em',
-                    cursor: linking ? 'default' : 'pointer',
-                    opacity: linking ? 0.7 : 1,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    marginTop: '0.6rem',
                   }}
                 >
-                  {linking
-                    ? 'Linking...'
-                    : detected.length === 1
-                      ? `Link ${w.name}`
-                      : w.name}
-                </button>
-              ))}
-            </div>
+                  {detected.map((w) => (
+                    <button
+                      key={w.id}
+                      type="button"
+                      onClick={() => {
+                        setChoosing(false);
+                        handleLink(w.id);
+                      }}
+                      disabled={linking}
+                      style={{
+                        background: '#FFFFFF',
+                        color: '#1F453A',
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #D7DDE4',
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        cursor: linking ? 'default' : 'pointer',
+                      }}
+                    >
+                      {w.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
