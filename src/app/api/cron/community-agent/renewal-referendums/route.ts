@@ -336,6 +336,9 @@ export async function GET(req: NextRequest) {
           result: proposal.status,
           closed_at: proposal.metadata?.closed_at ?? new Date().toISOString(),
           tally: proposal.metadata?.vote_counts ?? null,
+          // Kept so the pod can tell a defeat from a turnout failure. Without
+          // it a unanimous "for" that missed quorum reads as a rejection.
+          thresholds: proposal.metadata?.close_thresholds ?? null,
           funded_by: meta.funded_by,
         };
         const history = [...(cfg.renewal_history ?? []), historyEntry].slice(-12);

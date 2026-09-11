@@ -466,6 +466,24 @@ export default function PodCommunityAgentManager({
       {(() => {
         const rc = config as any;
         const lastRenewal = (rc.renewal_history ?? [])[((rc.renewal_history ?? []).length - 1)];
+
+        // A referendum can fail two very different ways: the community votes it
+        // down, or too few people vote at all. Saying "voted not to renew" when
+        // nobody opposed it misreports what the pod decided.
+        const th = lastRenewal?.thresholds ?? null;
+        const tally = lastRenewal?.tally ?? null;
+        const failedQuorumOnly =
+          !!lastRenewal &&
+          lastRenewal.result !== 'approved' &&
+          (th
+            ? th.quorumMet === false && th.approvalMet !== false
+            : !!tally && tally.against === 0 && tally.for > 0);
+        const turnoutLine =
+          th && th.eligibleVoters
+            ? `${tally?.total ?? 0} of ${th.eligibleVoters} members voted; ${th.requiredQuorum} were needed.`
+            : null;
+        const nextReferendum = rc.next_referendum_at ? new Date(rc.next_referendum_at) : null;
+        const nextIsUpcoming = !!nextReferendum && nextReferendum.getTime() > Date.now();
         const hasReferendumState =
           rc.active_renewal_proposal_id || rc.approved_renewal_proposal_id ||
           rc.renewal_rejected_proposal_id || rc.paused_by_referendum ||
@@ -483,8 +501,20 @@ export default function PodCommunityAgentManager({
 
             {rc.paused_by_referendum && (
               <p className="text-xs" style={{ color: '#8B3A3A' }}>
-                The community voted not to renew this agent. It is no longer operating.
-                A new renewal proposal in Governance can reinstate it.
+                {failedQuorumOnly ? (
+                  <>
+                    This agent stopped because its renewal referendum did not reach
+                    quorum — not because the pod voted against it.
+                    {tally ? ` Every vote cast was in favour (${tally.for} for, ${tally.against} against),` : ''}{' '}
+                    but turnout fell short.{turnoutLine ? ` ${turnoutLine}` : ''}{' '}
+                    A new renewal proposal in Governance can reinstate it.
+                  </>
+                ) : (
+                  <>
+                    The community voted not to renew this agent. It is no longer operating.
+                    A new renewal proposal in Governance can reinstate it.
+                  </>
+                )}
               </p>
             )}
 
@@ -514,16 +544,24 @@ export default function PodCommunityAgentManager({
               </p>
             )}
 
-            {rc.next_referendum_at && !rc.active_renewal_proposal_id && (
+            {/* A past date under "Next referendum" reads as a scheduled event.
+                The schedule only advances on renewal, so once one fails the
+                stored date is history, not a plan. */}
+            {nextIsUpcoming && !rc.active_renewal_proposal_id && (
               <p className="text-xs text-[#7C6F5B]">
-                Next referendum: {new Date(rc.next_referendum_at).toLocaleDateString()}
+                Next referendum: {nextReferendum!.toLocaleDateString()}
               </p>
             )}
 
             {lastRenewal && (
               <p className="text-xs text-[#7C6F5B]">
-                Last referendum: {lastRenewal.result === 'approved' ? 'renewed' : 'declined'}
-                {lastRenewal.tally ? ` (${lastRenewal.tally.for} for, ${lastRenewal.tally.against} against)` : ''}
+                Last referendum:{' '}
+                {lastRenewal.result === 'approved'
+                  ? 'renewed'
+                  : failedQuorumOnly
+                    ? 'no quorum'
+                    : 'declined'}
+                {tally ? ` (${tally.for} for, ${tally.against} against)` : ''}
                 {lastRenewal.closed_at ? ` on ${new Date(lastRenewal.closed_at).toLocaleDateString()}` : ''}
               </p>
             )}
