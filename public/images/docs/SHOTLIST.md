@@ -2,7 +2,7 @@
 
 *Generated from `public/images/docs/manifest.json` by `scripts/docs-screenshots.mjs plan`. Edit the manifest, not this file.*
 
-**88 shots** — 43 P1, 33 P2, 12 P3. Do P1 first across all guides; the docs are useful with P1 alone.
+**87 shots** — 43 P1, 33 P2, 11 P3. Do P1 first across all guides; the docs are useful with P1 alone.
 
 ## Capture standard
 
@@ -20,7 +20,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Getting Started  `01-getting-started.md` → folder `getting-started/`
 
-### ⬜ `01-sign-in.png` — P1 — must have
+### ✅ `01-sign-in.png` — P1 — must have
 
 - **Where in the doc:** before-body of `### Step 1: Connect Your Wallet`
 - **Caption:** The sign-in screen: email code or Google, no wallet app needed.
@@ -28,7 +28,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** The Coinbase embedded-wallet sign-in card with the email field and Google button visible. Skip the invite-code step if it appears, or capture the invite modal as a second frame only if you want it.
 - **Crop:** Viewport.
 
-### ⬜ `02-edit-profile.png` — P1 — must have
+### ✅ `02-edit-profile.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Step 2: Set Up Your Identity`
 - **Caption:** Identity → Edit Profile: name, picture, bio, interests, and openness to connect.
@@ -36,7 +36,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Edit Profile open with all fields filled with sample values and the Openness to Connect selector visible.
 - **Crop:** Viewport, scrolled so the form starts at the top.
 
-### ⬜ `03-home-screen.png` — P1 — must have
+### ✅ `03-home-screen.png` — P1 — must have
 
 - **Where in the doc:** before-body of `## Navigation`
 - **Caption:** The home screen: your modules on top, community modules below.
@@ -44,7 +44,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Both icon grids fully visible; tour dismissed; no toasts.
 - **Crop:** Full page.
 
-### ⬜ `04-bottom-nav.png` — P2 — should have
+### ✅ `04-bottom-nav.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Bottom Mobile Nav`
 - **Caption:** The bottom bar: Home, Claims, Govern, Alerts.
@@ -52,7 +52,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Any page; the four bottom-nav items visible.
 - **Crop:** Tight crop of the bottom bar only, about 393 x 90.
 
-### ⬜ `05-credentials-gallery.png` — P2 — should have
+### ✅ `05-credentials-gallery.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 3: Get Advocate (Optional)`
 - **Caption:** Credentials and accreditations on the Identity page, Advocate included.
@@ -60,7 +60,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Scrolled to the Credentials / Accreditations galleries showing Proof of Curiosity and Advocate.
 - **Crop:** Viewport.
 
-### ⬜ `06-guided-tour.png` — P3 — nice to have
+### ✅ `06-guided-tour.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `### Guided Tour`
 - **Caption:** The guided tour highlights each module in turn.
@@ -72,7 +72,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Pods  `02-pod-management.md` → folder `pods/`
 
-### ⬜ `01-pods-directory.png` — P1 — must have
+### ✅ `01-pods-directory.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Browse Pods`
 - **Caption:** The Pods directory.
@@ -80,7 +80,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** At least three pods listed with images and descriptions.
 - **Crop:** Viewport.
 
-### ⬜ `02-pod-page.png` — P1 — must have
+### ✅ `02-pod-page.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### View Pod Details`
 - **Caption:** A pod page: name, status, description, funding, and the sections below.
@@ -88,7 +88,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Top of a pod page with the Fund button and description visible.
 - **Crop:** Viewport.
 
-### ⬜ `03-apply-for-membership.png` — P1 — must have
+### ✅ `03-apply-for-membership.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Apply for Membership`
 - **Caption:** Applying to a pod: pick a role, answer the prompts, sign.
@@ -96,7 +96,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Application form with a role selected and a short statement typed.
 - **Crop:** Viewport.
 
-### ⬜ `04-create-pod-basics.png` — P2 — should have
+### ✅ `04-create-pod-basics.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 2: Fill Basic Information`
 - **Caption:** Create a pod: name, description, image.
@@ -105,7 +105,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/createpod.png (check it matches the current form)
 
-### ⬜ `05-create-pod-leaders.png` — P2 — should have
+### ✅ `05-create-pod-leaders.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 3: Add Pod Leaders`
 - **Caption:** Add leaders by wallet or by member search.
@@ -113,7 +113,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Leaders step with one leader added.
 - **Crop:** Viewport.
 
-### ⬜ `06-create-pod-eligibility.png` — P3 — nice to have
+### ✅ `06-create-pod-eligibility.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `### Step 4: Set Eligibility Criteria (Optional)`
 - **Caption:** Eligibility: token holdings, agreements, or other-pod membership.
@@ -121,7 +121,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Eligibility step with one criterion added.
 - **Crop:** Viewport.
 
-### ⬜ `07-create-pod-modules.png` — P2 — should have
+### ✅ `07-create-pod-modules.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 5: Enable Modules (Optional)`
 - **Caption:** Choose the modules your pod starts with.
@@ -129,7 +129,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Modules step with a few toggled on.
 - **Crop:** Viewport.
 
-### ⬜ `08-create-pod-review.png` — P2 — should have
+### ✅ `08-create-pod-review.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 6: Review and Create`
 - **Caption:** Review, then create. The on-chain step is gasless.
@@ -147,7 +147,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/podmanage.png (check)
 
-### ⬜ `10-members-roles.png` — P1 — must have
+### ✅ `10-members-roles.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Managing Permissions`
 - **Caption:** Members & Roles: each role carries granular permissions.
@@ -156,7 +156,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** public/images/appimages/modpermissions.png (check)
 
-### ⬜ `11-agreements-tab.png` — P2 — should have
+### ✅ `11-agreements-tab.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Creating Agreement`
 - **Caption:** Agreements tab: create an agreement and attach it to a role.
@@ -164,7 +164,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Agreements tab with the create form open.
 - **Crop:** Viewport.
 
-### ⬜ `12-modules-tab.png` — P1 — must have
+### ✅ `12-modules-tab.png` — P1 — must have
 
 - **Where in the doc:** before-body of `## Pod Modules in Detail`
 - **Caption:** Modules tab: Core, Add-Ons, and Paid.
@@ -173,7 +173,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Full page.
 - **Reuse:** public/images/appimages/podmods.PNG (check)
 
-### ⬜ `13-treasury-tab.png` — P2 — should have
+### ✅ `13-treasury-tab.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Treasury Module`
 - **Caption:** Treasury tab: balances, distribution, approvals.
@@ -186,7 +186,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Governance & Voting  `03-governance-voting.md` → folder `governance/`
 
-### ⬜ `01-proposals-list.png` — P1 — must have
+### ✅ `01-proposals-list.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Browse All Proposals`
 - **Caption:** Governance: proposals grouped by status.
@@ -195,7 +195,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/governanceapp.PNG (check)
 
-### ⬜ `02-proposal-detail.png` — P1 — must have
+### ✅ `02-proposal-detail.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### View Proposal Details`
 - **Caption:** A proposal: description, tier, tallies, and the vote buttons.
@@ -203,21 +203,13 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Active proposal with vote counts and For / Against / Abstain visible.
 - **Crop:** Viewport.
 
-### ⬜ `03-cast-vote.png` — P1 — must have
+### ✅ `03-cast-vote.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Cast Your Vote`
 - **Caption:** Casting a vote. On-chain votes are gasless.
 - **Screen:** `/governance/<proposal-id>` as *eligible voter*
 - **What to show:** Right after pressing a vote button: the confirming state or the 'You voted' badge.
 - **Crop:** Tight crop around the vote controls.
-
-### ⬜ `04-delegation.png` — P3 — nice to have
-
-- **Where in the doc:** after-body of `### Delegate to Someone Else (Optional)`
-- **Caption:** Delegating DAO-wide voting power.
-- **Screen:** `/governance` as *Advocate holder*
-- **What to show:** The delegation control with your current delegate shown.
-- **Crop:** Tight crop.
 
 ### ⬜ `05-create-proposal.png` — P2 — should have
 

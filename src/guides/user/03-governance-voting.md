@@ -38,25 +38,18 @@ Advocate is **auto-delegated when it is minted**, so your voting power is active
 - Based on number of Advocate tokens you hold
 - Active immediately: Advocate is auto-delegated on mint, so you never have to delegate to yourself
 
-### Delegate to Someone Else (Optional)
-**When:** You trust someone to vote on your behalf
+### Activating Voting Power
+Your Advocate credential is delegated to you automatically when it is minted,
+so your voting power is active from day one. If it ever is not (for example a
+credential minted before auto-delegation existed), the **Create Proposal**
+form shows an **Activate voting power** step: one gasless transaction that
+delegates the credential to your own address.
 
-**Steps:**
-1. Go to **Delegation** page
-2. Enter delegate's address
-3. Click "Delegate"
-4. Sign transaction
-5. Delegate can now vote with your power
-
-**Important:**
-- You can change your delegate anytime, or delegate back to yourself
-- Only one delegate at a time
-- Delegation doesn't transfer token ownership
-
-### Check Your Delegation
-1. Go to **Governance** page
-2. See "Delegated To" field
-3. By default it is your own address (auto-delegated), meaning you vote with your own power
+### Delegating to Someone Else
+The app does not offer delegation to another member. Each Advocate votes with
+their own power. The credential follows the ERC721Votes standard, so
+delegation is technically possible directly on the contract, but it is not a
+supported path and the app will not show it.
 
 ---
 
