@@ -111,16 +111,38 @@ export async function authorizeOwnedWallet(
     };
   }
   if (!ctx.isLinked(targetWallet)) {
+    // getUserWallets caches per server instance, so a wallet linked moments ago
+    // by a different instance can still look unlinked here. Confirm against the
+    // database before refusing — a stale cache must not deny a real wallet.
+    const fresh = await getUserWallets(ctx.userId, { fresh: true });
+    const target = targetWallet.toLowerCase();
+    const linkedNow =
+      target === ctx.jwtWallet ||
+      fresh.some((w) => w.walletAddress === target);
+
+    if (!linkedNow) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          {
+            error: 'forbidden',
+            detail:
+              'This wallet is not recognised as one of yours. Sign out and sign back in, then try again.',
+          },
+          { status: 403 },
+        ),
+      };
+    }
+    // Rebuild isLinked over the fresh set; the original closed over the stale one.
+    const freshSet = new Set(fresh.map((w) => w.walletAddress));
+    freshSet.add(ctx.jwtWallet);
     return {
-      ok: false,
-      response: NextResponse.json(
-        {
-          error: 'forbidden',
-          detail:
-            'The target wallet is not linked to your account. Link this device first.',
-        },
-        { status: 403 },
-      ),
+      ok: true,
+      ctx: {
+        ...ctx,
+        linkedWallets: fresh,
+        isLinked: (address: string) => freshSet.has(address.toLowerCase()),
+      },
     };
   }
   return { ok: true, ctx };

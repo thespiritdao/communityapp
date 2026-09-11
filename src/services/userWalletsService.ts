@@ -81,8 +81,14 @@ function toUserWallet(row: any): UserWallet {
  * All wallets linked to a user. Returns canonical first, then by
  * linked_at ascending.
  */
-export async function getUserWallets(userId: string): Promise<UserWallet[]> {
-  const cached = readCache(userId);
+export async function getUserWallets(
+  userId: string,
+  opts: { fresh?: boolean } = {},
+): Promise<UserWallet[]> {
+  // The cache lives in one server instance's memory, so a link written by
+  // another instance is invisible here until the TTL lapses. Callers about to
+  // refuse a request on the strength of this list should ask for a fresh read.
+  const cached = opts.fresh ? null : readCache(userId);
   if (cached) return cached;
 
   const { data, error } = await supabaseAdmin
