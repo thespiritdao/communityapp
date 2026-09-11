@@ -8,7 +8,6 @@ import {
   getConnectors,
   signMessage,
 } from '@wagmi/core';
-import { injected } from 'wagmi/connectors';
 import { supabase } from '@/lib/supabase';
 import { externalWalletConfig } from '@/features/identity/lib/externalWalletConfig';
 
@@ -51,6 +50,9 @@ export function LinkedWalletsSection({
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [linking, setLinking] = useState(false);
+  // Wallets that announced themselves over EIP-6963. Each carries its own
+  // provider, so we never have to touch the contested window.ethereum.
+  const [detected, setDetected] = useState<Array<{ id: string; name: string }>>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -84,14 +86,42 @@ export function LinkedWalletsSection({
     fetchWallets();
   }, [fetchWallets]);
 
-  const handleLink = useCallback(async () => {
+  // Wallet announcements arrive asynchronously after load, so re-read the
+  // connector list a few times rather than once on mount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const read = () => {
+      const announced = getConnectors(externalWalletConfig)
+        .filter((c) => c.id !== 'injected')
+        .map((c) => ({ id: c.id, name: c.name }));
+      setDetected((prev) =>
+        prev.length === announced.length &&
+        prev.every((p, i) => p.id === announced[i].id)
+          ? prev
+          : announced,
+      );
+    };
+    read();
+    // Nudge any wallet that hasn't announced yet, then re-read.
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    const timers = [250, 750, 2000].map((ms) => setTimeout(read, ms));
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const handleLink = useCallback(async (connectorId?: string) => {
     setError(null);
     setSuccess(null);
 
-    // No injected (browser) wallet available.
-    if (typeof window === 'undefined' || !(window as any).ethereum) {
+    // Which wallets actually announced themselves (EIP-6963)? We deliberately
+    // do NOT test for window.ethereum: Brave injects that object even when no
+    // wallet has been set up, so its presence proves nothing and connecting
+    // through it just launches Brave's wallet onboarding.
+    const announced = getConnectors(externalWalletConfig).filter(
+      (c) => c.id !== 'injected',
+    );
+    if (announced.length === 0) {
       setError(
-        'No browser wallet detected. Install MetaMask (or a similar extension) to link an external wallet.',
+        'No wallet extension detected. Install MetaMask (or set up another browser wallet), then reload this page.',
       );
       return;
     }
@@ -105,39 +135,19 @@ export function LinkedWalletsSection({
 
       // a. Connect the external wallet using the ISOLATED config only.
       //
-      // Prefer a connector discovered through EIP-6963 over constructing
-      // injected() here. injected() reaches for window.ethereum, and when one
-      // extension freezes that object while another wraps it in a Proxy, the
-      // JS engine throws a Proxy invariant error ("'removeListener' is a
-      // read-only and non-configurable data property on the proxy target...")
-      // before we ever get an account. EIP-6963 hands us each wallet's own
-      // provider instead of the shared, contested global.
-      const discovered = getConnectors(externalWalletConfig).filter(
-        (c) => c.type === 'injected' || c.id !== 'injected',
-      );
-      const preferred =
-        discovered.find((c) => c.id === 'io.metamask') ??
-        discovered.find((c) => c.id !== 'injected') ??
-        discovered[0];
+      // Connect to the wallet the user picked (or the only one announced).
+      // Using the announced provider — never the shared window.ethereum —
+      // avoids the Proxy invariant error that two extensions fighting over
+      // that global produce ("'removeListener' is a read-only and
+      // non-configurable data property on the proxy target...").
+      const chosen =
+        announced.find((c) => c.id === connectorId) ??
+        announced.find((c) => c.id === 'io.metamask') ??
+        announced[0];
 
-      const connectExternal = async () => {
-        try {
-          return await connect(externalWalletConfig, {
-            connector: preferred ?? injected(),
-          });
-        } catch (connectErr) {
-          // Last resort: the legacy window.ethereum path.
-          if (!preferred) throw connectErr;
-          console.warn(
-            'Discovered connector failed, retrying with the legacy injected provider:',
-            connectErr,
-          );
-          return await connect(externalWalletConfig, {
-            connector: injected(),
-          });
-        }
-      };
-      const connection = await connectExternal();
+      const connection = await connect(externalWalletConfig, {
+        connector: chosen,
+      });
       const externalAddress =
         connection.accounts[0] ??
         getAccount(externalWalletConfig).address;
@@ -353,25 +363,41 @@ export function LinkedWalletsSection({
         )}
 
         <div style={{ marginTop: '0.75rem' }}>
-          <button
-            type="button"
-            onClick={handleLink}
-            disabled={linking}
-            style={{
-              background: '#C6933F',
-              color: '#FFFFFF',
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              fontWeight: 600,
-              fontSize: '14px',
-              letterSpacing: '0.02em',
-              cursor: linking ? 'default' : 'pointer',
-              opacity: linking ? 0.7 : 1,
-            }}
-          >
-            {linking ? 'Linking...' : 'Link external wallet'}
-          </button>
+          {detected.length === 0 ? (
+            <p style={{ fontSize: '0.8rem', color: '#6B7A74', lineHeight: 1.5, margin: 0 }}>
+              No wallet extension detected. Install MetaMask, or set up your
+              browser&apos;s built-in wallet, then reload this page.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {detected.map((w) => (
+                <button
+                  key={w.id}
+                  type="button"
+                  onClick={() => handleLink(w.id)}
+                  disabled={linking}
+                  style={{
+                    background: '#C6933F',
+                    color: '#FFFFFF',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    letterSpacing: '0.02em',
+                    cursor: linking ? 'default' : 'pointer',
+                    opacity: linking ? 0.7 : 1,
+                  }}
+                >
+                  {linking
+                    ? 'Linking...'
+                    : detected.length === 1
+                      ? `Link ${w.name}`
+                      : w.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
