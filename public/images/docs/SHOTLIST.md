@@ -619,7 +619,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Community Agent  `13-community-agent.md` → folder `community-agent/`
 
-### ⬜ `01-agent-reply.png` — P1 — must have
+### ✅ `01-agent-reply.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Talking to it (members)`
 - **Caption:** Mention the agent in pod chat and it replies.
@@ -627,7 +627,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** A message that @mentions Kairos and its reply beneath.
 - **Crop:** Viewport.
 
-### ⬜ `02-agent-settings.png` — P1 — must have
+### ✅ `02-agent-settings.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Setting it up (pod leaders)`
 - **Caption:** Agents tab: name, avatar, persona, schedule.
@@ -640,7 +640,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Chat & Direct Messages  `14-chat-and-messages.md` → folder `chat/`
 
-### ⬜ `01-chat-groups.png` — P1 — must have
+### ✅ `01-chat-groups.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Pod chat`
 - **Caption:** Chat: your pod rooms and direct messages.
@@ -648,7 +648,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Group list with two or more rooms.
 - **Crop:** Viewport.
 
-### ⬜ `02-direct-message.png` — P2 — should have
+### ✅ `02-direct-message.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Direct messages`
 - **Caption:** A direct message thread.
@@ -664,10 +664,10 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 ### ⬜ `01-self-holdings.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## What $SELF is`
-- **Caption:** Your $SELF holdings by epoch.
-- **Screen:** `/claims` as *member with $SELF*
-- **What to show:** The $SELF holdings card with epochs and decay shown.
-- **Crop:** Tight crop.
+- **Caption:** Your spendable $SELF, already adjusted for decay.
+- **Screen:** `/identity` as *member with $SELF*
+- **What to show:** The balances block showing $SELF and $SYSTEM. The $SELF figure is the decayed, spendable amount — there is no per-epoch breakdown on any member screen.
+- **Crop:** Tight crop of the balances block.
 
 ### ⬜ `02-tenure-band.png` — P2 — should have
 

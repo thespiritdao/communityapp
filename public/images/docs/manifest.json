@@ -1108,12 +1108,12 @@
       "heading": "## What $SELF is",
       "placement": "after-body",
       "priority": 1,
-      "caption": "Your $SELF holdings by epoch.",
+      "caption": "Your spendable $SELF, already adjusted for decay.",
       "capture": {
-        "url": "/claims",
+        "url": "/identity",
         "actor": "member with $SELF",
-        "state": "The $SELF holdings card with epochs and decay shown.",
-        "crop": "Tight crop."
+        "state": "The balances block showing $SELF and $SYSTEM. The $SELF figure is the decayed, spendable amount — there is no per-epoch breakdown on any member screen.",
+        "crop": "Tight crop of the balances block."
       }
     },
     {
