@@ -415,24 +415,27 @@ Create 3 tutorial videos for SpiritDAO:
 
 ### Step 3: Fund Bounty
 
-**Escrow Funding:**
-- Funds locked in contract
-- Released when work approved
-- Protects worker payment
-- Refunded if canceled
+Every bounty is escrowed: the full amount is pulled into the bounty
+contract when you create it, released when work is approved, and refunded
+if the bounty is cancelled. There is no pay-on-completion option.
+
+**Choose the funding source:**
+- **Your wallet** — the amount comes from your own $SYSTEM or $SELF. The
+  app approves and escrows in one gasless transaction.
+- **Pod treasury** — the amount comes from the pod's treasury. You must be
+  a pod leader (or hold a role authorised for treasury funding), and the
+  treasury must already hold at least the bounty amount in that token. Top
+  it up first with the **Fund** button on the pod page if it does not.
 
 **Steps:**
-1. Approve token spending
-2. Transfer to escrow contract
-3. Sign transactions
-4. Wait for confirmation
-5. Bounty goes live
+1. Pick the funding source and the token
+2. Press Create — one gasless transaction
+3. Wait for confirmation (usually under a minute)
+4. Bounty goes live
 
-**Alternative:**
-- Pay-on-completion (no escrow)
-- Requires trust
-- Faster setup
-- Less secure for worker
+If the funding source cannot cover the amount, the form tells you before
+sending. If the network still rejects the transaction, the most common cause
+is the same: not enough of the chosen token where you are funding from.
 
 ### Step 4: Review and Create
 1. Double-check all details

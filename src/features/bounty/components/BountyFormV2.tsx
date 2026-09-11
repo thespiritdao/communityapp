@@ -462,6 +462,47 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         }
       }
 
+      // Pre-flight: the escrow pull reverts on-chain (opaque "execution
+      // reverted" from the bundler) when the funding source cannot cover the
+      // bounty. Check the balance first and explain it in plain words.
+      {
+        const tokenSymbol = formData.value.token;
+        const tokenAddr = (tokenSymbol === 'SYSTEM'
+          ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN
+          : process.env.NEXT_PUBLIC_SELF_TOKEN) as `0x${string}` | undefined;
+        const needed = parseEther(formData.value.amount || '0');
+        const fromTreasury = formData.funding_source === 'pod_treasury';
+        const selectedPod = managablePods.find((p) => p.id === formData.podId);
+        const source = (fromTreasury ? selectedPod?.treasury_contract_address : smartAccount) as `0x${string}` | undefined;
+        if (tokenAddr && source && needed > 0n) {
+          try {
+            const client = createPublicClient({
+              chain: base,
+              transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
+            });
+            const balance = (await client.readContract({
+              address: tokenAddr,
+              abi: [{ name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'a', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] }] as const,
+              functionName: 'balanceOf',
+              args: [source],
+            })) as bigint;
+            if (balance < needed) {
+              const have = (Number(balance) / 1e18).toLocaleString(undefined, { maximumFractionDigits: 4 });
+              const who = fromTreasury ? `${selectedPod?.name ?? 'The pod'}'s treasury` : 'Your wallet';
+              setErrors({
+                transaction: `${who} holds ${have} $${tokenSymbol}, but this bounty needs ${formData.value.amount} $${tokenSymbol}. ${
+                  fromTreasury ? 'Fund the treasury first (Fund button on the pod page), lower the amount, or fund from your wallet.' : 'Lower the amount or top up your wallet.'
+                }`,
+              });
+              setIsTransactionPending(false);
+              return;
+            }
+          } catch (preflightErr) {
+            console.warn('Balance pre-flight skipped:', preflightErr);
+          }
+        }
+      }
+
       const encodedCalls = callsToSend.map((call) => ({
         to: call.address as `0x${string}`,
         value: 0n,
@@ -710,7 +751,21 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         calls: transactionCalls,
       });
 
-      setErrors({ transaction: err.message || 'Transaction failed. Please try again.' });
+      // The bundler reports any on-chain revert as "useroperation reverted:
+      // execution reverted". Translate the common causes.
+      const raw = String(err?.message || '');
+      let friendly = err?.message || 'Transaction failed. Please try again.';
+      if (/useroperation reverted|execution reverted|failed to estimate gas/i.test(raw)) {
+        friendly =
+          formData.funding_source === 'pod_treasury'
+            ? 'The network rejected this bounty. Most often the pod treasury does not hold enough of the selected token to escrow the amount, or you do not wear the pod leader hat. Fund the treasury, lower the amount, or fund from your wallet.'
+            : 'The network rejected this bounty. Most often your wallet does not hold enough of the selected token to escrow the amount. Lower the amount or top up your wallet.';
+      } else if (/Not authorized to fund from treasury/i.test(raw)) {
+        friendly = 'Only the pod leader (or a role authorised for treasury funding) can fund a bounty from the treasury.';
+      } else if (/Pod not registered/i.test(raw)) {
+        friendly = 'This pod is not registered with the bounty contract yet. A pod leader needs to create the first treasury-funded bounty to register it.';
+      }
+      setErrors({ transaction: friendly });
       setTransactionStatus('');
     } finally {
       setIsTransactionPending(false); // EXACT FAUCET PATTERN
