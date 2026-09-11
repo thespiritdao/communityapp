@@ -5,6 +5,7 @@ import {
   connect,
   disconnect,
   getAccount,
+  getConnectors,
   signMessage,
 } from '@wagmi/core';
 import { injected } from 'wagmi/connectors';
@@ -103,9 +104,40 @@ export function LinkedWalletsSection({
       }
 
       // a. Connect the external wallet using the ISOLATED config only.
-      const connection = await connect(externalWalletConfig, {
-        connector: injected(),
-      });
+      //
+      // Prefer a connector discovered through EIP-6963 over constructing
+      // injected() here. injected() reaches for window.ethereum, and when one
+      // extension freezes that object while another wraps it in a Proxy, the
+      // JS engine throws a Proxy invariant error ("'removeListener' is a
+      // read-only and non-configurable data property on the proxy target...")
+      // before we ever get an account. EIP-6963 hands us each wallet's own
+      // provider instead of the shared, contested global.
+      const discovered = getConnectors(externalWalletConfig).filter(
+        (c) => c.type === 'injected' || c.id !== 'injected',
+      );
+      const preferred =
+        discovered.find((c) => c.id === 'io.metamask') ??
+        discovered.find((c) => c.id !== 'injected') ??
+        discovered[0];
+
+      const connectExternal = async () => {
+        try {
+          return await connect(externalWalletConfig, {
+            connector: preferred ?? injected(),
+          });
+        } catch (connectErr) {
+          // Last resort: the legacy window.ethereum path.
+          if (!preferred) throw connectErr;
+          console.warn(
+            'Discovered connector failed, retrying with the legacy injected provider:',
+            connectErr,
+          );
+          return await connect(externalWalletConfig, {
+            connector: injected(),
+          });
+        }
+      };
+      const connection = await connectExternal();
       const externalAddress =
         connection.accounts[0] ??
         getAccount(externalWalletConfig).address;
