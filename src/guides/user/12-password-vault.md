@@ -12,15 +12,15 @@ The Password Vault is end-to-end encrypted shared credential storage for a pod �
 2. Toggle on **Password Vault**.
 3. A **Passwords** tab appears in the pod menu. Enabling the module automatically gives every pod role vault *access*, and leader roles vault *management* (add/edit/delete).
 
-## First-time setup (every member, once)
+## Unlocking the vault (every member, each session)
 
-The first time you open the **Passwords** tab you'll see a **"Set up vault access"** prompt.
+When you open the **Passwords** tab without an unlocked vault, you'll see a **"Set up vault access"** prompt.
 
 1. Click **Set up vault access**.
 2. Your wallet asks you to sign one message. This is free — it's a signature, not a transaction — and it's how your browser derives your personal encryption key.
 3. Done. The key stays in your browser; it is never sent to the server.
 
-Note: the key lives in your browser session. If you sign out or switch devices, you'll be asked to set up access again — that's normal, just sign again.
+Expect this prompt again each time you come back in a new browser session. Your key is held only for as long as the tab is open, and is deliberately dropped when you close it — so nothing is left behind on a shared or lost machine. Signing again re-derives the same key and your entries are all still there.
 
 ## Using the vault (members)
 

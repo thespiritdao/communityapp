@@ -138,7 +138,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/podcreate.png (check)
 
-### ⬜ `09-manage-tabs.png` — P1 — must have
+### ✅ `09-manage-tabs.png` — P1 — must have
 
 - **Where in the doc:** before-body of `### Pod Management Dashboard`
 - **Caption:** Manage: the tab strip across the top of pod management.
@@ -248,7 +248,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** A bounty expanded with its details and the Apply button.
 - **Crop:** Viewport.
 
-### ⬜ `03-apply-form.png` — P1 — must have
+### ✅ `03-apply-form.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Submit Application`
 - **Caption:** Applying: experience, plan, deliverables, proposed amount.
@@ -256,7 +256,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Bid form partially filled.
 - **Crop:** Viewport.
 
-### ⬜ `04-application-status.png` — P2 — should have
+### ✅ `04-application-status.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Application Status`
 - **Caption:** Your applications and their status.
@@ -264,7 +264,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** The applicant's view with a Pending badge.
 - **Crop:** Viewport.
 
-### ⬜ `05-submit-work.png` — P2 — should have
+### ✅ `05-submit-work.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Submitting Work`
 - **Caption:** Submitting work for review.
@@ -272,7 +272,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Work submission form with title, description, and a link added.
 - **Crop:** Viewport.
 
-### ⬜ `06-review-work.png` — P2 — should have
+### ✅ `06-review-work.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### If You're the Reviewer`
 - **Caption:** Reviewing a submission: approve, request revision, or reject.
@@ -289,7 +289,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/bountyapp.PNG (current, reusable)
 
-### ⬜ `08-fund-bounty.png` — P2 — should have
+### ✅ `08-fund-bounty.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Step 3: Fund Bounty`
 - **Caption:** Funding from your wallet or the pod treasury.
@@ -297,7 +297,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** The funding-source choice and the confirm step.
 - **Crop:** Tight crop.
 
-### ⬜ `09-manage-bounties.png` — P2 — should have
+### ✅ `09-manage-bounties.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### As Bounty Poster`
 - **Caption:** Manage tab: applications, assignments, payments.
@@ -439,7 +439,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/marketplaceapp.PNG (check)
 
-### ⬜ `02-product-detail.png` — P2 — should have
+### ✅ `02-product-detail.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Product Details`
 - **Caption:** An artifact's detail view: full description, both prices, availability.
@@ -483,7 +483,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Video & Chat  `08-video-chat-conferencing.md` → folder `video/`
 
-### ⬜ `01-quick-meeting.png` — P1 — must have
+### ✅ `01-quick-meeting.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Accessing a Conference`
 - **Caption:** Quick Meeting on the pod page: start or join.
@@ -492,7 +492,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Tight crop.
 - **Reuse:** public/images/appimages/quickmeeting.PNG (check)
 
-### ⬜ `02-conference-room.png` — P2 — should have
+### ✅ `02-conference-room.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### Conference Controls`
 - **Caption:** In a conference: mute, camera, share, leave.
@@ -512,7 +512,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## App Walkthrough  `09-app-walkthrough.md` → folder `walkthrough/`
 
-### ⬜ `01-start-tour.png` — P2 — should have
+### ✅ `01-start-tour.png` — P2 — should have
 
 - **Where in the doc:** after-body of `### From the Home Screen`
 - **Caption:** Start the guided tour from the home screen.
@@ -520,7 +520,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** The tour entry point visible.
 - **Crop:** Tight crop.
 
-### ⬜ `02-kb-videos.png` — P2 — should have
+### ✅ `02-kb-videos.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Video Walkthroughs`
 - **Caption:** Video walkthroughs in the Knowledge Base.
@@ -533,7 +533,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Linking External Wallets  `10-linking-external-wallets.md` → folder `linking-wallets/`
 
-### ⬜ `01-linked-wallets.png` — P1 — must have
+### ✅ `01-linked-wallets.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## How to link a wallet, step by step`
 - **Caption:** Identity → Linked Wallets: link an external wallet by signing a message.
@@ -562,7 +562,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Tight crop.
 - **Reuse:** public/images/appimages/survey.PNG (check)
 
-### ⬜ `02-survey-form.png` — P2 — should have
+### ✅ `02-survey-form.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Taking a survey (members)`
 - **Caption:** Answering a survey.
@@ -570,7 +570,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Survey form open with a multiple-choice and a rating question.
 - **Crop:** Viewport.
 
-### ⬜ `03-create-survey.png` — P2 — should have
+### ✅ `03-create-survey.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Creating a survey (pod leaders)`
 - **Caption:** Creating a survey: audience and questions.
@@ -578,7 +578,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Surveys tab, create form with two questions.
 - **Crop:** Viewport.
 
-### ⬜ `04-results.png` — P3 — nice to have
+### ✅ `04-results.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `## Reading results (creators)`
 - **Caption:** Survey results.
@@ -590,7 +590,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Password Vault  `12-password-vault.md` → folder `password-vault/`
 
-### ⬜ `01-enable-vault.png` — P2 — should have
+### ✅ `01-enable-vault.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Turning it on (pod leaders)`
 - **Caption:** Modules → Add-Ons → Password Vault.
@@ -600,13 +600,13 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ### ⬜ `02-first-time-setup.png` — P1 — must have
 
-- **Where in the doc:** after-body of `## First-time setup (every member, once)`
-- **Caption:** One-time vault setup: sign to create your key.
+- **Where in the doc:** after-body of `## Unlocking the vault (every member, each session)`
+- **Caption:** Unlocking the vault: sign once per browser session.
 - **Screen:** `/pods/<pod-id>` as *member*
-- **What to show:** The vault setup prompt asking for a signature.
+- **What to show:** The "Set up vault access" prompt, before signing. Open the Passwords tab in a fresh browser session (or close and reopen the tab) to bring it back.
 - **Crop:** Viewport.
 
-### ⬜ `03-vault-entries.png` — P1 — must have
+### ✅ `03-vault-entries.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Using the vault (members)`
 - **Caption:** Vault entries. Decryption happens in your browser.
