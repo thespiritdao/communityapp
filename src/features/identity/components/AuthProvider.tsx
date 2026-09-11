@@ -3,6 +3,7 @@ import type React from 'react';
 import { createContext, useContext } from 'react';
 import { useAuth, type LinkingRequired } from '../hooks/useAuth';
 import { LinkNewDeviceModal } from './LinkNewDeviceModal';
+import { SessionGuard } from './SessionGuard';
 
 interface AuthContextType {
   session: any;
@@ -31,8 +32,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearLinkingRequired,
   } = useAuth();
 
-  // Removed auto-authentication to prevent conflicts with main page auth flow
-  // Authentication is now handled exclusively by page.tsx for better control
+  // page.tsx owns the first-run auth + onboarding sequence on '/'. Everywhere
+  // else, <SessionGuard> re-establishes a lapsed Supabase session so the
+  // wallet and the session can't drift apart (see SessionGuard.tsx).
 
   const value = {
     session,
@@ -47,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      <SessionGuard />
       <LinkNewDeviceModal />
     </AuthContext.Provider>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWallet } from '@/lib/apiPodGuard';
+import { fetchIpfsJson } from '@/lib/ipfsFetch';
 
 const PINATA_API_URL = 'https://api.pinata.cloud';
 const PINATA_JWT = process.env.PINATA_JWT;
@@ -168,37 +169,23 @@ async function fetchMetadata(ipfsHash: string) {
       );
     }
 
-    // Try Pinata gateway first
-    let response = await fetch(
-      `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      },
-    );
+    // Authenticated Pinata first, then trustless/public gateways, each with a
+    // timeout. The shared public gateways now rate-limit or hang, which used
+    // to make bounty metadata vanish. See src/lib/ipfsFetch.ts.
+    const { data, source, errors } = await fetchIpfsJson(ipfsHash);
 
-    // Fallback to public gateway if Pinata fails
-    if (!response.ok) {
-      console.log('Pinata gateway failed, trying public gateway...');
-      response = await fetch(`https://ipfs.io/ipfs/${ipfsHash}`);
-    }
-
-    if (!response.ok) {
+    if (!data) {
       return NextResponse.json(
-        { error: 'Failed to fetch from IPFS' },
+        { error: 'Failed to fetch from IPFS', details: errors },
         { status: 404 },
       );
     }
 
-    const metadata = await response.json();
-
     return NextResponse.json({
       success: true,
-      metadata,
+      metadata: data,
       ipfsHash,
-      source: response.url.includes('pinata') ? 'pinata' : 'public',
+      source,
     });
   } catch (error) {
     console.error('Fetch error:', error);

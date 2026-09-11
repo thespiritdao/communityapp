@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
-import { getCurrentSession } from '@/features/identity/utils/serverAuth';
+import { ensureAuthToken } from '@/lib/authHeaders';
 import { parseEther, encodeFunctionData, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { useRouter } from 'next/navigation';
@@ -601,8 +601,15 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           }
 
           console.log('💾 Initiating database save...');
-          const session = await getCurrentSession();
-          const authToken = session?.access_token;
+          // The bounty already exists on-chain at this point, so a missing
+          // Supabase session must not lose it: re-establish one if needed.
+          const authToken = await ensureAuthToken();
+          if (!authToken) {
+            console.error('❌ No session available to save bounty', bountyId);
+            setErrors({
+              transaction: `Your bounty was created on-chain (ID ${bountyId}) but your session expired before it could be saved. Reload the page and sign in — the bounty will be picked up automatically.`,
+            });
+          }
           fetch('/api/bounty/create', {
             method: 'POST',
             headers: {
