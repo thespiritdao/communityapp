@@ -36,6 +36,27 @@ async function isPodLeader(podId: string, wallet: string): Promise<boolean> {
   return !!member;
 }
 
+/**
+ * Answers submitted before 2026-09-11 were JSON-encoded a second time before
+ * being written to the jsonb column, so they come back wrapped in literal
+ * quotes ("\"Town Hall Time\""). Unwrap those so historic responses still
+ * tally. Values written correctly pass straight through.
+ */
+function normalizeAnswer(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw;
+  const trimmed = raw.trim();
+  const looksEncoded =
+    (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) ||
+    trimmed.startsWith('[') ||
+    trimmed.startsWith('{');
+  if (!looksEncoded) return raw;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return raw;
+  }
+}
+
 function extractIds(req: NextRequest): { podId: string; surveyId: string } {
   const match = req.nextUrl.pathname.match(/\/api\/pods\/([^/]+)\/surveys\/([^/]+)\/results/);
   return { podId: match?.[1] ?? '', surveyId: match?.[2] ?? '' };
@@ -81,7 +102,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   // Aggregate results per question
   const questionResults = questions.map((question: any) => {
-    const questionAnswers = (answers || []).filter((a: any) => a.question_id === question.id);
+    const questionAnswers = (answers || [])
+      .filter((a: any) => a.question_id === question.id)
+      .map((a: any) => ({ ...a, answer_value: normalizeAnswer(a.answer_value) }));
+
+    // Questions can be optional, so the share of people choosing an option is
+    // measured against the people who answered that question, not everyone who
+    // opened the survey.
+    const answeredCount = questionAnswers.length;
 
     let summary: any;
 
@@ -104,7 +132,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           }
         }
 
-        summary = { type: 'option_counts', option_counts: optionCounts };
+        summary = {
+          type: 'option_counts',
+          option_counts: optionCounts,
+          answered_count: answeredCount,
+        };
         break;
       }
 
@@ -116,7 +148,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           })
           .slice(0, 200);
 
-        summary = { type: 'free_text', responses };
+        summary = { type: 'free_text', responses, answered_count: answeredCount };
         break;
       }
 
@@ -141,6 +173,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           type: 'rating',
           average: count > 0 ? Math.round((sum / count) * 100) / 100 : 0,
           distribution,
+          answered_count: count,
         };
         break;
       }

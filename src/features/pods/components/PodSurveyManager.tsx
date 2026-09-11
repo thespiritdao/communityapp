@@ -731,7 +731,8 @@ export default function PodSurveyManager({
                                   {qr.summary.type === 'option_counts' && (
                                     <div className="space-y-1.5">
                                       {Object.entries(qr.summary.option_counts).map(([option, count]) => {
-                                        const total = results.total_responses || 1;
+                                        const total =
+                                          qr.summary.answered_count || results.total_responses || 1;
                                         const pct = Math.round(((count as number) / total) * 100);
                                         return (
                                           <div key={option}>
@@ -766,7 +767,7 @@ export default function PodSurveyManager({
                                               className="h-6 rounded-sm"
                                               style={{
                                                 backgroundColor: '#6A5F7A',
-                                                opacity: (qr.summary.distribution[val] || 0) > 0 ? 0.3 + (0.7 * (qr.summary.distribution[val] || 0)) / (results.total_responses || 1) : 0.1,
+                                                opacity: (qr.summary.distribution[val] || 0) > 0 ? 0.3 + (0.7 * (qr.summary.distribution[val] || 0)) / (qr.summary.answered_count || results.total_responses || 1) : 0.1,
                                               }}
                                             />
                                             <span className="text-[10px]" style={{ color: '#8F8A84' }}>{val}</span>

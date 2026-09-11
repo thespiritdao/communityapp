@@ -58,17 +58,21 @@ export interface QuestionResult {
 export interface OptionCountSummary {
   type: 'option_counts';
   option_counts: Record<string, number>;
+  /** People who answered this question; the denominator for each option's share. */
+  answered_count: number;
 }
 
 export interface FreeTextSummary {
   type: 'free_text';
   responses: string[];
+  answered_count: number;
 }
 
 export interface RatingSummary {
   type: 'rating';
   average: number;
   distribution: Record<number, number>;
+  answered_count: number;
 }
 
 // Form types used in the survey builder

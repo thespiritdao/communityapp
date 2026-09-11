@@ -120,11 +120,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: responseError.message }, { status: 500 });
   }
 
-  // Insert answers
+  // Insert answers. answer_value is a jsonb column, so the value is handed
+  // over as-is: the client encodes it once on the way out. Calling
+  // JSON.stringify() here encoded it a second time, storing the option as
+  // "\"Town Hall Time\"" — quote characters and all — which then matched no
+  // option when results were tallied.
   const answerRows = answers.map((a: any) => ({
     response_id: response.id,
     question_id: a.question_id,
-    answer_value: typeof a.answer_value === 'object' ? a.answer_value : JSON.stringify(a.answer_value),
+    answer_value: a.answer_value,
   }));
 
   const { error: answersError } = await supabaseAdmin
