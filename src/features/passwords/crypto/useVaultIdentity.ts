@@ -24,8 +24,9 @@
 //   - We never POST the secret or the raw signature to the server.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
+import { useCurrentUser, useEvmAddress, useSignEvmMessage } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
+import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import {
   buildCanonicalIdentityMessage,
   deriveIdentityKeypair,
@@ -88,6 +89,10 @@ function clearCachedIdentity(eoa: string): void {
 export function useVaultIdentity(): UseVaultIdentityResult {
   const { currentUser } = useCurrentUser();
   const { signEvmMessage } = useSignEvmMessage();
+  // The address the user is signed in as. CDP's useEvmAddress() returns the
+  // smart account, which is what the Supabase session is issued for — not the
+  // EOA below, which is what actually signs.
+  const { evmAddress: sessionAddress } = useEvmAddress();
 
   // CDP returns checksummed addresses on currentUser.evmAccounts. We keep
   // BOTH forms: the lowercase one is canonical for caching keys, server
@@ -219,20 +224,44 @@ export function useVaultIdentity(): UseVaultIdentityResult {
         throw new Error('Not authenticated — reconnect your wallet');
       }
 
-      const res = await fetch('/api/vault/keys', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          eoaAddress,
-          publicKey: kp.publicKey,
-        }),
-      });
+      const publish = (token: string) =>
+        fetch('/api/vault/keys', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            eoaAddress,
+            publicKey: kp.publicKey,
+          }),
+        });
+
+      let res = await publish(accessToken);
+
+      // A 403 means the server doesn't recognise this EOA as one of the
+      // account's wallets. Sessions issued before sign-in started recording
+      // the EOA alongside the smart account look like that. Re-requesting the
+      // session replays the Coinbase proof, which links it; then this works.
+      if (res.status === 403 && sessionAddress) {
+        const refreshed = await requestSupabaseSession({ address: sessionAddress });
+        if (refreshed.ok) {
+          const { supabaseToken, supabaseRefreshToken } = await refreshed.json();
+          if (supabaseToken && supabaseRefreshToken) {
+            await supabase.auth.setSession({
+              access_token: supabaseToken,
+              refresh_token: supabaseRefreshToken,
+            });
+            res = await publish(supabaseToken);
+          }
+        }
+      }
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || `Publish failed (${res.status})`);
+        throw new Error(
+          body?.detail || body?.error || `Publish failed (${res.status})`,
+        );
       }
 
       setIdentity(kp);
@@ -243,7 +272,7 @@ export function useVaultIdentity(): UseVaultIdentityResult {
       setError(e?.message || 'Bootstrap failed');
       setStatus('error');
     }
-  }, [eoaAddress, eoaAddressOriginal, signEvmMessage]);
+  }, [eoaAddress, eoaAddressOriginal, sessionAddress, signEvmMessage]);
 
   const clear = useCallback(() => {
     if (eoaAddress) clearCachedIdentity(eoaAddress);

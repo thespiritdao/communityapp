@@ -265,6 +265,55 @@ export async function insertLinkedWallet(args: {
 }
 
 /**
+ * Link every address a CDP session proves the user owns.
+ *
+ * A CDP embedded wallet is two addresses, not one: the EOA that signs, and
+ * the ERC-4337 smart account it owns. `useEvmAddress()` returns the smart
+ * account, so that is what signs the user in and what lands in user_wallets;
+ * features that need a signature (the password vault) use the EOA. Because
+ * only the smart account was ever recorded, authorizeOwnedWallet() rejected
+ * the EOA and the vault could not publish its public key.
+ *
+ * Both addresses come from the same validated CDP access token, so recording
+ * them grants nothing the caller had not already proven. Addresses already
+ * linked to a different user are skipped, never reassigned.
+ *
+ * Returns the number of addresses newly linked.
+ */
+export async function linkProvenCdpWallets(args: {
+  userId: string;
+  /** Addresses attested by cdp.endUser.validateAccessToken. */
+  addresses: string[];
+  /** The address the user actually signed in with. */
+  viaWallet: string;
+}): Promise<number> {
+  const existing = new Set(
+    (await getUserWallets(args.userId)).map((w) => w.walletAddress),
+  );
+
+  let linked = 0;
+  for (const raw of args.addresses) {
+    const target = raw.toLowerCase();
+    if (!/^0x[a-f0-9]{40}$/.test(target)) continue;
+    if (existing.has(target)) continue;
+
+    const result = await insertLinkedWallet({
+      userId: args.userId,
+      walletAddress: target,
+      issuedByWallet: args.viaWallet,
+      walletType: 'device',
+    });
+    if (result) {
+      existing.add(target);
+      linked++;
+    }
+  }
+
+  if (linked > 0) invalidate(args.userId);
+  return linked;
+}
+
+/**
  * Revoke a linked wallet. Refuses to revoke the canonical wallet —
  * users who want to change their canonical wallet need a separate
  * promote-then-revoke flow (not in Phase 1).

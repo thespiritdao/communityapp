@@ -23,6 +23,7 @@ import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
 import {
   findUserByWallet,
   insertCanonicalWallet,
+  linkProvenCdpWallets,
   touchWalletSeen,
 } from '@/services/userWalletsService';
 
@@ -329,6 +330,24 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       throw new Error('Failed to retrieve or create user ID');
+    }
+
+    // Record every address this CDP session proved the user owns — the smart
+    // account they signed in with AND the EOA that owns it. The password vault
+    // signs with the EOA, so without this its publish request is refused as an
+    // unlinked wallet. Cheap and idempotent after the first sign-in.
+    try {
+      const linked = await linkProvenCdpWallets({
+        userId,
+        addresses: verified.accounts,
+        viaWallet: normalizedAddress,
+      });
+      if (linked > 0) {
+        console.log(`🔗 Auth API: linked ${linked} additional CDP address(es) for user ${userId}`);
+      }
+    } catch (linkErr) {
+      // Never block sign-in on this; the vault will simply still 403.
+      console.error('⚠️ Auth API: could not link CDP sibling wallets:', linkErr);
     }
 
     // Sign a JWT directly with the Supabase JWT secret.
