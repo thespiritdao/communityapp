@@ -186,6 +186,8 @@ const nextConfig = {
                 https://api.stripe.com
                 https://*.livekit.cloud
                 wss://*.livekit.cloud
+                https://livekit.spiritdao.org
+                wss://livekit.spiritdao.org
                 https://tiles.openfreemap.org;
               worker-src 'self' blob:;
               child-src 'self' blob:;
