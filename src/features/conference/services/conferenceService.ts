@@ -72,7 +72,9 @@ export async function getRoomByName(roomName: string): Promise<RoomWithCount> {
  */
 export async function getRoomByEventId(eventId: string): Promise<RoomWithCount | null> {
   try {
-    return await apiGet<RoomWithCount>(`/api/conference/rooms?eventId=${encodeURIComponent(eventId)}`);
+    const res = await apiGet<RoomWithCount>(`/api/conference/rooms?eventId=${encodeURIComponent(eventId)}`);
+    // "No room yet" comes back as a 200 with room: null.
+    return res?.room ? res : null;
   } catch {
     return null;
   }
@@ -83,7 +85,9 @@ export async function getRoomByEventId(eventId: string): Promise<RoomWithCount |
  */
 export async function getRoomByPodId(podId: string): Promise<RoomWithCount | null> {
   try {
-    return await apiGet<RoomWithCount>(`/api/conference/rooms?podId=${encodeURIComponent(podId)}`);
+    const res = await apiGet<RoomWithCount>(`/api/conference/rooms?podId=${encodeURIComponent(podId)}`);
+    // "No room yet" comes back as a 200 with room: null.
+    return res?.room ? res : null;
   } catch {
     return null;
   }

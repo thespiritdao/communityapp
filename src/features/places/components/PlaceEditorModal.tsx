@@ -179,9 +179,11 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
   const filteredThreads = threads.filter((t) => t.title.toLowerCase().includes(threadFilter.toLowerCase())).slice(0, 40);
   const filteredMembers = members.filter((m) => m.name.toLowerCase().includes(memberFilter.toLowerCase())).slice(0, 40);
 
+  // pt-10 keeps the sheet clear of the top edge on mobile, and 85vh matches the
+  // other modals in the app — at 92vh this one sat noticeably higher.
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" role="dialog" aria-modal="true">
-      <div className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 pt-10 sm:p-4" role="dialog" aria-modal="true">
+      <div className="w-full sm:max-w-2xl max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
           <h4 className="font-semibold flex items-center gap-2">
             <MapPin className="h-4 w-4" /> {existing ? 'Edit place' : 'Add a place'}

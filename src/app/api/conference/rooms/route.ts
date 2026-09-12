@@ -68,7 +68,15 @@ export async function GET(req: NextRequest) {
     }
 
     if (!room) {
-      return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      // Asking "does this pod/event have a meeting open?" and hearing "no" is a
+      // normal answer, not a failure — most pods have no room most of the time.
+      // Returning 404 put a red error in every member's console on every pod
+      // page load. A named room that is missing is still a 404, because the
+      // caller asked for one that should exist.
+      if (roomName) {
+        return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      }
+      return NextResponse.json({ room: null, participantCount: 0 });
     }
 
     const { count } = await supabaseAdmin
