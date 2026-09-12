@@ -34,6 +34,15 @@ export default function BountyPage() {
   const [activeTab, setActiveTab] = useState('public');
   const [selectedPodId, setSelectedPodId] = useState<string>('');
   const [refreshKey, setRefreshKey] = useState(0); // Add refresh trigger
+  // ?bounty=<id> opens that bounty's card. Notifications about a specific
+  // bounty link here, so arriving on the bare list would leave the reader to
+  // hunt for whatever the alert was about.
+  const [focusBountyId, setFocusBountyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('bounty');
+    setFocusBountyId(id && id.trim() ? id.trim() : null);
+  }, []);
 
   // Check if selected pod is in managed pods (user has both module and permission)
   const podBountyPermission = managedPods.some(
@@ -41,8 +50,11 @@ export default function BountyPage() {
   );
   const permissionLoading = podsLoading;
 
-  // Set initial pod selection if user has manageable pods
+  // Set initial pod selection if user has manageable pods.
+  // Skipped when a bounty was deep-linked: auto-selecting a pod narrows the
+  // public list to it, which would hide a bounty belonging to any other pod.
   useEffect(() => {
+    if (focusBountyId) return;
     if (managedPods.length > 0 && !selectedPodId) {
       // Auto-select first manageable pod (already filtered by module + permission)
       setSelectedPodId(managedPods[0].id);
@@ -161,9 +173,10 @@ export default function BountyPage() {
 
           <TabsContent value="public">
             <BountyManagement
-              key={`public-${refreshKey}`}
-              podId={selectedPodId || 'all'}
+              key={`public-${refreshKey}-${focusBountyId ?? ''}`}
+              podId={focusBountyId ? 'all' : selectedPodId || 'all'}
               canManageBounties={false}
+              focusBountyId={focusBountyId}
             />
             {!selectedPodId && managedPods.length > 0 && (
               <div className="mt-4 p-4 bg-[#FAF4EC] border border-[#E8D7B8] rounded-lg">

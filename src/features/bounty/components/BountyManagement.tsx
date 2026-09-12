@@ -59,6 +59,13 @@ import { useTokenBalances } from '@/context/TokenBalancesContext';
 interface BountyManagementProps {
   podId: string;
   canManageBounties: boolean;
+  /**
+   * Open this bounty's detail card on mount. Set from ?bounty= so a
+   * notification can land on the bounty it refers to. The status filter starts
+   * at "open", which would hide an assigned or completed bounty — exactly the
+   * ones notifications point at — so a focused bounty also widens the filter.
+   */
+  focusBountyId?: string | null;
 }
 
 // Utility function to format crypto values
@@ -134,18 +141,21 @@ const canUserBid = (
 export const BountyManagement: React.FC<BountyManagementProps> = ({
   podId,
   canManageBounties,
+  focusBountyId = null,
 }) => {
   const { evmAddress: address } = useEvmAddress();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('open');
+  const [statusFilter, setStatusFilter] = useState<string>(
+    focusBountyId ? 'all' : 'open',
+  );
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedBounty, setSelectedBounty] = useState<BountyV2 | null>(null);
   const [showBidForm, setShowBidForm] = useState(false);
   const [selectedBountyForBid, setSelectedBountyForBid] =
     useState<BountyV2 | null>(null);
   const [openBountyDetailId, setOpenBountyDetailId] = useState<string | null>(
-    null,
+    focusBountyId,
   );
   const [editingBid, setEditingBid] = useState<any | null>(null); // Stores the bid being edited
   const [showWorkSubmissionForm, setShowWorkSubmissionForm] = useState(false);
