@@ -147,7 +147,7 @@ async function createRenewalProposal(opts: {
     ``,
     `**Funding:** ${fundingLine}`,
     ``,
-    `If this proposal is rejected or fails quorum, ${agentName} stops operating when the current period ends. A future proposal may reinstate it.`,
+    `If a quorum votes and the majority is against, ${agentName} stops operating when the current period ends; a future proposal may reinstate it. If too few people vote to reach quorum, the pod has decided nothing and ${agentName} simply continues to the next referendum — silence is not a vote to end it.`,
   ].join('\n');
 
   // Snapshot eligible voters at creation (same rule close-proposals applies)
@@ -331,6 +331,8 @@ export async function GET(req: NextRequest) {
         const isGrantFunded = meta.funded_by === 'dao_grant';
         const cadence = cfg.renewal_cadence_days ?? GRANT_REFERENDUM_CADENCE_DAYS;
 
+        const thresholds = proposal.metadata?.close_thresholds ?? null;
+
         const historyEntry = {
           proposal_id: proposal.id,
           result: proposal.status,
@@ -379,8 +381,41 @@ export async function GET(req: NextRequest) {
               }]);
             }
           }
+        } else if (thresholds?.quorumMet === false) {
+          // Too few people voted for the pod to have decided anything. Closing
+          // as 'rejected' is a bookkeeping artifact, not a verdict: the first
+          // of these was unanimously in favour, 2 for and 0 against, and still
+          // stopped the agent.
+          //
+          // A referendum that reaches no decision leaves things as they are.
+          // Treating silence as a vote to end the agent turned a check the
+          // community holds into a timer that fires on its own — the opposite
+          // of "decided by exactly the franchise from which it is excluded".
+          // A real majority against, with quorum, still ends it below.
+          const next = new Date(cfg.next_referendum_at ?? new Date());
+          next.setUTCDate(next.getUTCDate() + cadence);
+
+          await updateAgentConfig(podId, cfg, {
+            next_referendum_at: next.toISOString(),
+            active_renewal_proposal_id: null,
+            renewal_rejected_proposal_id: null,
+            renewal_history: history,
+          });
+
+          console.log(
+            `[RenewalReferendums] ${agentName}: referendum ${proposal.id} did not reach quorum ` +
+              `(${proposal.metadata?.vote_counts?.total ?? 0} of ${thresholds.eligibleVoters} voted, ` +
+              `${thresholds.requiredQuorum} needed). No decision — agent continues.`,
+          );
+
+          await notifyPodMembers(
+            podId,
+            `${agentName} continues — referendum did not reach quorum`,
+            `Only ${proposal.metadata?.vote_counts?.total ?? 0} of ${thresholds.eligibleVoters} members voted, short of the ${thresholds.requiredQuorum} needed, so no decision was reached and ${agentName} keeps running. The next referendum opens ${next.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}.`,
+            proposal.id,
+          );
         } else {
-          // Rejected (or failed quorum): the community declined renewal.
+          // A genuine decision: enough people voted, and they voted it down.
           // Grant-funded agents fall silent immediately; treasury-funded
           // agents run out their paid period and cannot be re-subscribed
           // without a new vote (subscribe API checks renewal state).
