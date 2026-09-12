@@ -20,6 +20,8 @@ SpiritDAO is open enrollment: download the app, connect with a community, or org
 
 ### Step 1: Connect Your Wallet
 
+![The sign-in screen: email code or Google, no wallet app needed.](https://app.spiritdao.org/images/docs/getting-started/01-sign-in.png)
+
 1. Click "Connect Wallet" button in top right
 2. Choose wallet option:
    - **Smart Wallet** (Recommended): No gas fees, easier to use
@@ -59,6 +61,8 @@ SpiritDAO is open enrollment: download the app, connect with a community, or org
 - Builds trust in community
 - Required for some pod applications
 
+![Identity → Edit Profile: name, picture, bio, interests, and openness to connect.](https://app.spiritdao.org/images/docs/getting-started/02-edit-profile.png)
+
 ### Step 3: Get Advocate (Optional)
 
 Advocate is a DAO-wide membership accreditation. It appears under **Accreditations** on your identity page.
@@ -78,6 +82,8 @@ Advocate is a DAO-wide membership accreditation. It appears under **Accreditatio
 
 ---
 
+![Credentials and accreditations on the Identity page, Advocate included.](https://app.spiritdao.org/images/docs/getting-started/05-credentials-gallery.png)
+
 ## Understanding Permissions
 
 SpiritDAO uses role-based permissions:
@@ -96,6 +102,8 @@ SpiritDAO uses role-based permissions:
 
 ## Navigation
 
+![The home screen: your modules on top, community modules below.](https://app.spiritdao.org/images/docs/getting-started/03-home-screen.png)
+
 ### Top Bar
 - **SpiritDAO Logo**: Return to home
 - **Search**: Find pods, events, proposals
@@ -110,6 +118,8 @@ SpiritDAO uses role-based permissions:
 - **Bounties**: Task marketplace
 
 ---
+
+![The bottom bar: Home, Claims, Govern, Alerts.](https://app.spiritdao.org/images/docs/getting-started/04-bottom-nav.png)
 
 ## Key Features Overview
 
@@ -247,6 +257,8 @@ SpiritDAO uses role-based permissions:
 1. Go to **Knowledge Base** page
 2. Click the "Take a guided tour" card (🧭) at the top
 3. Walk through every section in ~2 minutes
+
+![The guided tour highlights each module in turn.](https://app.spiritdao.org/images/docs/getting-started/06-guided-tour.png)
 
 ### Knowledge Base Videos
 1. Go to **Knowledge Base** from the home screen

@@ -49,6 +49,8 @@ SpiritDAO's forum is a discussion platform where members can:
    - Latest activity
    - Access requirements
 
+![Forum categories, including pod forums you can access.](https://app.spiritdao.org/images/docs/forum/01-categories.png)
+
 ### View Category Threads
 1. Click on category
 2. See all threads in that category
@@ -58,6 +60,8 @@ SpiritDAO's forum is a discussion platform where members can:
    - Reply count
    - Last activity timestamp
    - Pinned status
+
+![Threads in a category with sort controls.](https://app.spiritdao.org/images/docs/forum/02-category-threads.png)
 
 ### Filter Threads
 - By recent activity
@@ -116,6 +120,8 @@ SpiritDAO's forum is a discussion platform where members can:
 - Link to external docs
 - Embed videos (YouTube, etc.)
 
+![New thread: title, formatting toolbar, body.](https://app.spiritdao.org/images/docs/forum/03-new-thread-editor.png)
+
 ### Step 3: Choose Permissions
 
 **Public Thread:**
@@ -150,6 +156,8 @@ SpiritDAO's forum is a discussion platform where members can:
 3. Click "Reply" button
 4. Write your response
 5. Click "Post Reply"
+
+![Replying with an @mention: type @ and pick a member.](https://app.spiritdao.org/images/docs/forum/04-reply-mention.png)
 
 ### Reply to Specific Post
 1. Click "Quote" on that post
@@ -309,6 +317,8 @@ SpiritDAO's forum is a discussion platform where members can:
 
 ---
 
+![Moderation actions on a thread.](https://app.spiritdao.org/images/docs/forum/05-moderation-menu.png)
+
 ## Advanced Forum Features
 
 ### Thread Subscriptions
@@ -373,6 +383,8 @@ SpiritDAO's forum is a discussion platform where members can:
 - Closes automatically at deadline
 
 ---
+
+![A poll inside a thread.](https://app.spiritdao.org/images/docs/forum/06-poll.png)
 
 ## Connecting Forum to Governance
 
@@ -476,6 +488,8 @@ with a Pod Face that renames the **Forum** button to **Journal** and your
 community sees that word everywhere, including the forum page heading.
 
 Full walkthrough: [Journal and Places](19-journal-and-places.md).
+
+![A category in journal mode: entries by month with covers.](https://app.spiritdao.org/images/docs/forum/07-journal-mode.png)
 
 ## Best Practices
 

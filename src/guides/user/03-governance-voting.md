@@ -139,6 +139,8 @@ supported path and the app will not show it.
    - Time remaining (if active)
    - Whether you voted
 
+![Governance: proposals grouped by status.](https://app.spiritdao.org/images/docs/governance/01-proposals-list.png)
+
 ### Filter Proposals
 **By Status:**
 - **All**: See everything
@@ -162,6 +164,8 @@ supported path and the app will not show it.
    - Execution status
 
 ---
+
+![A proposal: description, tier, tallies, and the vote buttons.](https://app.spiritdao.org/images/docs/governance/02-proposal-detail.png)
 
 ## Voting on Proposals
 
@@ -192,6 +196,8 @@ supported path and the app will not show it.
 - Cannot change vote
 - Your voting power counted
 - Visible in vote history
+
+![Casting a vote. On-chain votes are gasless.](https://app.spiritdao.org/images/docs/governance/03-cast-vote.png)
 
 ### Vote Visibility
 - All votes are public
@@ -260,6 +266,8 @@ supported path and the app will not show it.
 - Restricts who can vote
 - Usually left as "Advocate"
 
+![Create proposal: title, description, tier.](https://app.spiritdao.org/images/docs/governance/05-create-proposal.png)
+
 ### Step 4: Review Requirements
 Before submitting, system checks:
 - ✅ Wallet connected
@@ -305,6 +313,8 @@ After creating:
 - Visible on proposal details page
 - Shows progress toward quorum
 - Updates in real-time
+
+![Per-pod governance settings: quorum, approval, and voting window.](https://app.spiritdao.org/images/docs/governance/06-governance-settings.png)
 
 ### Voting Countdown
 - Shows time remaining to vote

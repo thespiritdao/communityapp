@@ -51,6 +51,8 @@ Bounties are task-based rewards in SpiritDAO. They allow:
    - Number of applications
    - Pod (if pod-specific)
 
+![The bounty board.](https://app.spiritdao.org/images/docs/bounties/01-bounty-board.png)
+
 ### Filter Bounties
 
 **By Status:**
@@ -77,6 +79,8 @@ Bounties are task-based rewards in SpiritDAO. They allow:
    - Assigned worker (if applicable)
 
 ---
+
+![A bounty: value, deadline, requirements, and Apply.](https://app.spiritdao.org/images/docs/bounties/02-bounty-detail.png)
 
 ## Understanding Bounty Types
 
@@ -172,6 +176,8 @@ Bounties are task-based rewards in SpiritDAO. They allow:
 - You can edit until reviewed
 - Status: "Pending"
 
+![Applying: experience, plan, deliverables, proposed amount.](https://app.spiritdao.org/images/docs/bounties/03-apply-form.png)
+
 ### Application Status
 
 **Pending:**
@@ -192,6 +198,8 @@ Bounties are task-based rewards in SpiritDAO. They allow:
 - Don't be discouraged
 
 ---
+
+![Your applications and their status.](https://app.spiritdao.org/images/docs/bounties/04-application-status.png)
 
 ## Working on Assigned Bounties
 
@@ -267,6 +275,8 @@ Bounties are task-based rewards in SpiritDAO. They allow:
 
 ---
 
+![Submitting work for review.](https://app.spiritdao.org/images/docs/bounties/05-submit-work.png)
+
 ## Work Review Process
 
 ### If You're the Reviewer
@@ -303,6 +313,8 @@ Bounties are task-based rewards in SpiritDAO. They allow:
 3. Worker receives notification
 4. Payment returned to poster
 5. Bounty reopened or canceled
+
+![Reviewing a submission: approve, request revision, or reject.](https://app.spiritdao.org/images/docs/bounties/06-review-work.png)
 
 ### If You're the Worker
 
@@ -358,6 +370,8 @@ Bounties are task-based rewards in SpiritDAO. They allow:
 
 **Example Description:**
 ```
+
+![Create a bounty: pod, who can apply, title, category, amount.](https://app.spiritdao.org/images/docs/bounties/07-create-bounty.png)
 # Task: Create Tutorial Videos
 
 Create 3 tutorial videos for SpiritDAO:
@@ -437,6 +451,8 @@ If the funding source cannot cover the amount, the form tells you before
 sending. If the network still rejects the transaction, the most common cause
 is the same: not enough of the chosen token where you are funding from.
 
+![Funding from your wallet or the pod treasury.](https://app.spiritdao.org/images/docs/bounties/08-fund-bounty.png)
+
 ### Step 4: Review and Create
 1. Double-check all details
 2. Preview how it looks
@@ -487,6 +503,8 @@ is the same: not enough of the chosen token where you are funding from.
 - Refunds escrow to you
 - Notify applicants/assignee
 - Provide reason
+
+![Manage tab: applications, assignments, payments.](https://app.spiritdao.org/images/docs/bounties/09-manage-bounties.png)
 
 ### As Bounty Worker
 

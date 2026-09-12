@@ -541,7 +541,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Linked Wallets section with the Link button and, if possible, the MetaMask signature prompt.
 - **Crop:** Viewport.
 
-### ⬜ `02-linked-list.png` — P3 — nice to have
+### ❌ `02-linked-list.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `## Checking that it worked`
 - **Caption:** A linked external wallet listed with its type.
@@ -598,7 +598,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Modules tab with the Password Vault card toggled on.
 - **Crop:** Tight crop.
 
-### ⬜ `02-first-time-setup.png` — P1 — must have
+### ❌ `02-first-time-setup.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Unlocking the vault (every member, each session)`
 - **Caption:** Unlocking the vault: sign once per browser session.
@@ -661,15 +661,15 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## $SELF & Tenure  `15-self-token-and-tenure.md` → folder `self-tenure/`
 
-### ⬜ `01-self-holdings.png` — P1 — must have
+### ✅ `01-self-holdings.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## What $SELF is`
-- **Caption:** Your spendable $SELF, already adjusted for decay.
-- **Screen:** `/identity` as *member with $SELF*
-- **What to show:** The balances block showing $SELF and $SYSTEM. The $SELF figure is the decayed, spendable amount — there is no per-epoch breakdown on any member screen.
-- **Crop:** Tight crop of the balances block.
+- **Caption:** Your $SELF holdings by epoch.
+- **Screen:** `/claims` as *member with $SELF*
+- **What to show:** The $SELF holdings card with epochs and decay shown.
+- **Crop:** Tight crop.
 
-### ⬜ `02-tenure-band.png` — P2 — should have
+### ✅ `02-tenure-band.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Tenure — your permanent standing`
 - **Caption:** Your Tenure band on the Identity page.
@@ -681,7 +681,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## AI Agents & the Constitution  `16-ai-agents-and-the-constitution.md` → folder `agent-constitution/`
 
-### ⬜ `01-constitution-monitor.png` — P2 — should have
+### ✅ `01-constitution-monitor.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Safeguards`
 - **Caption:** The public constitution monitor at /constitution.
@@ -701,7 +701,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Pod Agreements section with a Not signed badge and the signing modal open.
 - **Crop:** Viewport.
 
-### ⬜ `02-create-agreement.png` — P3 — nice to have
+### ✅ `02-create-agreement.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `## Creating agreements (pod leaders)`
 - **Caption:** Attaching an agreement to a role.
@@ -713,7 +713,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Inviting People  `17-inviting-people.md` → folder `inviting-people/`
 
-### ⬜ `01-invite-friends.png` — P1 — must have
+### ✅ `01-invite-friends.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Using the Invite Friends panel`
 - **Caption:** Identity → Invite Friends: personal link, pod link, email.
@@ -721,7 +721,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Invite Friends panel expanded.
 - **Crop:** Viewport.
 
-### ⬜ `02-pod-invite-links.png` — P2 — should have
+### i ✅ `02-pod-invite-links.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Pod invite links, in depth (for pod leaders)`
 - **Caption:** Pod invite links and the pending-mint queue.
@@ -733,7 +733,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Pod Faces  `18-pod-faces.md` → folder `pod-faces/`
 
-### ⬜ `01-wear-a-look.png` — P1 — must have
+### ✅ `01-wear-a-look.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Wearing a look (members)`
 - **Caption:** Identity → Appearance: choose a pod's face.
@@ -741,7 +741,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Appearance section with the default and one pod face listed.
 - **Crop:** Tight crop.
 
-### ⬜ `02-face-editor.png` — P1 — must have
+### ✅ `02-face-editor.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Designing a face (pod leaders)`
 - **Caption:** The face editor: palette, icons, menu names, live preview.
@@ -753,7 +753,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Journal & Places  `19-journal-and-places.md` → folder `journal-and-places/`
 
-### ⬜ `01-journal-category.png` — P1 — must have
+### ✅ `01-journal-category.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Turn it on (pod leaders)`
 - **Caption:** Manage → Forum: choose Journal as the presentation.
@@ -761,7 +761,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Forum tab with the Presentation choice set to Journal.
 - **Crop:** Tight crop.
 
-### ⬜ `02-places-map.png` — P1 — must have
+### ✅ `02-places-map.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Places: your community's shared map`
 - **Caption:** The Places section on a pod page.
@@ -769,7 +769,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Places section in Map view with three or more pins of different kinds, one proposed (dashed), one approximate (circle), and a relationship line.
 - **Crop:** Viewport.
 
-### ⬜ `03-place-detail.png` — P1 — must have
+### ✅ `03-place-detail.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### What a place is`
 - **Caption:** A pin's detail card: kind, status, description, connections.
@@ -777,7 +777,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** A pin selected with the detail card showing a cover image and two connections.
 - **Crop:** Tight crop of the card.
 
-### ⬜ `04-add-place.png` — P1 — must have
+### ✅ `04-add-place.png` — P1 — must have
 
 - **Where in the doc:** after-body of `### Adding a place (managers)`
 - **Caption:** Add a place: search an address or tap the mini map.
@@ -785,7 +785,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Editor open with kind, status, the mini map, and address search results visible.
 - **Crop:** Full page of the editor sheet.
 
-### ⬜ `05-rename-section.png` — P3 — nice to have
+### ✅ `05-rename-section.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `### Naming the section`
 - **Caption:** Rename the section for your community.
@@ -793,7 +793,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** The heading in rename mode with 'Territory' typed.
 - **Crop:** Tight crop.
 
-### ⬜ `06-identity-location.png` — P1 — must have
+### ✅ `06-identity-location.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Sharing your own location (optional)`
 - **Caption:** Identity → Location: opt in, approximate by default.

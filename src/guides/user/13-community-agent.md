@@ -20,6 +20,8 @@ It answers from your pod's own material: forum posts (ingested automatically) pl
 - Or @mention it by name anywhere in your pod's forum or enabled chat channels — it shows up in the mention autocomplete like a member. Ask it things like "@Kairos what did we decide about the spring planting event?"
 - Expect a reply within a couple of minutes, not instantly — it checks for mentions on a short cycle.
 
+![Mention the agent in pod chat and it replies.](https://app.spiritdao.org/images/docs/community-agent/01-agent-reply.png)
+
 ## Setting it up (pod leaders)
 
 1. **Enable the module:** pod **Manage** → **Modules** → under Paid Modules, toggle **Community AI Agent**. An **Agents** tab appears in your pod menu.
@@ -33,6 +35,8 @@ It answers from your pod's own material: forum posts (ingested automatically) pl
 4. **Feed it knowledge:** in the Agents tab, use **Upload Documents** (PDF, TXT, or MD). Your pod's forum posts are ingested automatically. The more relevant material it has, the better its answers — with an empty corpus it falls back to generic responses.
 
 A note on permissions: leaders can delegate agent configuration to a member via the **agent management** permission, but subscription/billing actions always stay leader-only.
+
+![Agents tab: name, avatar, persona, schedule.](https://app.spiritdao.org/images/docs/community-agent/02-agent-settings.png)
 
 ## Good to know
 

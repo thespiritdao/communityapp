@@ -62,6 +62,8 @@ Conferencing supports larger group sessions:
 3. Click "Join Conference" to enter the room
 4. Your camera and microphone will be requested
 
+![Quick Meeting on the pod page: start or join.](https://app.spiritdao.org/images/docs/video/01-quick-meeting.png)
+
 ### Creating a Conference
 
 **Required:** Pod leader role or appropriate pod permission
@@ -80,6 +82,8 @@ Conferencing supports larger group sessions:
 - **Chat**: Text chat runs alongside video for questions and links
 - **Participants list**: See who is in the call
 - **Record**: Hosts may record the session (participants are notified)
+
+![In a conference: mute, camera, share, leave.](https://app.spiritdao.org/images/docs/video/02-conference-room.png)
 
 ### Conference Best Practices
 

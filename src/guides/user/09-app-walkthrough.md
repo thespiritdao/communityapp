@@ -20,6 +20,8 @@ The tour button may also be accessible from your home screen or settings dependi
 
 ---
 
+![Start the guided tour from the home screen.](https://app.spiritdao.org/images/docs/walkthrough/01-start-tour.png)
+
 ## What the Tour Covers
 
 The guided tour walks through every major section of the app in order:
@@ -55,6 +57,8 @@ In addition to the interactive tour, the Knowledge Base includes instructional v
 Browse these videos in the Knowledge Base by selecting the relevant category.
 
 ---
+
+![Video walkthroughs in the Knowledge Base.](https://app.spiritdao.org/images/docs/walkthrough/02-kb-videos.png)
 
 ## Tips for New Members
 

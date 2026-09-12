@@ -8,6 +8,8 @@ $SELF is SpiritDAO's participation token. You can't buy it and you can't be sent
 
 $SELF is **soulbound**: it's bound to you and can never be transferred, gifted, or sold. It leaves your wallet only one way — when *you* burn it to pay for something. (This is different from $SYSTEM, the transferable dollar-backed token used for donations, bounties, and purchases.)
 
+![Your spendable $SELF, already adjusted for decay.](https://app.spiritdao.org/images/docs/self-tenure/01-self-holdings.png)
+
 ## Earning $SELF
 
 $SELF is credited for verified participation, measured in hours:
@@ -55,6 +57,8 @@ Find it at **Identity → Tenure**. Tap your band card to see all five bands:
 | **Elder** | 600+ | The deepest roots — years of accumulated participation |
 
 Every member with Proof of Curiosity is at least Curious, from day one.
+
+![Your Tenure band on the Identity page.](https://app.spiritdao.org/images/docs/self-tenure/02-tenure-band.png)
 
 ## The short version
 

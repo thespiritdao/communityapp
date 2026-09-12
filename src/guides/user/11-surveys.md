@@ -8,6 +8,8 @@ Surveys let pod leaders ask their members structured questions — satisfaction 
 
 ## Taking a survey (members)
 
+![An active survey on the pod page.](https://app.spiritdao.org/images/docs/surveys/01-survey-banner.png)
+
 1. Open your pod's page. If there's an active survey for you, a **survey banner** appears near the top (with a clipboard icon).
 2. If there's one survey, click **Respond**. If there are several, the banner says how many are available — expand it and pick one.
 3. The survey opens right on the pod page: title, description, and the questions.
@@ -27,6 +29,8 @@ Things to know:
 - **Responses are attributed, not anonymous.** Your response is tied to your wallet. Survey creators can read free-text answers individually, so write what you'd be comfortable signing your name to.
 - Members don't see aggregate results in the app — the pod's leaders do, and they'll typically share outcomes back with the pod.
 
+![Answering a survey.](https://app.spiritdao.org/images/docs/surveys/02-survey-form.png)
+
 ## Creating a survey (pod leaders)
 
 You need the **survey management** permission (leaders have it by default).
@@ -42,6 +46,8 @@ You need the **survey management** permission (leaders have it by default).
 5. Click **Activate** when you're ready. The survey banner appears on the pod page for your audience.
 6. Click **Close** when you're done collecting responses, or **Delete** to remove the survey and all its responses (confirmation required — this can't be undone).
 
+![Creating a survey: audience and questions.](https://app.spiritdao.org/images/docs/surveys/03-create-survey.png)
+
 ## Reading results (creators)
 
 In the Surveys tab, expand a survey to see:
@@ -52,3 +58,5 @@ In the Surveys tab, expand a survey to see:
 - Free text: every individual answer, listed
 
 Tip: since questions can't be edited after creation, preview your draft carefully before activating. If a question is wrong, delete the survey and recreate it before anyone responds.
+
+![Survey results.](https://app.spiritdao.org/images/docs/surveys/04-results.png)

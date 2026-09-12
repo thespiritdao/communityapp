@@ -48,6 +48,8 @@ Pods can be **time-restricted or eternal**: some are created for a fixed span, a
    - Active modules
    - Application status
 
+![The Pods directory.](https://app.spiritdao.org/images/docs/pods/01-pods-directory.png)
+
 ### View Pod Details
 1. Click on any pod card
 2. See full information:
@@ -56,6 +58,8 @@ Pods can be **time-restricted or eternal**: some are created for a fixed span, a
    - Leadership structure
    - Active modules (Forum, Events, Bounties)
    - Membership requirements
+
+![A pod page: name, status, description, funding, and the sections below.](https://app.spiritdao.org/images/docs/pods/02-pod-page.png)
 
 ### Apply for Membership
 1. On pod details page, click "Apply for Membership"
@@ -72,6 +76,8 @@ Pods can be **time-restricted or eternal**: some are created for a fixed span, a
 - **Pending**: Submitted, awaiting review
 - **Approved**: Accepted, Hat token will be created
 - **Rejected**: Not accepted, can reapply
+
+![Applying to a pod: pick a role, answer the prompts, sign.](https://app.spiritdao.org/images/docs/pods/03-apply-for-membership.png)
 
 ### After Approval
 1. Leader approves your application
@@ -113,6 +119,8 @@ Pods can be **time-restricted or eternal**: some are created for a fixed span, a
 - Creates hierarchical structure
 - Inherits some permissions
 
+![Create a pod: name, description, image.](https://app.spiritdao.org/images/docs/pods/04-create-pod-basics.png)
+
 ### Step 3: Add Pod Leaders
 **Minimum:** 2 leaders required (for accountability)
 
@@ -126,6 +134,8 @@ Pods can be **time-restricted or eternal**: some are created for a fixed span, a
    - No misappropriation of funds
 
 **Important:** Leaders have significant power and responsibility
+
+![Add leaders by wallet or by member search.](https://app.spiritdao.org/images/docs/pods/05-create-pod-leaders.png)
 
 ### Step 4: Set Eligibility Criteria (Optional)
 Control who can join:
@@ -142,6 +152,8 @@ Control who can join:
 **Other Pod Membership:**
 - Must be member of another pod first
 - Example: "Must be in Contributor Pod"
+
+![Eligibility: token holdings, agreements, or other-pod membership.](https://app.spiritdao.org/images/docs/pods/06-create-pod-eligibility.png)
 
 ### Step 5: Enable Modules (Optional)
 **Available Modules:**
@@ -171,6 +183,8 @@ Pod modules come in three kinds:
 - Hold pod funds
 - Transparent accounting
 
+![Choose the modules your pod starts with.](https://app.spiritdao.org/images/docs/pods/07-create-pod-modules.png)
+
 ### Step 6: Review and Create
 1. Review all information
 2. Confirm accountability agreement
@@ -183,6 +197,8 @@ Pod modules come in three kinds:
 
 ---
 
+![Review, then create. The on-chain step is gasless.](https://app.spiritdao.org/images/docs/pods/08-create-pod-review.png)
+
 ## Managing Your Pod
 
 ### Access Pod Management
@@ -191,6 +207,8 @@ Pod modules come in three kinds:
 3. Click "Manage Pod" button (only visible to leaders)
 
 ### Pod Management Dashboard
+
+![Manage: the tab strip across the top of pod management.](https://app.spiritdao.org/images/docs/pods/09-manage-tabs.png)
 
 #### Members Tab
 **View All Members:**
@@ -329,6 +347,8 @@ Pod modules come in three kinds:
 4. Mark as required or optional
 5. Members must sign before access
 
+![Agreements tab: create an agreement and attach it to a role.](https://app.spiritdao.org/images/docs/pods/11-agreements-tab.png)
+
 ### Viewing Signed Agreements
 1. Go to pod management
 2. Click "Agreements" tab
@@ -371,7 +391,11 @@ Pod modules come in three kinds:
 
 ---
 
+![Members & Roles: each role carries granular permissions.](https://app.spiritdao.org/images/docs/pods/10-members-roles.png)
+
 ## Pod Modules in Detail
+
+![Modules tab: Core, Add-Ons, and Paid.](https://app.spiritdao.org/images/docs/pods/12-modules-tab.png)
 
 ### Forum Module
 **Enables:**
@@ -426,6 +450,8 @@ Pod modules come in three kinds:
 - Protected from single actor
 
 ---
+
+![Treasury tab: balances, distribution, approvals.](https://app.spiritdao.org/images/docs/pods/13-treasury-tab.png)
 
 ## Best Practices
 

@@ -18,11 +18,15 @@ SpiritDAO has two messaging surfaces, both reached from the **Chat** card on the
 - **Mentions:** tag members with @ — they'll get a notification linking back to the message.
 - **Moderation:** pod moderators can delete messages, pin important ones, and mute members. If you've been muted you can still read but your messages won't send — you'll be told you're muted.
 
+![Chat: your pod rooms and direct messages.](https://app.spiritdao.org/images/docs/chat/01-chat-groups.png)
+
 ## Direct messages
 
 - **Starting one:** open a member's profile and message them, or tap a message notification — DMs open in a window over the chat page.
 - **Privacy:** DMs are between the two of you. They are not end-to-end encrypted (unlike the password vault), so treat them like messages on any community platform — private from other members, not cryptographically sealed.
 - **Blocking:** you can block a member to stop DMs between you. If someone has blocked you, your messages to them won't go through.
+
+![A direct message thread.](https://app.spiritdao.org/images/docs/chat/02-direct-message.png)
 
 ## Notifications
 

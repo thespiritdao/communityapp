@@ -28,6 +28,8 @@ about who can read or write it. What changes is how it looks and feels:
    screen's **Forum** button to **Journal** so members see that word
    everywhere (the forum page heading follows the same name).
 
+![Manage → Forum: choose Journal as the presentation.](https://app.spiritdao.org/images/docs/journal-and-places/01-journal-category.png)
+
 ### Good habits
 
 - Pin one entry as the living vision and update it rather than starting over.
@@ -43,6 +45,8 @@ about who can read or write it. What changes is how it looks and feels:
 **Manage → Modules → Add-Ons**. Once on, a **Places** section appears on the
 pod's page for every member. It is **members only**: people outside the pod
 never see it, and images on it are served only to members.
+
+![The Places section on a pod page.](https://app.spiritdao.org/images/docs/journal-and-places/02-places-map.png)
 
 ### What a place is
 
@@ -69,6 +73,8 @@ circle instead of a point. Use it for anything sensitive.
 as *steward*), and to other places (with a relationship such as *supplies*).
 Two connected places are drawn with a dashed line between them.
 
+![A pin's detail card: kind, status, description, connections.](https://app.spiritdao.org/images/docs/journal-and-places/03-place-detail.png)
+
 ### Who can do what
 
 - **Every member** can open the map, switch to the list, filter by kind and
@@ -88,6 +94,8 @@ Two connected places are drawn with a dashed line between them.
 5. **Add place**. It appears on the map for every member and posts a line to
    Pulse.
 
+![Add a place: search an address or tap the mini map.](https://app.spiritdao.org/images/docs/journal-and-places/04-add-place.png)
+
 ### Naming the section
 
 Managers can rename **Places** to whatever fits your community (up to 20
@@ -95,6 +103,8 @@ characters): *Territory*, *Commons*, *Our patch*. Tap the pencil next to the
 heading.
 
 ---
+
+![Rename the section for your community.](https://app.spiritdao.org/images/docs/journal-and-places/05-rename-section.png)
 
 ## Sharing your own location (optional)
 
@@ -106,3 +116,5 @@ and shown as a shaded circle; you can choose exact if you prefer.
 Only people who share a pod with you can see it, and only while sharing is
 on. Remove it any time from the same place. Nothing about your location is
 ever public.
+
+![Identity → Location: opt in, approximate by default.](https://app.spiritdao.org/images/docs/journal-and-places/06-identity-location.png)

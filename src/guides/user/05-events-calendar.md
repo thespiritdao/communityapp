@@ -61,6 +61,8 @@ Events are community gatherings with blockchain-based registration:
    - Pod
    - Status (Upcoming, Past, Registered)
 
+![Upcoming events.](https://app.spiritdao.org/images/docs/events/01-events-list.png)
+
 ### Event Details
 Click any event to see:
 - Title and description
@@ -73,6 +75,8 @@ Click any event to see:
 - Check-in status
 
 ---
+
+![An event: when, where, price, and Register.](https://app.spiritdao.org/images/docs/events/02-event-detail.png)
 
 ## Registering for Events
 
@@ -120,6 +124,8 @@ Click any event to see:
 - NFT visible in wallet
 - Can view in Identity page
 
+![Registering: choose $SELF or $SYSTEM for paid events.](https://app.spiritdao.org/images/docs/events/03-register-modal.png)
+
 ### After Registration
 - Add to your calendar (iCal/Google)
 - Receive reminder notifications
@@ -163,6 +169,8 @@ Click any event to see:
 - Or in notifications
 - Unique to you and event
 - Valid only during event window
+
+![Your check-in QR code.](https://app.spiritdao.org/images/docs/events/04-checkin-qr.png)
 
 ### During Event
 - Participate actively
@@ -235,6 +243,8 @@ Click any event to see:
 - Leave blank for unlimited
 - First-come-first-served
 - Can increase later if needed
+
+![Create an event: title, date, location, capacity, price.](https://app.spiritdao.org/images/docs/events/05-create-event.png)
 
 ### Step 3: Configure Registration
 
@@ -358,6 +368,8 @@ Click any event to see:
 
 ---
 
+![Organizer tools: attendees, check-in, completion.](https://app.spiritdao.org/images/docs/events/07-organizer-manage.png)
+
 ## Event Features
 
 ### Registration NFTs
@@ -444,6 +456,8 @@ Click any event to see:
 - All upcoming events
 - Easier to scan
 - Filterable
+
+![The community calendar, month view.](https://app.spiritdao.org/images/docs/events/06-calendar-month.png)
 
 ### Filtering Events
 - By pod

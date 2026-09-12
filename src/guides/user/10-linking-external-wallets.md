@@ -38,9 +38,13 @@ This feature is enabled per pod by the SpiritDAO Executive Pod. If your pod does
 6. The wallet then asks you to **sign a message**. It says you're proving ownership of this address for your SpiritDAO account. Signing is free and moves nothing. Click Sign.
 7. Done. The wallet appears in your Linked Wallets list with an **External** tag.
 
+![Identity → Linked Wallets: link an external wallet by signing a message.](https://app.spiritdao.org/images/docs/linking-wallets/01-linked-wallets.png)
+
 ## Checking that it worked
 
 Open your pod's page. If the pod uses a governance token, a balance chip near the top shows your total. After linking, it shows the **combined** amount and says "governance eligibility · incl. linked wallets."
+
+![A linked external wallet listed with its type.](https://app.spiritdao.org/images/docs/linking-wallets/02-linked-list.png)
 
 ## Removing a linked wallet
 

@@ -37,3 +37,5 @@ Notes for leaders:
 - Keep agreements short and concrete — a page of clear expectations beats ten pages of legalese nobody reads.
 - The signature list on the pod page doubles as your record of who has committed.
 - One signature per member per agreement; there's currently no re-signing flow, so if you materially change an agreement's text, treat it as a new agreement.
+
+![Attaching an agreement to a role.](https://app.spiritdao.org/images/docs/agreements/02-create-agreement.png)

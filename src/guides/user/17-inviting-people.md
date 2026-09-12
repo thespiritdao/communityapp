@@ -31,6 +31,8 @@ Things to know:
 - People who are already members, or who were invited in the last 30 days, are skipped automatically — the results list tells you who and why.
 - Only pods you **lead** offer the auto-join option. If you're a regular member of a pod, you can still invite people to SpiritDAO (the app link), but enrolling someone into a pod is a leader action.
 
+![Identity → Invite Friends: personal link, pod link, email.](https://app.spiritdao.org/images/docs/inviting-people/01-invite-friends.png)
+
 ## Pod invite links, in depth (for pod leaders)
 
 Whether you generate a pod-enroll link from your Identity page or from the pod's Manage page, it's the same mechanism — a shareable link that grants **pod membership on acceptance**. From the pod's Manage page you get extra controls:
@@ -48,6 +50,8 @@ When someone accepts:
 - Links grant **member** roles only — leadership always goes through explicit approval.
 
 Because leaders now get notified the moment someone joins, you don't have to keep checking the queue — but it's still good practice to mint promptly so new members' roles are finalized on-chain.
+
+![Pod invite links and the pending-mint queue.](https://app.spiritdao.org/images/docs/inviting-people/02-pod-invite-links.png)
 
 ## Your personal invite link
 

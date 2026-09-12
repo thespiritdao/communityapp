@@ -52,6 +52,8 @@ SpiritDAO's marketplace is a community store where members can buy and sell prod
    - Token requirements (if any)
    - Availability status
 
+![The Artifacts marketplace.](https://app.spiritdao.org/images/docs/marketplace/01-storefront.png)
+
 ### Filter Products
 
 **By Size:**
@@ -86,6 +88,8 @@ Click any product to see:
 - Pod association (if any)
 
 ---
+
+![An artifact's detail view: full description, both prices, availability.](https://app.spiritdao.org/images/docs/marketplace/02-product-detail.png)
 
 ## Understanding Token-Gated Products
 
@@ -137,6 +141,8 @@ Some products require you to hold specific tokens or NFTs to purchase:
    - Quantity
    - Price
 4. Subtotal shown at bottom
+
+![The cart: items, token choice and Purchase in one panel.](https://app.spiritdao.org/images/docs/marketplace/03-cart.png)
 
 ### Modify Cart
 
@@ -213,6 +219,8 @@ not holding enough of the chosen token.
 - **Delivered**: Completed
 - **Cancelled**: Order cancelled
 - **Refunded**: Payment returned
+
+![Your orders and their status.](https://app.spiritdao.org/images/docs/marketplace/05-orders.png)
 
 ### Track Specific Order
 1. Find order in list
@@ -294,6 +302,8 @@ not holding enough of the chosen token.
 - JPG or PNG
 - Max 5MB
 - Shows preview
+
+![Creating a product.](https://app.spiritdao.org/images/docs/marketplace/06-create-product.png)
 
 ### Step 4: Set Pricing
 
@@ -465,6 +475,8 @@ This controls where the **$SYSTEM** portion of a sale goes. Any $SELF a buyer pa
 - Not visible to buyer
 - Track special instructions
 - Document issues
+
+![Order management for fulfilment.](https://app.spiritdao.org/images/docs/marketplace/07-order-management.png)
 
 ### Fulfillment Best Practices
 

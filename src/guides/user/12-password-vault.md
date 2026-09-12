@@ -12,6 +12,8 @@ The Password Vault is end-to-end encrypted shared credential storage for a pod �
 2. Toggle on **Password Vault**.
 3. A **Passwords** tab appears in the pod menu. Enabling the module automatically gives every pod role vault *access*, and leader roles vault *management* (add/edit/delete).
 
+![Modules → Add-Ons → Password Vault.](https://app.spiritdao.org/images/docs/password-vault/01-enable-vault.png)
+
 ## Unlocking the vault (every member, each session)
 
 When you open the **Passwords** tab without an unlocked vault, you'll see a **"Set up vault access"** prompt.
@@ -27,6 +29,8 @@ Expect this prompt again each time you come back in a new browser session. Your 
 - Entries are listed by **label** and **tags** — both searchable. (Labels and tags are the only unencrypted parts, so keep secrets out of them.)
 - Click the **eye icon** to reveal a password, and the **copy icon** to copy it. The clipboard auto-clears after about 30 seconds.
 - If an entry says **"Pending grant"**, it exists but a manager hasn't shared it with your key yet. Nothing to do — a manager will grant it, and it becomes readable on refresh.
+
+![Vault entries. Decryption happens in your browser.](https://app.spiritdao.org/images/docs/password-vault/03-vault-entries.png)
 
 ## Managing entries (leaders / vault managers)
 

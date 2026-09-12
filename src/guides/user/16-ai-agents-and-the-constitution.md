@@ -40,6 +40,8 @@ Your words are yours: if a pod ingests its forum discourse, you can click **"Kee
 - **Drift monitoring**: a monthly automated review scores the agent's outputs for failure modes (claiming permanence, implying destiny, speaking as if it holds authority) and reports to leadership. The review flags; humans decide.
 - **The ledger**: every agent act is labeled and publicly traceable — see any decision's full lineage at `/explorer/trace/{proposalId}`, export the ledger at `/api/explorer/export`, and verify it hasn't been altered against the weekly onchain Merkle anchors.
 
+![The public constitution monitor at /constitution.](https://app.spiritdao.org/images/docs/agent-constitution/01-constitution-monitor.png)
+
 ## Changing the boundary — the amendment procedure
 
 The exclusion of agents from sovereignty is a **constitutional-choice rule**: it defines who counts in collective choice. It is deliberately hard — but not impossible — to change. If a community someday concludes its agent deserves standing, the lawful path is:
