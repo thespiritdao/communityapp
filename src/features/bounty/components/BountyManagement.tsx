@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,8 +62,9 @@ interface BountyManagementProps {
   /**
    * Open this bounty's detail card on mount. Set from ?bounty= so a
    * notification can land on the bounty it refers to. The status filter starts
-   * at "open", which would hide an assigned or completed bounty — exactly the
-   * ones notifications point at — so a focused bounty also widens the filter.
+   * at "Open", which excludes the assigned and completed bounties most
+   * notifications are about, so the filter is moved to match this bounty's
+   * actual status once the list loads.
    */
   focusBountyId?: string | null;
 }
@@ -146,9 +147,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   const { evmAddress: address } = useEvmAddress();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(
-    focusBountyId ? 'all' : 'open',
-  );
+  const [statusFilter, setStatusFilter] = useState<string>('open');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedBounty, setSelectedBounty] = useState<BountyV2 | null>(null);
   const [showBidForm, setShowBidForm] = useState(false);
@@ -354,6 +353,28 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
       setLoading(supabaseLoading);
     }
   }, [supabaseBounties, supabaseLoading]);
+
+  // Move the status filter to wherever the deep-linked bounty actually lives.
+  // The dropdown has no "All" option and the list defaults to Open, so a
+  // notification about an assigned bounty would otherwise land on a list that
+  // excludes it — the card exists but is filtered out, and the page looks
+  // broken. Runs once, so the reader can still change the filter afterwards.
+  const focusFilterApplied = useRef(false);
+  useEffect(() => {
+    if (!focusBountyId || focusFilterApplied.current) return;
+    const target = bounties.find((b) => b.id === focusBountyId);
+    if (!target) return;
+
+    const label = (
+      { 0: 'open', 1: 'assigned', 2: 'completed', 3: 'cancelled' } as Record<
+        number,
+        string
+      >
+    )[target.status as number];
+
+    if (label) setStatusFilter(label);
+    focusFilterApplied.current = true;
+  }, [focusBountyId, bounties]);
 
   // Filter and search bounties
   const filteredBounties = useMemo(() => {
