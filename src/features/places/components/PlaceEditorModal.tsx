@@ -179,12 +179,17 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
   const filteredThreads = threads.filter((t) => t.title.toLowerCase().includes(threadFilter.toLowerCase())).slice(0, 40);
   const filteredMembers = members.filter((m) => m.name.toLowerCase().includes(memberFilter.toLowerCase())).slice(0, 40);
 
-  // pt-10 keeps the sheet clear of the top edge on mobile, and 85vh matches the
-  // other modals in the app — at 92vh this one sat noticeably higher.
+  // This form is long — kind, status, address lookup, image, and three link
+  // pickers — so on a phone it gets the whole screen rather than a sheet sized
+  // to a fraction of it. Only the middle section scrolls: the title stays put
+  // and the Add/Cancel buttons stay reachable without scrolling to the end,
+  // which is what previously made it unusable unless the window was maximised.
+  // 100dvh (not vh) tracks the browser chrome as it collapses, and the footer
+  // clears the iOS home indicator.
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 pt-10 sm:p-4" role="dialog" aria-modal="true">
-      <div className="w-full sm:max-w-2xl max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
+    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-black/40 sm:p-4" role="dialog" aria-modal="true">
+      <div className="flex w-full flex-col bg-white shadow-xl h-[100dvh] sm:h-auto sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl">
+        <div className="flex shrink-0 items-center justify-between border-b bg-white px-4 py-3">
           <h4 className="font-semibold flex items-center gap-2">
             <MapPin className="h-4 w-4" /> {existing ? 'Edit place' : 'Add a place'}
           </h4>
@@ -193,7 +198,9 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
           </Button>
         </div>
 
-        <div className="p-4 space-y-4">
+        {/* min-h-0 is what lets this shrink inside the flex column; without it
+            the body refuses to scroll and pushes the footer off-screen. */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Name</label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="The north orchard" maxLength={120} />
@@ -329,10 +336,10 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
                     {filteredMembers.map((m) => (
                       <div key={m.wallet} className="flex items-center gap-2 text-sm px-1">
                         <input type="checkbox" checked={hasLink('member', m.wallet)} onChange={() => toggleLink('member', m.wallet)} />
-                        <span className="truncate flex-1">{m.name}</span>
+                        <span className="truncate flex-1 min-w-0">{m.name}</span>
                         {hasLink('member', m.wallet) && (
                           <input
-                            className="w-28 rounded border px-2 py-0.5 text-xs"
+                            className="w-24 sm:w-28 shrink-0 rounded border px-2 py-0.5 text-xs"
                             placeholder="role, e.g. steward"
                             value={links.find((l) => l.target_type === 'member' && l.target_id === m.wallet)?.label ?? ''}
                             onChange={(e) => setLinkLabel('member', m.wallet, e.target.value)}
@@ -356,10 +363,10 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
                   {otherPlaces.map((p) => (
                     <div key={p.id} className="flex items-center gap-2 text-sm px-1">
                       <input type="checkbox" checked={hasLink('place', p.id)} onChange={() => toggleLink('place', p.id)} />
-                      <span className="truncate flex-1">{p.title}</span>
+                      <span className="truncate flex-1 min-w-0">{p.title}</span>
                       {hasLink('place', p.id) && (
                         <input
-                          className="w-28 rounded border px-2 py-0.5 text-xs"
+                          className="w-24 sm:w-28 shrink-0 rounded border px-2 py-0.5 text-xs"
                           placeholder="relationship"
                           value={links.find((l) => l.target_type === 'place' && l.target_id === p.id)?.label ?? ''}
                           onChange={(e) => setLinkLabel('place', p.id, e.target.value)}
@@ -375,7 +382,10 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
           {error && <p className="text-sm text-red-700">{error}</p>}
         </div>
 
-        <div className="sticky bottom-0 flex justify-end gap-2 border-t bg-white px-4 py-3">
+        <div
+          className="shrink-0 flex justify-end gap-2 border-t bg-white px-4 py-3"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
           <Button onClick={submit} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
