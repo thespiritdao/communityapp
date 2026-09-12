@@ -108,3 +108,9 @@ public/guides/
 
 # Executive marketing tools (local only)
 src/app/api/marketing/
+
+# Hardhat compile output. Regenerate with: npx hardhat compile
+# Not tracked: the ABIs the deploy scripts read were already absent from the
+# repo, so a fresh clone has always needed a compile before deploying a contract.
+/artifacts/
+/cache/
