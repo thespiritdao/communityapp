@@ -13,6 +13,11 @@ import { Loader2 } from 'lucide-react';
 import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import {
+  buildSignAgreementCall,
+  isOnChainAgreementConfigured,
+} from '../services/OnChainAgreementService';
 
 interface AgreementSigningModalProps {
   isOpen: boolean;
@@ -21,6 +26,13 @@ interface AgreementSigningModalProps {
   agreementText: string;
   podId: string;
   roleId: string;
+  /**
+   * IPFS CID of the agreement. When present, signing is a real transaction
+   * against the eligibility module rather than an off-chain message, and the
+   * signature is publicly verifiable. Agreements created before the text was
+   * pinned have no CID and keep the message-signature path.
+   */
+  agreementCid?: string;
   onSigningComplete?: () => void;
 }
 
@@ -31,13 +43,17 @@ export default function AgreementSigningModal({
   agreementText,
   podId,
   roleId,
+  agreementCid,
   onSigningComplete,
 }: AgreementSigningModalProps) {
   const { evmAddress: address } = useEvmAddress();
   const { currentUser } = useCurrentUser();
   const { signEvmMessage } = useSignEvmMessage();
+  const { sendUserOperation } = useSendUserOperation();
   const { toast } = useToast();
   const [isSigning, setIsSigning] = useState(false);
+
+  const signsOnChain = !!agreementCid && isOnChainAgreementConfigured();
 
   const handleSign = async () => {
     if (!address) {
@@ -51,7 +67,7 @@ export default function AgreementSigningModal({
 
     // Check if EVM account is available
     const evmAccount = currentUser?.evmAccounts?.[0];
-    if (!evmAccount) {
+    if (!evmAccount && !signsOnChain) {
       toast({
         title: 'Account Not Ready',
         description: 'Your wallet account is still initializing. Please wait a moment and try again.',
@@ -62,15 +78,37 @@ export default function AgreementSigningModal({
 
     setIsSigning(true);
     try {
-      // Create message to sign
-      const message = `I agree to the following terms:\n\n${agreementText}\n\nSigned by: ${address}\nTimestamp: ${new Date().toISOString()}`;
+      let signature: string;
 
-      // Get wallet signature using CDP
-      const result = await signEvmMessage({
-        evmAccount: evmAccount as `0x${string}`,
-        message,
-      });
-      const signature = result.signature;
+      if (signsOnChain) {
+        // A transaction, not a message. signAgreement records the signature in
+        // the eligibility module, where anyone can verify it with
+        // hasSignedAgreement — no trust in this app required. Gas is sponsored
+        // through the smart account, as elsewhere in the platform.
+        toast({
+          title: 'Confirm the transaction',
+          description: 'Signing publishes your agreement on Base.',
+          duration: 5000,
+        });
+
+        const res: any = await sendUserOperation({
+          calls: [buildSignAgreementCall(agreementCid!)],
+        } as any);
+
+        signature =
+          res?.userOperationHash || res?.transactionHash || res?.hash || 'onchain';
+      } else {
+        // Legacy path for agreements whose text was never pinned to IPFS:
+        // there is no content hash to sign against, so fall back to an
+        // off-chain message signature.
+        const message = `I agree to the following terms:\n\n${agreementText}\n\nSigned by: ${address}\nTimestamp: ${new Date().toISOString()}`;
+
+        const result = await signEvmMessage({
+          evmAccount: evmAccount as `0x${string}`,
+          message,
+        });
+        signature = result.signature;
+      }
 
       // Store signature in pod_accountability_signatures table
       const { error: signatureError } = await supabase
@@ -118,8 +156,11 @@ export default function AgreementSigningModal({
 
       toast({
         title: 'Agreement Signed!',
-        description: 'Your signature has been recorded on-chain',
+        description: signsOnChain
+          ? 'Your signature is recorded on Base and is publicly verifiable.'
+          : 'Your signature has been recorded.',
         variant: 'default',
+        duration: 7000,
       });
 
       // Call completion callback

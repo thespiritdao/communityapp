@@ -7,6 +7,11 @@ import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/w
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
 import {
+  buildAddAgreementCriterionCall,
+  isCriterionOnChain,
+  isOnChainAgreementConfigured,
+} from '../services/OnChainAgreementService';
+import {
   Shield,
   RefreshCw,
   CheckCircle,
@@ -279,6 +284,82 @@ export const UnifiedMembershipManager: React.FC<
       });
 
       console.log('✅ Database updated successfully');
+
+      // Record agreements on-chain. This is the durable, publicly verifiable
+      // half of an agreement: addAgreementCriterion writes it against the role's
+      // hat, and members later sign it with signAgreement. It goes direct to
+      // the eligibility module, which authorises via Hats' own isAdminOfHat —
+      // no pod proxy or factory involved, unlike the token/time criteria below.
+      //
+      // It does not switch on enforcement. A hat only consults this module once
+      // its eligibility is re-pointed there, which is a separate deliberate act.
+      const agreementCriteria = eligibilityCriteria.filter(
+        (c: any) => c.type === 'agreement_signed' && c.agreement_cid,
+      );
+
+      if (agreementCriteria.length > 0 && hatId && isOnChainAgreementConfigured()) {
+        try {
+          const hatIdBig = BigInt(hatId);
+          const pending: any[] = [];
+
+          for (const criterion of agreementCriteria as any[]) {
+            const already = publicClient
+              ? await isCriterionOnChain(
+                  publicClient as any,
+                  hatIdBig,
+                  criterion.agreement_cid,
+                )
+              : false;
+            if (already) {
+              console.log(
+                'ℹ️ Agreement already recorded on-chain:',
+                criterion.agreement_cid,
+              );
+              continue;
+            }
+            pending.push(
+              buildAddAgreementCriterionCall(hatIdBig, criterion.agreement_cid),
+            );
+          }
+
+          if (pending.length > 0) {
+            toast({
+              title: 'Recording agreement on-chain',
+              description: 'Confirm the transaction to publish this agreement.',
+              duration: 5000,
+            });
+
+            const res: any = await sendUserOperation({ calls: pending } as any);
+            const txHash =
+              res?.userOperationHash || res?.transactionHash || res?.hash || null;
+
+            toast({
+              title: 'Agreement published on-chain',
+              description: txHash
+                ? `Members can now sign it. Transaction ${String(txHash).slice(0, 10)}…`
+                : 'Members can now sign it.',
+              duration: 8000,
+            });
+          }
+        } catch (chainErr: any) {
+          // The agreement is already saved and usable in the app; only the
+          // on-chain record failed. Say which, rather than implying data loss.
+          console.error('❌ On-chain agreement write failed:', chainErr);
+          // 0xea8e4eb5 is EligibilityModule's NotAuthorized() selector, which is
+          // what a non-admin gets back. Confirmed by simulating the call.
+          const notAdmin = /NotAuthorized|not authoriz|0xea8e4eb5/i.test(
+            `${chainErr?.shortMessage || ''} ${chainErr?.message || ''} ${chainErr?.data ?? ''} ${chainErr?.cause?.data ?? ''}`,
+          );
+          toast({
+            title: 'Saved, but not recorded on-chain',
+            description: notAdmin
+              ? 'Publishing an agreement requires admin of this role’s hat, which this wallet does not hold. The agreement is saved and enforced in the app.'
+              : 'The agreement is saved and enforced in the app, but the on-chain record could not be written. You can retry by saving again.',
+            variant: 'destructive',
+            duration: 9000,
+          });
+        }
+      }
 
       // Step 2: Build transaction calls for on-chain sync (if criteria exist)
       if (eligibilityCriteria.length > 0) {

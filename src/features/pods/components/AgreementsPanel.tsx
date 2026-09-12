@@ -383,6 +383,7 @@ export function AgreementsPanel({
           roleId={signingAgreement.roleId}
           agreementText={signingAgreement.description || signingAgreement.name}
           agreementId={signingAgreement.name}
+          agreementCid={(signingAgreement as any).agreement_cid}
           onSigningComplete={handleAgreementSigned}
         />
       )}
