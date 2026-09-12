@@ -31,6 +31,8 @@ Things to know:
 - If a pod updates its face, you'll see the new version automatically. If a pod removes its face while you're wearing it, you return to the default — nothing breaks.
 - The Appearance section only appears once at least one of your pods has published a face.
 
+![Identity → Appearance: choose a pod's face.](https://app.spiritdao.org/images/docs/pod-faces/01-wear-a-look.png)
+
 ## Designing a face (pod leaders)
 
 You need the **appearance management** permission (leaders have it by default once the module is on).
