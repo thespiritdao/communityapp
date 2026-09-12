@@ -387,7 +387,7 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
           style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
         >
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={submit} disabled={saving}>
+          <Button className="px-5" onClick={submit} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
             {existing ? 'Save changes' : 'Add place'}
           </Button>

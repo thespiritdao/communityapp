@@ -213,7 +213,7 @@ export function PodPlacesSection({ podId, walletAddress, isMember }: Props) {
             </button>
           </div>
           {data.canManage && (
-            <Button size="sm" onClick={() => setEditing('new')} disabled={busy}>
+            <Button size="sm" className="px-4" onClick={() => setEditing('new')} disabled={busy}>
               <Plus className="h-4 w-4 mr-1" /> Add place
             </Button>
           )}
