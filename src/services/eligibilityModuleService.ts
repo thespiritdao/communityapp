@@ -415,15 +415,32 @@ export class EligibilityModuleService {
         hatId.toString(),
       );
 
-      // Query Supabase for blockchain_pod_id using hat_id
-      const { data, error } = await supabase
+      // management_hat_id is stored inconsistently: most pods hold the padded
+      // hex form ("0x00000749…"), one holds the decimal. Matching only the
+      // decimal missed every hex pod and returned a 406 from PostgREST, which
+      // surfaced as "no pod found" for pods that plainly exist. Match either.
+      const asDecimal = hatId.toString();
+      const asHex = `0x${hatId.toString(16).padStart(64, '0')}`;
+
+      const { data: rows, error } = await supabase
         .from('pods')
         .select('blockchain_pod_id, name, proxy_contract_address')
-        .eq('management_hat_id', hatId.toString())
-        .single();
+        .or(
+          `management_hat_id.eq.${asDecimal},management_hat_id.eq.${asHex}`,
+        )
+        .limit(1);
 
       if (error) {
         console.error('❌ Database query error:', error);
+        return null;
+      }
+
+      const data = rows?.[0];
+
+      if (!data) {
+        console.warn(
+          `⚠️ No pod is registered against HAT ${asDecimal} (${asHex}).`,
+        );
         return null;
       }
 
@@ -537,14 +554,14 @@ export class EligibilityModuleService {
       const podId = await this.getPodId(hatIdBigInt);
 
       if (!podId) {
+        // Not a save failure: the criteria are already written to the database
+        // and the app enforces them. Only on-chain publication is unavailable,
+        // which is the normal state for a pod whose proxy was never deployed.
         result.errors.push(
-          'No pod found for this HAT - cannot manage criteria',
+          'Requirements saved. They cannot be published on-chain because this pod has no deployed proxy contract, so they are enforced in the app only.',
         );
-        console.error(
-          '❌ Pod must exist with a deployed proxy contract to manage eligibility criteria',
-        );
-        console.error(
-          '   Ensure the pod was created with the latest pod creation flow',
+        console.warn(
+          '⚠️ Skipping on-chain eligibility sync: no pod with a deployed proxy contract for this HAT.',
         );
         return result;
       }

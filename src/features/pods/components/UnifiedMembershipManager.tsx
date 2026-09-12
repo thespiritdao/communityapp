@@ -361,9 +361,10 @@ export const UnifiedMembershipManager: React.FC<
             );
 
             toast({
-              title: 'Saved (Sync Unavailable)',
-              description: `Configuration saved to database. ${callResult.errors[0]}`,
+              title: 'Saved',
+              description: callResult.errors[0],
               variant: 'default',
+              duration: 7000,
             });
           } else {
             // Success but no calls to make (e.g., all criteria are database-only)
