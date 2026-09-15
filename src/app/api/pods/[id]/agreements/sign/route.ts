@@ -123,23 +123,12 @@ export async function POST(req: NextRequest) {
   });
   if (sigErr) return NextResponse.json({ error: sigErr.message }, { status: 500 });
 
-  if (roleId) {
-    const { error: eligErr } = await supabaseAdmin.from('user_eligibility_status').upsert(
-      {
-        user_wallet: wallet,
-        pod_id: podId,
-        role_id: roleId,
-        criteria_type: 'agreement',
-        criteria_id: agreementId,
-        status: 'met',
-        proof,
-        verified_at: now,
-        last_checked: now,
-      },
-      { onConflict: 'user_wallet,pod_id,role_id,criteria_type,criteria_id' },
-    );
-    if (eligErr) console.warn('[agreements/sign] eligibility upsert failed:', eligErr.message);
-  }
+  // The browser used to also upsert user_eligibility_status here. That table
+  // has never existed in production — the write failed and was swallowed on
+  // every signing since the feature shipped. The signature row above, and the
+  // chain itself, are the record. Whether a cached eligibility table should
+  // exist at all is a Phase 3 decision; nothing is written to one here.
+  void roleId;
 
   return NextResponse.json({ ok: true, proof: agreementCid ? 'onchain' : 'signature' });
 }

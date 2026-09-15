@@ -5,8 +5,10 @@
 -- POST /api/pods/[id]/agreements/sign. The Phase 0 trigger on
 -- pod_accountability_signatures (signer must be the caller) stays in place.
 --
--- Drops every client write policy on pod_accountability_signatures and
--- user_eligibility_status. Reads are unchanged.
+-- Drops every client write policy on pod_accountability_signatures. The
+-- first version of this migration also touched user_eligibility_status; that
+-- table does not exist in production (the app has been writing to it and
+-- swallowing the error), so it is guarded here and left for Phase 3.
 
 DO $$
 DECLARE pol record;
@@ -25,7 +27,15 @@ BEGIN
 END $$;
 
 ALTER TABLE public.pod_accountability_signatures ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_eligibility_status ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF to_regclass('public.user_eligibility_status') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.user_eligibility_status ENABLE ROW LEVEL SECURITY';
+  ELSE
+    RAISE NOTICE 'user_eligibility_status does not exist; nothing to lock down';
+  END IF;
+END $$;
 
 COMMENT ON TABLE public.pod_accountability_signatures IS
   'Written only by /api/pods/[id]/agreements/sign after the chain (or a verified message signature) proves the signer. Client access is SELECT only (APP_AUDIT_2026-09-15, Phase 1).';
