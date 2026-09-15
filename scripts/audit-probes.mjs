@@ -113,7 +113,9 @@ console.log('F3  general_notifications');
 {
   const a = await anon.from('general_notifications').select('id').limit(1);
   report('anon reads', !!a.error || !a.data?.length);
-  const o = await me.client.from('general_notifications').select('id').neq('recipient_address', me.wallet).limit(1);
+  // A sender may see what they sent; the exposure is other people's inboxes.
+  const o = await me.client.from('general_notifications').select('id')
+    .neq('recipient_address', me.wallet).neq('sender_address', me.wallet).limit(1);
   report("member reads others'", !!o.error || !o.data?.length);
 }
 
