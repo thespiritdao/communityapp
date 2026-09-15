@@ -1836,11 +1836,17 @@ export const HatsModulePodCreationForm: React.FC<
                   }),
                 ),
               );
+              // The pod and its hats exist on-chain at this point regardless
+              // of whether the database row landed. A 409 means the chain
+              // read lagged the mint; the leader can still be recorded later
+              // (claim-hat or reindex), so warn rather than fail the creation.
               const failedMember = memberResults.find((r) => !r.ok);
               if (failedMember) {
                 const err = await failedMember.json().catch(() => ({}));
-                console.error('❌ Failed to record pod_members:', err);
-                throw new Error(err.error || 'Leaders minted, but the membership records could not be written');
+                console.warn('⚠️ Leader membership not recorded yet:', err);
+                if (failedMember.status !== 409) {
+                  throw new Error(err.error || 'Leaders minted, but the membership records could not be written');
+                }
               }
 
               console.log(
