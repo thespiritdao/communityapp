@@ -144,5 +144,62 @@ console.log('F5  routes without a session token');
   report('PUT  /api/community-agent/events', isBlocked(s), `HTTP ${s}`);
 }
 
-console.log(`\n${open === 0 ? 'All probes blocked.' : `${open} probe(s) still OPEN.`}`);
+// ── Regression: the lockdown must not break legitimate flows ─────────────────
+// A lockdown that "passes" by blocking everything is not a pass. Each check
+// here is a real path the app takes; each must be ALLOWED.
+console.log('Regression  legitimate flows must still work');
+{
+  const pass = (label, allowed, detail = '') => {
+    if (!allowed) open++;
+    console.log(`${allowed ? '  ALLOWED ' : '  BROKEN ✗'} ${label}${detail ? ' — ' + detail : ''}`);
+  };
+  const { data: pod } = await admin.from('pods').select('pod_leads').eq('id', TN).single();
+  const lead = pod.pod_leads[0].toLowerCase();
+  const { data: lp } = await admin.from('user_profiles').select('user_id').eq('wallet_address', lead).single();
+  const now = Math.floor(Date.now() / 1000);
+  const ltok = jwt.sign(
+    { sub: lp.user_id, aud: 'authenticated', role: 'authenticated', iat: now, exp: now + 600,
+      wallet_address: lead, user_metadata: { wallet_address: lead } },
+    SECRET, { algorithm: 'HS256' },
+  );
+  const L = createClient(SB, ANON, { global: { headers: { Authorization: `Bearer ${ltok}` } } });
+
+  // Lead adds a member (application approval) and later deactivates them.
+  let r = await L.from('pod_members').insert({
+    pod_id: TN, wallet: '0x00000000000000000000000000000000000probe',
+    role: 'member', membership_type: 'member', is_active: true,
+  }).select('id').single();
+  pass('lead inserts a new member', !r.error, r.error?.message?.slice(0, 60));
+  if (r.data?.id) {
+    const r2 = await L.from('pod_members').update({ is_active: false }).eq('id', r.data.id).select('id');
+    pass('lead deactivates that member', !r2.error && !!r2.data?.length);
+    await admin.from('pod_members').delete().eq('id', r.data.id);
+  }
+
+  // Lead notifies the applicant and asks for the row back — the pattern the app uses.
+  r = await L.from('general_notifications').insert({
+    recipient_address: me.wallet, sender_address: lead,
+    notification_type: 'pod_application_status', title: 'probe', message: 'probe',
+  }).select().single();
+  pass('lead sends approval notification (with RETURNING)', !r.error, r.error?.message?.slice(0, 60));
+  if (r.data?.id) await admin.from('general_notifications').delete().eq('id', r.data.id);
+
+  // Member reads own inbox, sends as self, signs as self.
+  r = await me.client.from('general_notifications').select('id').eq('recipient_address', me.wallet).limit(1);
+  pass('member reads own notifications', !r.error);
+  r = await me.client.from('general_notifications').insert({
+    recipient_address: lead, sender_address: me.wallet,
+    notification_type: 'user_mentioned', title: 'probe', message: 'probe',
+  }).select('id').single();
+  pass('member sends a notification as self', !r.error, r.error?.message?.slice(0, 60));
+  if (r.data?.id) await admin.from('general_notifications').delete().eq('id', r.data.id);
+  r = await me.client.from('pod_accountability_signatures').insert({
+    pod_id: TN, signer_address: me.wallet, signature_data: 'probe',
+    accountability_statement: 'probe', signed_at: new Date().toISOString(), is_valid: true,
+  }).select('id').single();
+  pass('member signs as self', !r.error, r.error?.message?.slice(0, 60));
+  if (r.data?.id) await admin.from('pod_accountability_signatures').delete().eq('id', r.data.id);
+}
+
+console.log(`\n${open === 0 ? 'All probes blocked; all legitimate flows allowed.' : `${open} check(s) failing.`}`);
 process.exit(open === 0 ? 0 : 1);
