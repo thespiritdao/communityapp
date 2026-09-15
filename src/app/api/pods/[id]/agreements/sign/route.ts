@@ -59,16 +59,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'On-chain agreements are not configured' }, { status: 503 });
     }
     let signed: boolean;
+    let stage = 'hash';
     try {
+      const hash = agreementHashFromCid(agreementCid);
+      stage = 'read';
       signed = (await publicClient.readContract({
         address: ELIGIBILITY_MODULE_ADDRESS,
         abi: ELIGIBILITY_MODULE_ABI,
         functionName: 'hasSignedAgreement',
-        args: [agreementHashFromCid(agreementCid), wallet as `0x${string}`],
+        args: [hash, wallet as `0x${string}`],
       })) === true;
     } catch (err) {
+      const e = err as Error & { shortMessage?: string; cause?: unknown };
+      console.error('[agreements/sign] chain read failed', { stage, module: ELIGIBILITY_MODULE_ADDRESS, message: e?.message, stack: e?.stack });
       return NextResponse.json(
-        { error: 'Could not read the signature from the chain; try again shortly', detail: err instanceof Error ? err.message : String(err) },
+        {
+          error: 'Could not read the signature from the chain; try again shortly',
+          detail: e?.shortMessage || e?.message || String(err),
+          stage,
+          module: ELIGIBILITY_MODULE_ADDRESS,
+          frame: (e?.stack || '').split('\n').slice(1, 4).map((l) => l.trim()),
+        },
         { status: 503 },
       );
     }
