@@ -5,14 +5,19 @@
 // pod_accountability_signatures row itself (F2: any member could insert one
 // for anyone). Now the row is written here, and only when either
 //
-//   - the agreement has an IPFS CID and Hats' EligibilityModule reports
-//     hasSignedAgreement(keccak(cid), wallet) == true on Base, or
+//   - the agreement has an IPFS CID and the eligibility module on Base shows
+//     the wallet as having signed keccak(cid) — read through
+//     hasSignedOnChain(), which handles both deployed module shapes — or
 //   - the agreement predates pinning (no CID) and the caller supplies the
 //     message they signed plus a signature that verifies against their own
 //     wallet.
 //
 // The signing itself stays where it was (a transaction from the browser);
 // this route only records what the chain — or the signature — proves.
+//
+// GET returns which module this server is pointed at. Public addresses only;
+// it exists because production and a developer machine were found pointing
+// at different contracts.
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, verifyMessage } from 'viem';
@@ -20,9 +25,9 @@ import { base } from 'viem/chains';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { requireWallet } from '@/lib/apiPodGuard';
 import {
-  ELIGIBILITY_MODULE_ABI,
   ELIGIBILITY_MODULE_ADDRESS,
-  agreementHashFromCid,
+  hasSignedOnChain,
+  moduleHatAdmin,
 } from '@/features/pods/services/OnChainAgreementService';
 
 export const runtime = 'nodejs';
@@ -31,6 +36,16 @@ const publicClient = createPublicClient({
   chain: base,
   transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
 });
+
+export async function GET() {
+  // Probe with hat id 1: MultiCriteria answers hatAdmins(); EligibilityModule
+  // has no such function and throws.
+  const admin = ELIGIBILITY_MODULE_ADDRESS ? await moduleHatAdmin(publicClient as never, 1n) : null;
+  return NextResponse.json({
+    module: ELIGIBILITY_MODULE_ADDRESS ?? null,
+    kind: !ELIGIBILITY_MODULE_ADDRESS ? 'unconfigured' : admin === null ? 'EligibilityModule' : 'MultiCriteriaEligibilityModule',
+  });
+}
 
 export async function POST(req: NextRequest) {
   const podId = req.nextUrl.pathname.match(/\/api\/pods\/([^/]+)\/agreements\/sign/)?.[1] ?? '';
@@ -59,27 +74,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'On-chain agreements are not configured' }, { status: 503 });
     }
     let signed: boolean;
-    let stage = 'hash';
     try {
-      const hash = agreementHashFromCid(agreementCid);
-      stage = 'read';
-      signed = (await publicClient.readContract({
-        address: ELIGIBILITY_MODULE_ADDRESS,
-        abi: ELIGIBILITY_MODULE_ABI,
-        functionName: 'hasSignedAgreement',
-        args: [hash, wallet as `0x${string}`],
-      })) === true;
+      signed = await hasSignedOnChain(publicClient as never, agreementCid, wallet as `0x${string}`);
     } catch (err) {
-      const e = err as Error & { shortMessage?: string; cause?: unknown };
-      console.error('[agreements/sign] chain read failed', { stage, module: ELIGIBILITY_MODULE_ADDRESS, message: e?.message, stack: e?.stack });
+      const e = err as Error & { shortMessage?: string };
+      console.error('[agreements/sign] chain read failed', { module: ELIGIBILITY_MODULE_ADDRESS, message: e?.message });
       return NextResponse.json(
-        {
-          error: 'Could not read the signature from the chain; try again shortly',
-          detail: e?.shortMessage || e?.message || String(err),
-          stage,
-          module: ELIGIBILITY_MODULE_ADDRESS,
-          frame: (e?.stack || '').split('\n').slice(1, 4).map((l) => l.trim()),
-        },
+        { error: 'Could not read the signature from the chain; try again shortly', detail: e?.shortMessage || e?.message || String(err), module: ELIGIBILITY_MODULE_ADDRESS },
         { status: 503 },
       );
     }
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
         { status: 409 },
       );
     }
-    proof = `onchain:${agreementHashFromCid(agreementCid)}`;
+    proof = `onchain:${agreementCid}`;
   } else {
     // Legacy agreements (no pinned text): a message signature from the
     // caller's own wallet. The message must be about this agreement.

@@ -345,15 +345,16 @@ export const UnifiedMembershipManager: React.FC<
           // The agreement is already saved and usable in the app; only the
           // on-chain record failed. Say which, rather than implying data loss.
           console.error('❌ On-chain agreement write failed:', chainErr);
-          // 0xea8e4eb5 is EligibilityModule's NotAuthorized() selector, which is
-          // what a non-admin gets back. Confirmed by simulating the call.
-          const notAdmin = /NotAuthorized|not authoriz|0xea8e4eb5/i.test(
-            `${chainErr?.shortMessage || ''} ${chainErr?.message || ''} ${chainErr?.data ?? ''} ${chainErr?.cause?.data ?? ''}`,
-          );
+          // Two deployed module shapes refuse a non-admin differently:
+          // EligibilityModule reverts NotAuthorized() (0xea8e4eb5);
+          // MultiCriteria reverts "Only HAT admin can manage criteria", and
+          // its admin registry (hatAdmins) must have been claimed first.
+          const blob = `${chainErr?.shortMessage || ''} ${chainErr?.message || ''} ${chainErr?.data ?? ''} ${chainErr?.cause?.data ?? ''}`;
+          const notAdmin = /NotAuthorized|not authoriz|0xea8e4eb5|Only HAT admin/i.test(blob);
           toast({
             title: 'Saved, but not recorded on-chain',
             description: notAdmin
-              ? 'Publishing an agreement requires admin of this role’s hat, which this wallet does not hold. The agreement is saved and enforced in the app.'
+              ? 'Publishing an agreement on-chain requires being registered as this hat’s admin in the eligibility module, which this wallet is not (on the production module no admin has been set for any hat yet). The agreement is saved and enforced in the app.'
               : 'The agreement is saved and enforced in the app, but the on-chain record could not be written. You can retry by saving again.',
             variant: 'destructive',
             duration: 9000,
