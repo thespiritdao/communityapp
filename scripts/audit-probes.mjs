@@ -168,16 +168,34 @@ console.log('Regression  legitimate flows must still work');
   );
   const L = createClient(SB, ANON, { global: { headers: { Authorization: `Bearer ${ltok}` } } });
 
-  // Lead adds a member (application approval) and later deactivates them.
-  let r = await L.from('pod_members').insert({
-    pod_id: TN, wallet: '0x00000000000000000000000000000000000probe',
-    role: 'member', membership_type: 'member', is_active: true,
-  }).select('id').single();
-  pass('lead inserts a new member', !r.error, r.error?.message?.slice(0, 60));
-  if (r.data?.id) {
-    const r2 = await L.from('pod_members').update({ is_active: false }).eq('id', r.data.id).select('id');
-    pass('lead deactivates that member', !r2.error && !!r2.data?.length);
-    await admin.from('pod_members').delete().eq('id', r.data.id);
+  // Since Phase 1 step 2 the browser never writes pod_members; leads record
+  // members through the server, which confirms the hat on-chain. Re-recording
+  // the lead's own (worn) hat is idempotent — it proves the path without
+  // creating anything. A direct client INSERT must now be refused even for a
+  // plain member row.
+  let r = await fetch(`${BASE}/api/pods/${TN}/members`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${ltok}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ wallet: lead, hatId: '0x0000074900020001000000000000000000000000000000000000000000000000', role: 'leader', notify: false }),
+  });
+  pass('lead records a member via the server route (chain-verified)', r.status === 200, `HTTP ${r.status}`);
+  {
+    // Self-join another pod as a plain member: the Phase 0 trigger allows a
+    // wallet to insert itself as 'member', so only the policy drop in
+    // 20260915000003 closes this. Uses the Executive Pod, which the probe
+    // member is not in (skipped if they somehow are).
+    const { data: already } = await admin.from('pod_members').select('id').eq('pod_id', EXEC).eq('wallet', me.wallet).maybeSingle();
+    if (already) {
+      console.log('  SKIP     F1 direct client INSERT (probe member already in Executive Pod)');
+    } else {
+      const direct = await me.client.from('pod_members').insert({
+        pod_id: EXEC, wallet: me.wallet, role: 'member', membership_type: 'member', is_active: true,
+      }).select('id').single();
+      const blocked = !!direct.error;
+      if (!blocked && direct.data?.id) await admin.from('pod_members').delete().eq('id', direct.data.id);
+      console.log(`${blocked ? '  BLOCKED ' : '  OPEN ✗  '} F1 direct client INSERT: self-join Executive Pod as plain member — ${blocked ? 'refused' : 'allowed; apply 20260915000003'}`);
+      if (!blocked) open++;
+    }
   }
 
   // Lead notifies the applicant and asks for the row back — the pattern the app uses.

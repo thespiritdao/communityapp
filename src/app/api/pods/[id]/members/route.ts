@@ -86,25 +86,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Re-recording someone who is already a member (the "already wears the hat"
+  // approval path, or a role change) must not reset when they joined.
   const now = new Date().toISOString();
-  const { data: row, error } = await supabaseAdmin
-    .from('pod_members')
-    .upsert(
-      {
-        pod_id: podId,
-        wallet,
-        hat_id: hatId,
-        role,
-        membership_type: role,
-        is_active: true,
-        joined_at: now,
-        updated_at: now,
-      },
-      { onConflict: 'pod_id,wallet' },
-    )
-    .select('id')
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { data: existing } = await supabaseAdmin
+    .from('pod_members').select('id').eq('pod_id', podId).eq('wallet', wallet).maybeSingle();
+
+  let row: { id: string } | null = null;
+  let error: { message: string } | null = null;
+  if (existing) {
+    const res = await supabaseAdmin
+      .from('pod_members')
+      .update({ hat_id: hatId, role, membership_type: role, is_active: true, removed_at: null, updated_at: now })
+      .eq('id', existing.id)
+      .select('id')
+      .single();
+    row = res.data; error = res.error;
+  } else {
+    const res = await supabaseAdmin
+      .from('pod_members')
+      .insert({ pod_id: podId, wallet, hat_id: hatId, role, membership_type: role, is_active: true, joined_at: now, updated_at: now })
+      .select('id')
+      .single();
+    row = res.data; error = res.error;
+  }
+  if (error || !row) return NextResponse.json({ error: error?.message || 'Could not record member' }, { status: 500 });
 
   if (applicationId) {
     await supabaseAdmin
