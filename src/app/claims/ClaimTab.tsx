@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { toast } from 'react-hot-toast';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
@@ -91,7 +92,7 @@ export default function ClaimTab() {
     try {
       const res = await fetch('/api/claims/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await ensureAuthHeaders(),
         body: JSON.stringify({ walletAddress, amount, payoutEmail, payoutNote }),
       });
       const data = await res.json();

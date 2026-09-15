@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { requireWallet } from '@/lib/apiPodGuard';
 import { AGENT_PSEUDO_WALLET, deriveAgentWallet } from '@/services/communityAgent/types';
 import { getAgentConfig } from '@/services/communityAgent/configService';
 
@@ -49,8 +50,15 @@ export async function GET(req: NextRequest) {
  * Body: { eventId, action: 'publish' | 'reject' | 'edit', updates?: {...} }
  */
 export async function PUT(req: NextRequest) {
+  // Audit F5: the leader check compared pod_leads against a wallet taken from
+  // the request body, which anyone can set. It now uses the session wallet;
+  // the body's walletAddress is ignored.
+  const walletOrDenied = requireWallet(req);
+  if (walletOrDenied instanceof Response) return walletOrDenied;
+  const walletAddress = walletOrDenied;
+
   const body = await req.json();
-  const { eventId, action, updates, walletAddress } = body;
+  const { eventId, action, updates } = body;
 
   if (!eventId || !action || !walletAddress) {
     return NextResponse.json(

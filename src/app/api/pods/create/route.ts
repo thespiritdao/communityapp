@@ -194,13 +194,18 @@ export async function POST(req: NextRequest) {
 
     // Fire-and-forget: notify relevant pod leaders of the new application
     const notifyUrl = new URL('/api/pods/notify-leaders', req.url);
+    // notify-leaders now requires the caller's session; forward ours.
     fetch(notifyUrl.toString(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(req.headers.get('authorization')
+          ? { Authorization: req.headers.get('authorization') as string }
+          : {}),
+      },
       body: JSON.stringify({
         podId: savedPod.id,
         podName: name,
-        creatorAddress: callerAddress,
         parentPodId: parentPodId || null,
       }),
     }).catch((e) => console.error('Pod create API: notify-leaders failed:', e));

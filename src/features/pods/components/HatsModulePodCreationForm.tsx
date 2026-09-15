@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
@@ -1782,16 +1783,20 @@ export const HatsModulePodCreationForm: React.FC<
 
           // Fire-and-forget: notify relevant pod leaders of the new application
           if (podData?.podId) {
-            fetch('/api/pods/notify-leaders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                podId: podData.podId,
-                podName: formData.name,
-                creatorAddress: address,
-                parentPodId: formData.parentPodId || null,
-              }),
-            }).catch((e) => console.error('notify-leaders fetch failed:', e));
+            const notifyPodId: string = podData.podId;
+            ensureAuthHeaders()
+              .then((headers) =>
+                fetch('/api/pods/notify-leaders', {
+                  method: 'POST',
+                  headers,
+                  body: JSON.stringify({
+                    podId: notifyPodId,
+                    podName: formData.name,
+                    parentPodId: formData.parentPodId || null,
+                  }),
+                }),
+              )
+              .catch((e) => console.error('notify-leaders fetch failed:', e));
           }
 
         }
@@ -1888,7 +1893,7 @@ export const HatsModulePodCreationForm: React.FC<
           try {
             await fetch('/api/pods/notify-exec', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: await ensureAuthHeaders(),
               body: JSON.stringify({ podId: podData?.podId, podName: formData.name }),
             });
           } catch (notifErr) {

@@ -4,15 +4,31 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { sendServerNotificationBatch } from '@/lib/serverNotifications';
+import { requireWallet } from '@/lib/apiPodGuard';
+import { isPodLeader } from '@/lib/serverPodAuth';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
+    // Audit F5: this was callable by anyone with any text, delivering it as a
+    // notification to every Executive member. Only the pod's creator or a lead
+    // may announce a pod.
+    const walletOrDenied = requireWallet(req);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const caller = walletOrDenied;
+
     const { podId, podName } = await req.json();
 
     if (!podId || !podName) {
       return NextResponse.json({ error: 'Missing podId or podName' }, { status: 400 });
+    }
+
+    const { data: podRow } = await supabaseAdmin
+      .from('pods').select('created_by_address').eq('id', podId).maybeSingle();
+    const isCreator = (podRow?.created_by_address || '').toLowerCase() === caller;
+    if (!isCreator && !(await isPodLeader(podId, caller))) {
+      return NextResponse.json({ error: 'Only the pod creator or a lead can send this' }, { status: 403 });
     }
 
     // Get exec pod members from DB

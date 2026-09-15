@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,6 +28,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { walletAddress, amount, payoutEmail, payoutNote } = body;
+
+    // Audit F5: any wallet plus any payout email could open a claim. A claim
+    // may only be opened for the session's own wallet.
+    const walletOrDenied = requireWalletMatch(request, walletAddress);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     // ─── Validation ───────────────────────────────────────────────────────────
 

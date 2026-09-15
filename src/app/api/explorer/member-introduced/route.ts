@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,12 @@ export async function POST(req: NextRequest) {
     if (!walletAddress || !displayName) {
       return NextResponse.json({ error: 'walletAddress and displayName required' }, { status: 400 });
     }
+
+    // Audit F5: explorer_events are Merkle-rooted on-chain by anchor-ledger, so
+    // an unauthenticated insert put fabricated provenance into the public
+    // record. The wallet must be the caller's own.
+    const walletOrDenied = requireWalletMatch(req, walletAddress);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
 
     const normalized = walletAddress.toLowerCase();
 

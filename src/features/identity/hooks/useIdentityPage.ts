@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useDisconnect } from 'wagmi';
 import { useAuth } from './useAuth';
 import { useUserProfile } from './useUserProfile';
@@ -40,7 +41,7 @@ export function useIdentityPage(address: string | undefined) {
         try {
           await fetch('/api/explorer/member-introduced', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await ensureAuthHeaders(),
             body: JSON.stringify({
               walletAddress: address,
               displayName: [data.first_name, data.last_name].filter(Boolean).join(' '),

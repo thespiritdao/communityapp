@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +53,7 @@ export default function AgentEventDrafts({ podId, walletAddress }: AgentEventDra
     try {
       const res = await fetch('/api/community-agent/events', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await ensureAuthHeaders(),
         body: JSON.stringify({
           eventId,
           action,
@@ -88,7 +89,7 @@ export default function AgentEventDrafts({ podId, walletAddress }: AgentEventDra
     try {
       const res = await fetch('/api/community-agent/events', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await ensureAuthHeaders(),
         body: JSON.stringify({
           eventId,
           action: 'edit',

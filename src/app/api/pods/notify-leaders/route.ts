@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { sendServerNotificationBatch } from '@/lib/serverNotifications';
+import { requireWallet } from '@/lib/apiPodGuard';
+import { isPodLeader } from '@/lib/serverPodAuth';
 
 /**
  * Resolve the pod_id for a named role by querying pod_role_permissions.
@@ -66,10 +68,25 @@ async function resolveLeaders(podId: string): Promise<string[]> {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { podId, podName, creatorAddress, parentPodId } = await req.json();
+    // Audit F5: anyone could send arbitrary text to every leader of any pod.
+    // The caller must be signed in, and creatorAddress is the session wallet
+    // rather than whatever the body says.
+    const walletOrDenied = requireWallet(req);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const caller = walletOrDenied;
 
-    if (!podId || !podName || !creatorAddress) {
+    const { podId, podName, parentPodId } = await req.json();
+    const creatorAddress = caller;
+
+    if (!podId || !podName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const { data: podRow } = await supabaseAdmin
+      .from('pods').select('created_by_address').eq('id', podId).maybeSingle();
+    const isCreator = (podRow?.created_by_address || '').toLowerCase() === caller;
+    if (!isCreator && !(await isPodLeader(podId, caller))) {
+      return NextResponse.json({ error: 'Only the pod creator or a lead can send this' }, { status: 403 });
     }
 
     // Resolve community pod UUID dynamically — stable role name, not UUID

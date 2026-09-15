@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { toast } from 'react-hot-toast';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 import { useWalletClient, usePublicClient } from 'wagmi';
@@ -108,7 +109,7 @@ export default function ClaimTab() {
       setStep('requesting');
       const requestRes = await fetch('/api/claims/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await ensureAuthHeaders(),
         body: JSON.stringify({ walletAddress, amount, payoutEmail, payoutNote }),
       });
 
