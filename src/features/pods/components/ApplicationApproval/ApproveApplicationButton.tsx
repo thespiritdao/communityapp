@@ -1371,18 +1371,24 @@ export const ApproveApplicationButton: React.FC<
       // welcome notification. (Audit Phase 1: the browser no longer writes
       // pod_members.)
       {
-        const rec = await fetch(`/api/pods/${podId}/members`, {
-          method: 'POST',
-          headers: await ensureAuthHeaders(),
-          body: JSON.stringify({
-            wallet: applicantAddress.toLowerCase(),
-            hatId: effectiveHatId,
-            role: roleLabel.toLowerCase() === 'leader' ? 'leader' : 'member',
-            applicationId,
-          }),
+        // The mint's user operation resolves when sent, not when mined, and
+        // the route refuses (409) until the chain shows the hat. Retry for up
+        // to about thirty seconds before treating it as a failure.
+        const headers = await ensureAuthHeaders();
+        const body = JSON.stringify({
+          wallet: applicantAddress.toLowerCase(),
+          hatId: effectiveHatId,
+          role: roleLabel.toLowerCase() === 'leader' ? 'leader' : 'member',
+          applicationId,
         });
-        if (!rec.ok) {
-          const err = await rec.json().catch(() => ({}));
+        let rec: Response | null = null;
+        for (let attempt = 0; attempt < 10; attempt++) {
+          rec = await fetch(`/api/pods/${podId}/members`, { method: 'POST', headers, body });
+          if (rec.status !== 409) break;
+          await new Promise((r) => setTimeout(r, 3000));
+        }
+        if (!rec || !rec.ok) {
+          const err = rec ? await rec.json().catch(() => ({})) : {};
           throw new Error(err.error || 'Hat minted, but the membership could not be recorded');
         }
       }
