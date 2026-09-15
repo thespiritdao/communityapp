@@ -142,6 +142,10 @@ console.log('F5  routes without a session token');
   report('POST /api/claims/request', isBlocked(s), `HTTP ${s}`);
   s = await put('/api/community-agent/events', { eventId: '00000000-0000-0000-0000-000000000000', action: 'approve', walletAddress: me.wallet });
   report('PUT  /api/community-agent/events', isBlocked(s), `HTTP ${s}`);
+  s = await post('/api/bounty/cancel', { bountyId: '00000000-0000-0000-0000-000000000000', cancelerAddress: me.wallet, cancellationReason: 'probe' });
+  report('POST /api/bounty/cancel (body-claimed canceler)', isBlocked(s), `HTTP ${s}`);
+  s = await post('/api/community-agent/subscribe', { podId: TN, txHash: '0x' + '0'.repeat(64), walletAddress: me.wallet });
+  report('POST /api/community-agent/subscribe (body-claimed leader)', isBlocked(s), `HTTP ${s}`);
 }
 
 // ── Regression: the lockdown must not break legitimate flows ─────────────────

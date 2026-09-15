@@ -12,6 +12,7 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { EXEMPT_POD_IDS } from '@/services/communityAgent/types';
 import { getSubscriptionStatus } from '@/services/communityAgent/configService';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 export const runtime = 'nodejs';
 
@@ -43,6 +44,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { podId, txHash, walletAddress } = body;
+
+  // Audit sweep: the leader check compared pod_leads against a wallet taken
+  // from the body. The claimed wallet must be the session's own.
+  const walletOrDenied = requireWalletMatch(req, walletAddress);
+  if (walletOrDenied instanceof Response) return walletOrDenied;
 
   if (!podId || !txHash || !walletAddress) {
     return NextResponse.json(
