@@ -231,6 +231,23 @@ export async function isPodLead(wallet: string, podId: string): Promise<boolean>
   return auth.isLeader;
 }
 
+/**
+ * Does `wallet` wear `hatId` right now, per Hats on Base? Throws if the chain
+ * cannot be read — callers that record membership must not guess.
+ */
+export async function wearsHat(wallet: string, hatId: string | bigint): Promise<boolean> {
+  if (!HATS) throw new Error('NEXT_PUBLIC_HATS_CONTRACT unset');
+  const id = typeof hatId === 'bigint' ? hatId : toHatId(hatId);
+  if (id === null) throw new Error(`Unparseable hat id: ${String(hatId)}`);
+  const balance = await publicClient.readContract({
+    address: HATS,
+    abi: BALANCE_OF_ABI,
+    functionName: 'balanceOf',
+    args: [wallet.toLowerCase() as `0x${string}`, id],
+  });
+  return (balance as bigint) > 0n;
+}
+
 /** Drop cached authority for a wallet/pod, e.g. right after minting a hat. */
 export function invalidatePodAuthority(wallet: string, podId: string): void {
   cache.delete(`${wallet.toLowerCase()}|${podId}`);

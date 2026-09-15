@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserWallet } from '@/hooks/useUserWallet';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
@@ -584,8 +585,8 @@ export const ApproveApplicationButton: React.FC<
           className="text-xs p-2 rounded"
           style={{ color: '#C6933F', backgroundColor: '#FAF4EC' }}
         >
-          <strong>Why:</strong> In Hats Protocol, only wearers of the admin role
-          (management role) can mint child roles (membership roles).
+          <strong>Why:</strong> Only wearers of the admin role (management role)
+          can mint child roles (membership roles).
         </p>
         <p className="text-sm mt-2" style={{ color: '#C6933F' }}>
           Contact a pod administrator to mint you the Management Role first, or
@@ -1251,20 +1252,26 @@ export const ApproveApplicationButton: React.FC<
 
         if (Number(applicantBalance) > 0) {
           console.warn('⚠️ CHECK #5: Applicant already wears this HAT — marking application approved without re-minting');
-          // Hat already minted — still mark application approved and add to pod_members
-          await supabase
-            .from('pod_membership_applications')
-            .update({ status: 'approved', approved_at: new Date().toISOString() })
-            .eq('id', applicationId);
-          await supabase.from('pod_members').upsert({
-            pod_id: podId,
-            wallet: applicantAddress.toLowerCase(),
-            membership_type: roleLabel.toLowerCase(),
-            role: roleLabel.toLowerCase(),
-            hat_id: effectiveHatId,
-            is_active: true,
-            joined_at: new Date().toISOString(),
-          }, { onConflict: 'pod_id,wallet' });
+          // Hat already minted — the server records the membership after
+          // confirming the hat on-chain, and marks the application approved.
+          // (Audit Phase 1: the browser no longer writes pod_members.)
+          {
+            const rec = await fetch(`/api/pods/${podId}/members`, {
+              method: 'POST',
+              headers: await ensureAuthHeaders(),
+              body: JSON.stringify({
+                wallet: applicantAddress.toLowerCase(),
+                hatId: effectiveHatId,
+                role: roleLabel.toLowerCase() === 'leader' ? 'leader' : 'member',
+                applicationId,
+                notify: false,
+              }),
+            });
+            if (!rec.ok) {
+              const err = await rec.json().catch(() => ({}));
+              throw new Error(err.error || 'Could not record the membership');
+            }
+          }
           const { data: pod } = await supabase.from('pods').select('name').eq('id', podId).single();
           toast({
             title: '✅ Application Approved',
@@ -1359,16 +1366,26 @@ export const ApproveApplicationButton: React.FC<
         })
         .eq('id', applicationId);
 
-      // Add to pod_members
-      await supabase.from('pod_members').insert({
-        pod_id: podId,
-        wallet: applicantAddress.toLowerCase(),
-        membership_type: roleLabel.toLowerCase(),
-        role: roleLabel.toLowerCase(),
-        hat_id: effectiveHatId,
-        is_active: true,
-        joined_at: new Date().toISOString(),
-      });
+      // Record the membership server-side. The route confirms the applicant
+      // wears the hat on-chain, marks the application approved, and sends the
+      // welcome notification. (Audit Phase 1: the browser no longer writes
+      // pod_members.)
+      {
+        const rec = await fetch(`/api/pods/${podId}/members`, {
+          method: 'POST',
+          headers: await ensureAuthHeaders(),
+          body: JSON.stringify({
+            wallet: applicantAddress.toLowerCase(),
+            hatId: effectiveHatId,
+            role: roleLabel.toLowerCase() === 'leader' ? 'leader' : 'member',
+            applicationId,
+          }),
+        });
+        if (!rec.ok) {
+          const err = await rec.json().catch(() => ({}));
+          throw new Error(err.error || 'Hat minted, but the membership could not be recorded');
+        }
+      }
 
       // Get pod name for notifications
       const { data: pod } = await supabase
@@ -1380,18 +1397,6 @@ export const ApproveApplicationButton: React.FC<
       const applicantName = applicantProfile?.first_name && applicantProfile?.last_name
         ? `${applicantProfile.first_name} ${applicantProfile.last_name}`
         : applicantProfile?.first_name || undefined;
-
-      // Notify applicant
-      await supabase.from('general_notifications').insert({
-        recipient_address: applicantAddress.toLowerCase(),
-        sender_address: (userWallet ?? evmAddress).toLowerCase(),
-        notification_type: 'pod_application_status',
-        title: `Welcome to ${pod?.name || 'the pod'}!`,
-        message: `Your application has been approved and your ${roleLabel} role has been minted.`,
-        context_type: 'governance',
-        context_id: podId,
-        context_url: `/pods/${podId}`,
-      });
 
       // Notify exec pod and pod leaders
       await notifyExecPodOfNewMember({

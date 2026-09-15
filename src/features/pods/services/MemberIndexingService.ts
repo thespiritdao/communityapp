@@ -84,6 +84,24 @@ export class MemberIndexingService {
     pod: { id: string; management_hat_id?: string; membership_hat_id?: string },
     stats: IndexingStats,
   ): Promise<void> {
+    // In the browser, indexing is a request to the server, which reconciles
+    // the rows against the chain itself (audit Phase 1: the browser no longer
+    // writes pod_members). The chain-walking path below stays for the edge
+    // function, which runs server-side.
+    if (typeof window !== 'undefined') {
+      const { ensureAuthHeaders } = await import('@/lib/authHeaders');
+      const res = await fetch(`/api/pods/${pod.id}/members/reindex`, {
+        method: 'POST',
+        headers: await ensureAuthHeaders(),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || `Reindex failed (${res.status})`);
+      stats.pods_processed += 1;
+      stats.members_added += out.activated ?? 0;
+      stats.members_removed += out.deactivated ?? 0;
+      return;
+    }
+
     console.log(`🔍 Indexing pod ${pod.id}`);
 
     const currentMembers = new Set<string>();

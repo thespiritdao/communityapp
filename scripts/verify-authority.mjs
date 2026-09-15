@@ -77,5 +77,32 @@ for (const [label, method, path, body, who, expect] of cases) {
     console.log(`${ok ? '  OK   ' : '  FAIL '} ${who.padEnd(6)} role eligibility PUT (requirePodPermission roleAssignment → resolver) — HTTP ${res.status} (expected ${expect})`);
   }
 }
+// Membership routes (Phase 1 step 2). None of these writes anything: the
+// member is refused by the guard, and the lead's request names a wallet that
+// does not wear the hat, which the route must refuse after checking the chain.
+{
+  const TN_LEADER_HAT = '0x0000074900020001000000000000000000000000000000000000000000000000';
+  const NOBODY = '0x000000000000000000000000000000000000dead';
+  const call = (who, method, path, body) => fetch(BASE + path, {
+    method, headers: { Authorization: `Bearer ${sessions[who]}`, 'Content-Type': 'application/json' },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const checks = [
+    ['member', 'POST', `/api/pods/${TN}/members`, { wallet: member, hatId: TN_LEADER_HAT, role: 'leader' }, 403, 'add member'],
+    ['member', 'PATCH', `/api/pods/${TN}/members`, { wallet: lead, hatId: TN_LEADER_HAT }, 403, 'deactivate member'],
+    ['member', 'DELETE', `/api/pods/${TN}/members`, null, 403, 'purge members'],
+    ['member', 'POST', `/api/pods/${TN}/members/reindex`, null, 403, 'reindex'],
+    ['member', 'POST', `/api/pods/${TN}/members/claim-hat`, null, 409, 'claim management hat (does not wear it)'],
+    ['lead', 'POST', `/api/pods/${TN}/members`, { wallet: NOBODY, hatId: TN_LEADER_HAT, role: 'leader', notify: false }, 409, 'add a wallet that does not wear the hat'],
+    ['lead', 'PATCH', `/api/pods/${TN}/members`, { wallet: lead, hatId: TN_LEADER_HAT }, 409, 'deactivate a wallet that still wears the hat'],
+  ];
+  for (const [who, method, path, body, expect, label] of checks) {
+    const res = await call(who, method, path, body);
+    const ok = res.status === expect;
+    if (!ok) failed++;
+    console.log(`${ok ? '  OK   ' : '  FAIL '} ${who.padEnd(6)} ${label} — HTTP ${res.status} (expected ${expect})`);
+  }
+}
+
 console.log(`\n${failed === 0 ? 'Authority decisions match the chain.' : `${failed} mismatch(es).`}`);
 process.exit(failed ? 1 : 0);

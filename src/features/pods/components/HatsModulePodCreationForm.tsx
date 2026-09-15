@@ -1823,14 +1823,24 @@ export const HatsModulePodCreationForm: React.FC<
                 }),
               );
 
-              const { error: membersError } = await supabase
-                .from('pod_members')
-                .insert(memberEntries);
-
-              if (membersError) {
-                console.error('❌ Failed to insert pod_members:', membersError);
-                console.error('❌ Error details:', membersError);
-                throw membersError;
+              // Each leader is recorded by the server after it confirms they
+              // wear the hat on-chain (audit Phase 1: the browser no longer
+              // writes pod_members).
+              const memberHeaders = await ensureAuthHeaders();
+              const memberResults = await Promise.all(
+                memberEntries.map((entry) =>
+                  fetch(`/api/pods/${entry.pod_id}/members`, {
+                    method: 'POST',
+                    headers: memberHeaders,
+                    body: JSON.stringify({ wallet: entry.wallet, hatId: entry.hat_id, role: 'leader', notify: false }),
+                  }),
+                ),
+              );
+              const failedMember = memberResults.find((r) => !r.ok);
+              if (failedMember) {
+                const err = await failedMember.json().catch(() => ({}));
+                console.error('❌ Failed to record pod_members:', err);
+                throw new Error(err.error || 'Leaders minted, but the membership records could not be written');
               }
 
               console.log(

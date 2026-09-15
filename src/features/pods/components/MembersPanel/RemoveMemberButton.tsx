@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
@@ -163,35 +164,18 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
           txHash,
         });
 
-        // Update pod_members table - mark as removed
-        await supabase
-          .from('pod_members')
-          .update({
-            is_active: false,
-            removed_at: new Date().toISOString(),
-          })
-          .eq('id', memberId);
-
-        // Remove from pod_leads array if leader
-        if (membershipType === 'leader') {
-          const { data: pod } = await supabase
-            .from('pods')
-            .select('pod_leads')
-            .eq('id', podId)
-            .single();
-
-          if (pod?.pod_leads) {
-            const updatedLeads = (pod.pod_leads as string[]).filter(
-              (lead) => lead.toLowerCase() !== memberAddress.toLowerCase(),
-            );
-
-            await supabase
-              .from('pods')
-              .update({ pod_leads: updatedLeads })
-              .eq('id', podId);
-
-            console.log('✅ Removed from pod_leads array');
-          }
+        // Record the removal server-side. The route confirms the hat is gone
+        // on-chain before marking the row inactive, and drops the wallet from
+        // pod_leads itself (audit Phase 1: the browser no longer writes
+        // pod_members).
+        const recorded = await fetch(`/api/pods/${podId}/members`, {
+          method: 'PATCH',
+          headers: await ensureAuthHeaders(),
+          body: JSON.stringify({ wallet: memberAddress, hatId }),
+        });
+        if (!recorded.ok) {
+          const err = await recorded.json().catch(() => ({}));
+          throw new Error(err.error || 'Hat removed on-chain, but the membership record could not be updated');
         }
 
         // Send notification to removed member

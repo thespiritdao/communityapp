@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { Card, CardContent } from '@/components/ui/card';
 import { Crown, CheckCircle, Loader2 } from 'lucide-react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
@@ -232,21 +233,17 @@ export const ClaimManagementHATButton: React.FC<
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
           );
 
-          const { error: syncError } = await supabase
-            .from('pod_members')
-            .upsert({
-              pod_id: podId,
-              wallet: evmAddress.toLowerCase(),
-              membership_type: 'leader',
-              role: 'leader',
-              hat_id: managementHatId,
-              is_active: true,
-              joined_at: new Date().toISOString(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }, {
-              onConflict: 'pod_id,wallet'
-            });
+          // The server confirms this wallet wears the management hat on-chain
+          // and records the leadership itself (audit Phase 1: the browser no
+          // longer writes pod_members).
+          const claimRes = await fetch(`/api/pods/${podId}/members/claim-hat`, {
+            method: 'POST',
+            headers: await ensureAuthHeaders(),
+          });
+          const syncError = claimRes.ok
+            ? null
+            : await claimRes.json().catch(() => ({ error: `HTTP ${claimRes.status}` }));
+          void supabase;
 
           if (syncError) {
             console.error('⚠️ Failed to sync to database:', syncError);

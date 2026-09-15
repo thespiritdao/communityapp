@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabaseClient';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { PodService } from './PodService';
 import { HatDeactivationService } from './hatDeactivationService';
 import { PodProxyDeletionService } from './PodProxyDeletionService';
@@ -638,12 +639,17 @@ export class PodDeletionService {
         // This would involve transferring remaining funds to a designated address
       }
 
-      // Step 3: Remove all member records
+      // Step 3: Remove all member records — via the server, which checks the
+      // caller leads the pod (audit Phase 1: the browser no longer writes
+      // pod_members).
       console.log('👥 Removing member records...');
-      const { error: memberError } = await supabase
-        .from('pod_members')
-        .delete()
-        .eq('pod_id', podId);
+      const purge = await fetch(`/api/pods/${podId}/members`, {
+        method: 'DELETE',
+        headers: await ensureAuthHeaders(),
+      });
+      const memberError = purge.ok
+        ? null
+        : { message: (await purge.json().catch(() => ({}))).error || `HTTP ${purge.status}` };
 
       if (
         memberError &&
