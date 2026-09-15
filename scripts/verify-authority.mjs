@@ -37,21 +37,28 @@ const member = mp.wallet_address.toLowerCase();
 const sessions = { lead: token(lp.user_id, lead), member: token(mp.user_id, member) };
 console.log(`lead ${lead.slice(0, 10)}…  member ${member.slice(0, 10)}…  against ${BASE}\n`);
 
-// [label, method, path, who, expectAllowed]
+// Reads that any member may make are not authority checks. These are the
+// write paths the routes gate on leadership; a body that fails validation
+// lets a lead prove they passed the guard (400) without creating anything,
+// while a member must be stopped by the guard first (403).
+// [label, method, path, body, who, expectStatus]
 const cases = [
-  ['surveys list (isPodLeader → resolver)', 'GET', `/api/pods/${TN}/surveys`, 'lead', true],
-  ['surveys list (isPodLeader → resolver)', 'GET', `/api/pods/${TN}/surveys`, 'member', false],
-  ['agent config (isPodLeader → resolver)', 'GET', `/api/community-agent/config?podId=${TN}`, 'lead', true],
-  ['agent config (isPodLeader → resolver)', 'GET', `/api/community-agent/config?podId=${TN}`, 'member', false],
+  ['create survey (isPodLeader → resolver)', 'POST', `/api/pods/${TN}/surveys`, {}, 'lead', 400],
+  ['create survey (isPodLeader → resolver)', 'POST', `/api/pods/${TN}/surveys`, {}, 'member', 403],
+  ['update agent config (isPodLeader → resolver)', 'PUT', '/api/community-agent/config', { podId: TN, config: {} }, 'member', 403],
+  ['survey results (isPodLeader → resolver)', 'GET', `/api/pods/${TN}/surveys/00000000-0000-0000-0000-000000000000/results`, null, 'member', 403],
 ];
 
 let failed = 0;
-for (const [label, method, path, who, expectAllowed] of cases) {
-  const res = await fetch(BASE + path, { method, headers: { Authorization: `Bearer ${sessions[who]}` } });
-  const allowed = res.status < 400;
-  const ok = allowed === expectAllowed;
+for (const [label, method, path, body, who, expect] of cases) {
+  const res = await fetch(BASE + path, {
+    method,
+    headers: { Authorization: `Bearer ${sessions[who]}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const ok = res.status === expect;
   if (!ok) failed++;
-  console.log(`${ok ? '  OK   ' : '  FAIL '} ${who.padEnd(6)} ${label} — HTTP ${res.status} (expected ${expectAllowed ? 'allowed' : 'refused'})`);
+  console.log(`${ok ? '  OK   ' : '  FAIL '} ${who.padEnd(6)} ${label} — HTTP ${res.status} (expected ${expect})`);
 }
 
 // requirePodPermission → hasPodPermission → chain. The eligibility PUT runs

@@ -85,6 +85,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Surveys module is not enabled for this pod' }, { status: 400 });
   }
 
+  // Audit follow-up: creation had no leadership check — any signed-in member
+  // could open a survey in any pod with the module on. The guide says leaders
+  // create surveys; now the server does too.
+  if (!(await isPodLeader(podId, wallet))) {
+    return NextResponse.json({ error: 'Only pod leaders can create surveys' }, { status: 403 });
+  }
+
   const body = await req.json();
   const { title, description, audience, questions, starts_at, ends_at } = body;
 
