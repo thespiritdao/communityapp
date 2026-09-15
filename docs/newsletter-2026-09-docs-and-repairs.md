@@ -115,10 +115,14 @@ the controls always reachable.
 Pod agreements have until now been signed inside the app, with the record held
 in our database. You had to trust us that the signature existed.
 
-Creating an agreement and signing one are now **transactions on Base**. A
-signature is recorded on the blockchain, where anyone can verify it
-independently — including after we are gone from the picture. Gas is sponsored,
-so signing costs you nothing.
+Signing an agreement is now a **transaction on Base**. A signature is recorded
+on the blockchain, where anyone can verify it independently — including after
+we are gone from the picture. Gas is sponsored, so signing costs you nothing.
+
+*(Editor's note before publishing: on-chain* creation *of an agreement is not
+yet live on production — the eligibility module there needs an admin claimed
+for each pod's hat first. Keep this paragraph to signing only until that is
+done. See APP_AUDIT_2026-09-15 F12/F13.)*
 
 To be precise about what this does and does not do yet: agreements are recorded
 and verifiable, but they do not yet *gate* access to a role. Turning that on
