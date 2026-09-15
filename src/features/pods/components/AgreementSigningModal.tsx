@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useToast } from '@/components/ui/use-toast';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import {
@@ -79,6 +80,7 @@ export default function AgreementSigningModal({
     setIsSigning(true);
     try {
       let signature: string;
+      let signedMessage: string | null = null;
 
       if (signsOnChain) {
         // A transaction, not a message. signAgreement records the signature in
@@ -108,51 +110,42 @@ export default function AgreementSigningModal({
           message,
         });
         signature = result.signature;
+        signedMessage = message;
       }
 
-      // Store signature in pod_accountability_signatures table
-      const { error: signatureError } = await supabase
-        .from('pod_accountability_signatures')
-        .insert({
-          pod_id: podId,
-          signer_address: address.toLowerCase(),
-          signature_data: signature,
-          accountability_statement: agreementText,
-          signed_at: new Date().toISOString(),
-          is_valid: true,
+      // Record the signature server-side. The route checks the proof — the
+      // chain for a pinned agreement, the message signature otherwise — and
+      // writes both the signature row and the eligibility status. (Audit
+      // Phase 1: the browser no longer writes these tables.)
+      // The user operation resolves when it is sent, not when it is mined, so
+      // the first check can land before the chain shows the signature. A 409
+      // means "not yet" — retry for about half a minute before giving up.
+      const headers = await ensureAuthHeaders();
+      const record = () =>
+        fetch(`/api/pods/${podId}/agreements/sign`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            agreementId,
+            roleId,
+            agreementText,
+            agreementCid: signsOnChain ? agreementCid : null,
+            message: signedMessage,
+            signature: signsOnChain ? null : signature,
+          }),
         });
 
-      if (signatureError) {
-        throw signatureError;
+      let recorded: Response | null = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        recorded = await record();
+        if (recorded.status !== 409 || !signsOnChain) break;
+        await new Promise((r) => setTimeout(r, 3000));
       }
-
-      // Also store in user_eligibility_status table
-      const { error: eligibilityError } = await supabase
-        .from('user_eligibility_status')
-        .upsert(
-          {
-            user_wallet: address.toLowerCase(),
-            pod_id: podId,
-            role_id: roleId,
-            criteria_type: 'agreement',
-            criteria_id: agreementId,
-            status: 'met',
-            proof: signature,
-            verified_at: new Date().toISOString(),
-            last_checked: new Date().toISOString(),
-          },
-          {
-            onConflict: 'user_wallet,pod_id,role_id,criteria_type,criteria_id',
-          },
-        );
-
-      if (eligibilityError) {
-        console.warn(
-          'Warning: Failed to update eligibility status:',
-          eligibilityError,
-        );
-        // Don't throw - signature was stored successfully
+      if (!recorded || !recorded.ok) {
+        const err = recorded ? await recorded.json().catch(() => ({})) : {};
+        throw new Error(err.error || 'Signed, but the signature could not be recorded');
       }
+      void supabase;
 
       toast({
         title: 'Agreement Signed!',

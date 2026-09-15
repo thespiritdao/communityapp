@@ -215,12 +215,26 @@ console.log('Regression  legitimate flows must still work');
   }).select('id').single();
   pass('member sends a notification as self', !r.error, r.error?.message?.slice(0, 60));
   if (r.data?.id) await admin.from('general_notifications').delete().eq('id', r.data.id);
-  r = await me.client.from('pod_accountability_signatures').insert({
-    pod_id: TN, signer_address: me.wallet, signature_data: 'probe',
-    accountability_statement: 'probe', signed_at: new Date().toISOString(), is_valid: true,
-  }).select('id').single();
-  pass('member signs as self', !r.error, r.error?.message?.slice(0, 60));
-  if (r.data?.id) await admin.from('pod_accountability_signatures').delete().eq('id', r.data.id);
+  // Since Phase 1 step 4 the browser never writes signatures either; the
+  // server records one only after the chain (or a verified message
+  // signature) proves it. A claim the chain doesn't back must be refused.
+  {
+    const meTok = jwt.sign({ sub: (await admin.from('user_profiles').select('user_id').eq('wallet_address', me.wallet).single()).data.user_id, aud: 'authenticated', role: 'authenticated', iat: now, exp: now + 600, wallet_address: me.wallet, user_metadata: { wallet_address: me.wallet } }, SECRET, { algorithm: 'HS256' });
+    const res = await fetch(`${BASE}/api/pods/${TN}/agreements/sign`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${meTok}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agreementId: 'probe', agreementText: 'probe', agreementCid: 'bafkreiprobeprobeprobeprobeprobeprobeprobeprobeprobeprobeprobe' }),
+    });
+    pass('member records a signature the chain does not back → refused', res.status === 409, `HTTP ${res.status}`);
+    const direct = await me.client.from('pod_accountability_signatures').insert({
+      pod_id: TN, signer_address: me.wallet, signature_data: 'probe',
+      accountability_statement: 'probe', signed_at: new Date().toISOString(), is_valid: true,
+    }).select('id').single();
+    const blocked = !!direct.error;
+    if (!blocked && direct.data?.id) await admin.from('pod_accountability_signatures').delete().eq('id', direct.data.id);
+    console.log(`${blocked ? '  BLOCKED ' : '  OPEN ✗  '} F2 direct client INSERT of own signature — ${blocked ? 'refused' : 'allowed; apply 20260915000004'}`);
+    if (!blocked) open++;
+  }
 }
 
 console.log(`\n${open === 0 ? 'All probes blocked; all legitimate flows allowed.' : `${open} check(s) failing.`}`);
