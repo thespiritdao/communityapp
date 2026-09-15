@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { isPodLeader } from '@/lib/serverPodAuth';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
 
@@ -15,26 +16,6 @@ function getWalletFromToken(token: string): string | null {
   }
 }
 
-async function isPodLeader(podId: string, wallet: string): Promise<boolean> {
-  const { data: pod } = await supabaseAdmin
-    .from('pods')
-    .select('pod_leads')
-    .eq('id', podId)
-    .single();
-
-  if (pod?.pod_leads?.includes(wallet.toLowerCase())) return true;
-
-  const { data: member } = await supabaseAdmin
-    .from('pod_members')
-    .select('id')
-    .eq('pod_id', podId)
-    .eq('wallet', wallet.toLowerCase())
-    .eq('role', 'leader')
-    .eq('is_active', true)
-    .single();
-
-  return !!member;
-}
 
 /**
  * Answers submitted before 2026-09-11 were JSON-encoded a second time before

@@ -30,24 +30,13 @@ export async function isPodLeader(
   podId: string,
   wallet: string,
 ): Promise<boolean> {
-  const { data: pod } = await supabaseAdmin
-    .from('pods')
-    .select('pod_leads')
-    .eq('id', podId)
-    .single();
-
-  if (pod?.pod_leads?.includes(wallet.toLowerCase())) return true;
-
-  const { data: member } = await supabaseAdmin
-    .from('pod_members')
-    .select('id')
-    .eq('pod_id', podId)
-    .eq('wallet', wallet.toLowerCase())
-    .eq('role', 'leader')
-    .eq('is_active', true)
-    .maybeSingle();
-
-  return !!member;
+  // Audit Phase 1: one definition of "leader", decided from the management
+  // hat on-chain first (see src/lib/podAuthority.ts). pods.pod_leads and the
+  // creator still count — members cannot write those columns — but
+  // pod_members.role no longer decides anything unless the chain is
+  // unreachable.
+  const { isPodLead } = await import('@/lib/podAuthority');
+  return isPodLead(wallet, podId);
 }
 
 /**

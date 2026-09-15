@@ -16,6 +16,7 @@ import { NextResponse } from 'next/server';
 import { getWalletFromRequest, isPodLeader, isPodMember, isExecutiveLeader } from '@/lib/serverPodAuth';
 import { PodAccessControlService } from '@/features/pods/services/PodAccessControlService';
 import type { HatPermissions } from '@/services/hatPermissionsService';
+import { hasPodPermission } from '@/lib/podAuthority';
 
 const deny = (error: string, status: number) =>
   NextResponse.json({ success: false, error }, { status });
@@ -74,13 +75,11 @@ export async function requirePodPermission(
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 
-  const check = await PodAccessControlService.requirePodPermission(
-    wallet,
-    podId,
-    permission,
-  );
+  // Audit Phase 1: decide from the hats the wallet wears on-chain, not from
+  // the database join a member could once edit (F1).
+  const check = await hasPodPermission(wallet, podId, permission);
   if (!check.allowed) {
-    return deny(check.error || `Missing required permission: ${String(permission)}`, 403);
+    return deny(`Missing required permission: ${String(permission)}`, 403);
   }
   return wallet;
 }
