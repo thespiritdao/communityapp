@@ -12,16 +12,34 @@ import { supabase } from '@/utils/supabaseClient';
 import { HATS_PROTOCOL_ADDRESS } from '@/constants/hatsProtocol';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 
-// Minimal Hats Protocol ABI for transferHat function
-const HATS_TRANSFER_ABI = [
+// On-chain removal (audit Phase 2, step 3): the pod's eligibility module
+// records a revocation by a hat admin, then Hats re-checks the wearer and
+// burns the hat. Hats refuses transferHat to the zero address, and
+// setHatWearerStatus is callable only by the module itself, so this is the
+// one admin-driven path Hats Protocol allows.
+const POD_ELIGIBILITY_MODULE = (process.env.NEXT_PUBLIC_POD_ELIGIBILITY_MODULE || '') as `0x${string}` | '';
+
+const POD_ELIGIBILITY_ABI = [
   {
     inputs: [
       { name: '_hatId', type: 'uint256' },
-      { name: '_from', type: 'address' },
-      { name: '_to', type: 'address' },
+      { name: '_wearer', type: 'address' },
     ],
-    name: 'transferHat',
+    name: 'revoke',
     outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+] as const;
+
+const HATS_CHECK_ABI = [
+  {
+    inputs: [
+      { name: '_hatId', type: 'uint256' },
+      { name: '_wearer', type: 'address' },
+    ],
+    name: 'checkHatWearerStatus',
+    outputs: [{ name: 'updated', type: 'bool' }],
     stateMutability: 'nonpayable',
     type: 'function',
   },
@@ -97,9 +115,6 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
     );
   }
 
-  // ✅ Transfer HAT to zero address (burns it effectively)
-  const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
   // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
   const handleRemoveMemberTransaction = async () => {
     // EXACT FAUCET PATTERN: Simple validation matching faucet
@@ -122,32 +137,34 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
     setIsProcessing(true);
 
     try {
-      console.log('🚀 Building Smart Account User Operation for member removal...');
-      console.log('💼 Smart Account:', smartAccount);
-      console.log('🎯 Contract: Hats Protocol - transferHat');
-      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+      if (!POD_ELIGIBILITY_MODULE) {
+        throw new Error('POD_ELIGIBILITY_MODULE_UNSET');
+      }
 
-      // EXACT FAUCET PATTERN: Encode call data
-      const callData = encodeFunctionData({
-        abi: HATS_TRANSFER_ABI,
-        functionName: 'transferHat',
-        args: [
-          BigInt(hatId),
-          memberAddress as `0x${string}`,
-          ZERO_ADDRESS as `0x${string}`,
-        ],
+      console.log('🚀 Member removal: revoke on the eligibility module, then Hats re-check');
+      console.log('💼 Smart Account:', smartAccount);
+
+      const revokeData = encodeFunctionData({
+        abi: POD_ELIGIBILITY_ABI,
+        functionName: 'revoke',
+        args: [BigInt(hatId), memberAddress as `0x${string}`],
+      });
+      const checkData = encodeFunctionData({
+        abi: HATS_CHECK_ABI,
+        functionName: 'checkHatWearerStatus',
+        args: [BigInt(hatId), memberAddress as `0x${string}`],
       });
 
-      // EXACT FAUCET PATTERN: Send user operation
+      // One user operation, two calls: the revocation is recorded, then Hats
+      // reads the module, sees the wearer ineligible, and burns the hat.
       const result = await sendUserOperation({
-        evmSmartAccount: smartAccount,  // ← Smart Account directly!
-        network: 'base',                 // ← Base mainnet
-        calls: [{
-          to: HATS_PROTOCOL_ADDRESS,
-          value: 0n,                     // ← Zero ETH (bigint)
-          data: callData,
-        }],
-        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [
+          { to: POD_ELIGIBILITY_MODULE, value: 0n, data: revokeData },
+          { to: HATS_PROTOCOL_ADDRESS, value: 0n, data: checkData },
+        ],
+        useCdpPaymaster: true,
       });
 
       console.log('✅ User operation sent successfully!', result);
@@ -211,16 +228,17 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
 
       let errorMessage = error.message || 'Failed to remove member. Please try again.';
 
-      if (
+      if (error.message === 'POD_ELIGIBILITY_MODULE_UNSET') {
+        errorMessage =
+          "On-chain removal is not available yet: the pod eligibility module with revocation control has not been deployed. The member can leave by renouncing their hat.";
+      } else if (
         error.message?.includes('execution reverted') ||
         error.message?.includes('failed to estimate gas')
       ) {
-        // Hats Protocol lets only a hat's eligibility module revoke a wearer,
-        // and this pod's module has no revocation control yet; transferring
-        // the hat to the zero address is refused by Hats. Say so, rather than
-        // guessing at permissions.
+        // Either this hat is not yet attached to the pod eligibility module,
+        // or the caller is not an admin of the hat.
         errorMessage =
-          "On-chain removal is not available for this pod yet: only the hat's eligibility module can revoke a wearer, and the current module has no revocation control. The member can leave by renouncing their hat; admin-driven removal is planned.";
+          "The removal was refused on-chain. Either this pod's hat is not yet attached to the eligibility module with revocation control, or your wallet is not an admin of this hat.";
       } else if (error.message?.includes('user rejected')) {
         errorMessage = 'Transaction cancelled by user.';
       }
