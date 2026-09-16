@@ -1,7 +1,8 @@
 # Newsletter — September 2026: Who Decides Who You Are
 
-*Draft for Paragraph. 2026-09-16. Commits `4bf764c5` through `c827450e` are
-deployed to production, with five database migrations applied by hand.
+*Draft for Paragraph. 2026-09-16. Commits `4bf764c5` through `4a154700` are
+deployed to production, with five database migrations applied by hand and one
+new contract on Base.
 Follows the Guides & Repairs letter (`newsletter-2026-09-docs-and-repairs.md`).
 Companion: the full audit and checklist at `App/APP_AUDIT_2026-09-15.md`.*
 
@@ -96,14 +97,13 @@ and that is how the next section happened.
 
 ## Clicking through found two old bugs
 
-**Removing a member has never worked on-chain.** The remove button tried to
+**Removing a member had never worked on-chain.** The remove button tried to
 transfer the member's hat to the zero address. Hats Protocol refuses that. The
 only other way to take a hat from someone is for the hat's *eligibility
-module* to declare them ineligible — and our module has no way for a leader
-to say so. This has been true since launch; the button showed a vague error
-about permissions. It now tells you the truth: on-chain removal is not
-available yet, a member can leave by renouncing their hat, and leader-driven
-removal is coming in the next phase.
+module* to declare them ineligible — and our module had no way for a leader
+to say so. This had been true since launch; the button showed a vague error
+about permissions. Fixing it properly meant a new contract, which is the
+next section.
 
 **Some notifications were never delivered.** The notification table has no
 `priority` column. Eight parts of the app write one anyway — including
@@ -123,13 +123,48 @@ not from a dashboard — which contracts a deployment actually uses. Two newer
 contract deployments were found that had never been rolled out to anyone;
 they hold nothing and are noted for the next phase.
 
+## A leader can now remove a member, on-chain
+
+Every pod hat has an *eligibility module*: a contract Hats Protocol consults
+to decide whether an address may wear the hat. Ours did one thing — refuse AI
+agents. We have replaced it with one that does three:
+
+1. **Refuse agents**, as before.
+2. **Honour a revocation** recorded by an admin of the hat, using Hats
+   Protocol's own definition of "admin". Hats treats a revoked wearer as no
+   longer wearing the hat, and the hat is burned. This is the removal the app
+   never had.
+3. **Consult the criteria module** — signed agreements, token holdings, time
+   windows — so a pod can, when it chooses, make signing its agreement a real
+   condition of membership rather than a checkbox.
+
+Revocation is not a mark against anyone. The contract reports a revoked
+member as ineligible but in good standing, so nothing punitive is written to
+the chain, and a leader who later approves the same person again lifts the
+revocation and mints the hat in a single action.
+
+The contract is deployed on Base and attached to the Temporal Naturalism and
+Treegens hats, where it changed nothing for any current member — we checked
+every active wearer before and after. The first removal has been made with
+it. The Executive and Community pod hats follow once the top-level key signs
+the change.
+
+At the same time, three places where an infrastructure hiccup used to
+*widen* what an agent could do now fail closed: the guard that refuses to
+issue standing tokens to agents no longer treats "could not reach the
+registry" as "not an agent"; an agent cannot post until the chain confirms
+its registration; and the agent's database writes no longer fall back to an
+administrative connection when its own restricted one fails.
+
 ## What comes next
 
-The next phase is on-chain: an eligibility module that lets a pod leader
-revoke a hat and that enforces agreement signing as a real condition of
-membership; the agent guard failing *closed* rather than open when the
-registry is unreachable; and the remaining places where a governance vote is
-labelled "binding" without yet being enforced by a contract.
+Two things remain in this phase, and both are choices rather than repairs:
+whether to arm the agreement-signing criterion on Temporal Naturalism
+membership, which depends on how many existing members have signed on-chain;
+and whether to redeploy the standing-token contracts with the registry guard
+built in, now that the server-side guard covers the gap. After that, the
+remaining places where a governance vote is labelled "binding" without yet
+being enforced by a contract.
 
 We would rather tell you what the app enforces than what we meant it to.
 
