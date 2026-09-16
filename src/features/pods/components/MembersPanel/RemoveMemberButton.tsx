@@ -211,12 +211,16 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
 
       let errorMessage = error.message || 'Failed to remove member. Please try again.';
 
-      if (error.message?.includes('execution reverted')) {
+      if (
+        error.message?.includes('execution reverted') ||
+        error.message?.includes('failed to estimate gas')
+      ) {
+        // Hats Protocol lets only a hat's eligibility module revoke a wearer,
+        // and this pod's module has no revocation control yet; transferring
+        // the hat to the zero address is refused by Hats. Say so, rather than
+        // guessing at permissions.
         errorMessage =
-          'Transaction would revert. You may not have permission to remove this member, or the HAT cannot be transferred.';
-      } else if (error.message?.includes('failed to estimate gas')) {
-        errorMessage =
-          'Failed to estimate gas. You may not be an admin of this HAT or the member is not currently wearing it.';
+          "On-chain removal is not available for this pod yet: only the hat's eligibility module can revoke a wearer, and the current module has no revocation control. The member can leave by renouncing their hat; admin-driven removal is planned.";
       } else if (error.message?.includes('user rejected')) {
         errorMessage = 'Transaction cancelled by user.';
       }
@@ -263,20 +267,25 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
     <div className="space-y-4">
       {/* Confirmation Warning */}
       <div
-        className="p-4 border-l-4 rounded"
+        className="p-4 border-l-4 rounded min-w-0 overflow-hidden"
         style={{ backgroundColor: '#F5E6E6', borderColor: '#8B3A3A' }}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 min-w-0">
           <AlertTriangle
             className="w-5 h-5 flex-shrink-0 mt-0.5"
             style={{ color: '#8B3A3A' }}
           />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0 break-words">
+            {/* The person first, then the question — long names and pod names
+                wrap inside the card instead of pushing past it. */}
+            <div className="text-base font-semibold mb-1 break-words" style={{ color: '#5C1F1F' }}>
+              {memberName}
+            </div>
             <h4
-              className="text-sm font-semibold mb-2"
+              className="text-sm font-semibold mb-2 break-words"
               style={{ color: '#8B3A3A' }}
             >
-              Remove {memberName} from {podName}?
+              Remove from {podName}?
             </h4>
             <p className="text-xs mb-3" style={{ color: '#8B3A3A' }}>
               This action will:
@@ -306,12 +315,13 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
 
       {/* CDP Smart Account Transaction Buttons */}
       {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex gap-3">
+        <div className="flex flex-col gap-3 min-w-0">
+          {/* Stack on narrow screens so neither button escapes the card. */}
+          <div className="flex flex-col sm:flex-row gap-3 min-w-0">
             <Button
               onClick={handleRemoveMemberTransaction}
               disabled={isTransactionPending || isProcessing}
-              className="flex-1 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#8B3A3A] hover:bg-[#5C1F1F]"
+              className="w-full sm:flex-1 min-w-0 whitespace-normal text-white px-4 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#8B3A3A] hover:bg-[#5C1F1F]"
             >
               {isTransactionPending || isProcessing ? (
                 <>
@@ -319,13 +329,13 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
                   {isTransactionPending ? 'Removing...' : 'Processing...'}
                 </>
               ) : (
-                `Confirm: Remove ${membershipType === 'leader' ? 'Leader' : 'Member'} (Gasless)`
+                `Confirm: Remove ${membershipType === 'leader' ? 'Leader' : 'Member'}`
               )}
             </Button>
             <button
               onClick={() => setShowConfirmation(false)}
               disabled={isTransactionPending || isProcessing}
-              className="px-6 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium disabled:opacity-50"
             >
               Cancel
             </button>
@@ -348,9 +358,6 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
         </div>
       )}
 
-      <p className="text-xs text-gray-500 text-center">
-        Member address: {memberAddress.slice(0, 8)}...{memberAddress.slice(-6)}
-      </p>
     </div>
   );
 };
