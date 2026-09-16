@@ -37,6 +37,34 @@ import { ProfileModal } from '@/features/identity';
 import type { UserProfile } from '@/features/identity/types';
 import { notifyExecPodOfNewMember, notifyPodLeadersOfNewMember } from '@/features/pods/services/PodMembershipNotificationService';
 
+// Pod eligibility module (audit Phase 2): a member removed by a leader is
+// recorded as revoked there. Approving them again is the same authority
+// acting again, so the approval lifts the revocation in the same operation
+// as the mint — otherwise Hats would refuse the mint as ineligible.
+const POD_ELIGIBILITY_MODULE = (process.env.NEXT_PUBLIC_POD_ELIGIBILITY_MODULE || '') as `0x${string}` | '';
+const POD_ELIGIBILITY_ABI = [
+  {
+    inputs: [
+      { name: '', type: 'uint256' },
+      { name: '', type: 'address' },
+    ],
+    name: 'revoked',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { name: '_hatId', type: 'uint256' },
+      { name: '_wearer', type: 'address' },
+    ],
+    name: 'reinstate',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+] as const;
+
 // Minimal Hats Protocol ABI for mintHat function
 const HATS_MINT_ABI = [
   {
@@ -1339,15 +1367,44 @@ export const ApproveApplicationButton: React.FC<
         args: [BigInt(effectiveHatId), applicantAddress as `0x${string}`],
       });
 
+      const calls: { to: `0x${string}`; value: bigint; data: `0x${string}` }[] = [];
+
+      // A previously removed member is revoked on the eligibility module.
+      // Re-approval reinstates them first, in the same operation.
+      if (POD_ELIGIBILITY_MODULE && publicClient) {
+        try {
+          const isRevoked = await publicClient.readContract({
+            address: POD_ELIGIBILITY_MODULE,
+            abi: POD_ELIGIBILITY_ABI,
+            functionName: 'revoked',
+            args: [BigInt(effectiveHatId), applicantAddress as `0x${string}`],
+          });
+          if (isRevoked) {
+            console.log('↩️ Applicant was previously removed; reinstating before mint');
+            calls.push({
+              to: POD_ELIGIBILITY_MODULE,
+              value: 0n,
+              data: encodeFunctionData({
+                abi: POD_ELIGIBILITY_ABI,
+                functionName: 'reinstate',
+                args: [BigInt(effectiveHatId), applicantAddress as `0x${string}`],
+              }),
+            });
+          }
+        } catch (err) {
+          // If the module cannot be read, mint anyway: a still-revoked
+          // wearer is refused by Hats and the failure is reported normally.
+          console.warn('Could not read revocation status; proceeding with mint only:', err);
+        }
+      }
+
+      calls.push({ to: HATS_PROTOCOL_ADDRESS as `0x${string}`, value: 0n, data: callData });
+
       // EXACT FAUCET PATTERN: Send user operation
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,  // ← Smart Account directly!
         network: 'base',                 // ← Base mainnet
-        calls: [{
-          to: HATS_PROTOCOL_ADDRESS,
-          value: 0n,                     // ← Zero ETH (bigint)
-          data: callData,
-        }],
+        calls,
         useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
       });
 
