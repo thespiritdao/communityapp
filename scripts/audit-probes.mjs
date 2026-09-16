@@ -202,8 +202,11 @@ console.log('Regression  legitimate flows must still work');
   r = await L.from('general_notifications').insert({
     recipient_address: me.wallet, sender_address: lead,
     notification_type: 'pod_application_status', title: 'probe', message: 'probe',
+    // Eight writers set priority; the column only exists once migration
+    // 20260916000001 is applied. Keep this insert shaped like the real ones.
+    priority: 'high',
   }).select().single();
-  pass('lead sends approval notification (with RETURNING)', !r.error, r.error?.message?.slice(0, 60));
+  pass('lead sends approval notification (with RETURNING, priority)', !r.error, r.error?.message?.slice(0, 60));
   if (r.data?.id) await admin.from('general_notifications').delete().eq('id', r.data.id);
 
   // Member reads own inbox, sends as self, signs as self.
