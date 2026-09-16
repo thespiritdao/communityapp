@@ -167,62 +167,57 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
         useCdpPaymaster: true,
       });
 
-      console.log('✅ User operation sent successfully!', result);
+      console.log('✅ User operation sent', result);
 
-      // Handle success with receipt
-      // Type assertion needed due to incomplete CDP SDK types
-      const resultWithReceipt = result as any;
-      if (resultWithReceipt?.receipt) {
-        const txHash = resultWithReceipt.receipt.transactionHash;
+      // sendUserOperation resolves when the operation is *sent*, not mined,
+      // so a receipt is usually absent here. The server route is the
+      // authority anyway: it refuses (409) while the hat is still worn and
+      // records the removal once the chain shows it gone. Poll it for up to
+      // ~45s instead of depending on a receipt.
+      const txHash: string | undefined =
+        (result as any)?.receipt?.transactionHash || (result as any)?.userOpHash || undefined;
 
-        console.log('✅ Member removed on-chain:', {
-          member: memberAddress,
-          hatId,
-          txHash,
-        });
-
-        // Record the removal server-side. The route confirms the hat is gone
-        // on-chain before marking the row inactive, and drops the wallet from
-        // pod_leads itself (audit Phase 1: the browser no longer writes
-        // pod_members).
-        const recorded = await fetch(`/api/pods/${podId}/members`, {
+      let recorded: Response | null = null;
+      let lastError = 'Hat removed on-chain, but the membership record could not be updated';
+      for (let attempt = 0; attempt < 15; attempt++) {
+        const res = await fetch(`/api/pods/${podId}/members`, {
           method: 'PATCH',
           headers: await ensureAuthHeaders(),
           body: JSON.stringify({ wallet: memberAddress, hatId }),
         });
-        if (!recorded.ok) {
-          const err = await recorded.json().catch(() => ({}));
-          throw new Error(err.error || 'Hat removed on-chain, but the membership record could not be updated');
+        if (res.ok) {
+          recorded = res;
+          break;
         }
-
-        // Send notification to removed member
-        await supabase.from('general_notifications').insert({
-          recipient_address: memberAddress.toLowerCase(),
-          sender_address: (userWallet ?? evmAddress).toLowerCase(),
-          notification_type: 'pod_member_removed',
-          title: `Removed from ${podName}`,
-          message: `You have been removed from ${podName}. Your ${membershipType} role has been revoked.`,
-          context_type: 'governance',
-          context_id: podId,
-          context_url: `/pods/${podId}`,
-        });
-
-        toast({
-          title: 'Member Removed Successfully',
-          description: `${memberName} has been removed from ${podName}. Transaction: ${txHash?.slice(0, 10)}...`,
-          duration: 5000,
-        });
-
-        setShowConfirmation(false);
-        onSuccess?.();
-      } else {
-        console.warn('⚠️ No receipt found in result');
-        toast({
-          title: 'Transaction Completed',
-          description: 'Member removal completed but receipt not found. Please refresh.',
-          variant: 'destructive',
-        });
+        const err = await res.json().catch(() => ({}));
+        lastError = err.error || lastError;
+        if (res.status !== 409) break; // a real refusal, not "not mined yet"
+        await new Promise((r) => setTimeout(r, 3000));
       }
+      if (!recorded) throw new Error(lastError);
+
+      console.log('✅ Member removal recorded:', { member: memberAddress, hatId, txHash });
+
+      // Send notification to removed member
+      await supabase.from('general_notifications').insert({
+        recipient_address: memberAddress.toLowerCase(),
+        sender_address: (userWallet ?? evmAddress).toLowerCase(),
+        notification_type: 'pod_member_removed',
+        title: `Removed from ${podName}`,
+        message: `You have been removed from ${podName}. Your ${membershipType} role has been revoked.`,
+        context_type: 'governance',
+        context_id: podId,
+        context_url: `/pods/${podId}`,
+      });
+
+      toast({
+        title: 'Member Removed',
+        description: `${memberName} has been removed from ${podName}.`,
+        duration: 5000,
+      });
+
+      setShowConfirmation(false);
+      onSuccess?.();
     } catch (error: any) {
       console.error('❌ Member removal failed:', error);
 
@@ -282,7 +277,7 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="remove-confirm w-full space-y-4">
       {/* Confirmation Warning */}
       <div
         className="p-4 border-l-4 rounded min-w-0 overflow-hidden"

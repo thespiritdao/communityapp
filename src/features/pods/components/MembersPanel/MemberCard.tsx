@@ -96,7 +96,9 @@ export const MemberCard = React.memo<MemberCardProps>(
     }, [canRemove, onRemoveMember, currentUserIsLeader, isCurrentUser]);
 
     return (
-      <div className={className}>
+      // flex-wrap lets the removal confirmation drop to its own full-width
+      // row beneath the name instead of squeezing the name beside it.
+      <div className={`${className ?? ''} flex-wrap`}>
         <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-gray-200">
           {profile?.profile_picture ? (
             <img
@@ -144,7 +146,9 @@ export const MemberCard = React.memo<MemberCardProps>(
 
         {/* Remove Button - Only show for leaders removing others */}
         {showRemoveButton && (
-          <div className="flex items-center space-x-2">
+          // While the confirmation card is open (.remove-confirm), this
+          // container takes the full row width and sits under the name.
+          <div className="flex items-center space-x-2 has-[.remove-confirm]:basis-full has-[.remove-confirm]:w-full has-[.remove-confirm]:mt-3 has-[.remove-confirm]:space-x-0">
             {/* ✅ ISSUE #7: Use RemoveMemberButton if we have full member data */}
             {memberRef?.id && memberRef?.hat_id && podId && podName ? (
               <RemoveMemberButton
