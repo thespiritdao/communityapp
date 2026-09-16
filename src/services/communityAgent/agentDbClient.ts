@@ -7,15 +7,22 @@
 // SUPABASE_JWT_SECRET) instead of the service role. The role can only INSERT
 // forum/chat/event content attributed to its own wallet — enforced by grants
 // and RLS (see supabase/migrations/20260818000001_agent_scoped_role.sql),
-// not by application discipline. actor_type='agent' is required by the RLS
-// policies, so provenance is structural.
+// not by application discipline.
 //
 // A leaked agent token can, at worst, post content as that agent. It cannot
 // touch votes, treasuries, memberships, permissions, or profiles.
+//
+// Audit Phase 2 (2026-09-16), two changes:
+//   1. No service-role fallback. It existed because the scoped role once was
+//      not migrated; the role is verified working in production, so a failed
+//      scoped write is now an error, never a silent escalation to admin.
+//   2. An agent may not post until it is registered in the on-chain
+//      AgentRegistry. The constitution monitor claims every posting agent is
+//      registered; this is where that claim is enforced.
 
 import { createHmac } from 'crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { isRegisteredAgent } from '@/lib/agentGuard';
 
 const TOKEN_TTL_SECONDS = 15 * 60;
 
@@ -61,13 +68,33 @@ export function getAgentClient(agentWallet: string): SupabaseClient {
 }
 
 /**
+ * May this agent wallet post at all? Only a wallet registered in the on-chain
+ * AgentRegistry may. Legacy pseudo-addresses (0xca10…) were never registrable
+ * and are refused; the guard's own failure (registry unreachable, nothing
+ * cached) is also a refusal. Returns the reason when refused.
+ */
+export async function agentMayPost(agentWallet: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const addr = agentWallet.toLowerCase();
+  if (addr.startsWith('0xca10')) {
+    return { ok: false, reason: 'legacy pseudo-address is not an on-chain registered agent' };
+  }
+  try {
+    const registered = await isRegisteredAgent(addr);
+    return registered
+      ? { ok: true }
+      : { ok: false, reason: 'agent wallet is not registered in the AgentRegistry' };
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
  * Insert a row as the agent, returning selected columns.
  *
- * Falls back to the service role with a LOUD warning if the scoped write
- * fails for infrastructure reasons (role not migrated yet, JWT secret
- * missing) — agent liveness should not depend on migration timing. RLS
- * *policy* rejections do NOT fall back: if the constitution says no, the
- * answer is no.
+ * Fails closed: if the scoped write cannot be made — the agent is not
+ * registered on-chain, the role is refused by RLS, the JWT secret is missing,
+ * the scoped client cannot be built — the caller gets an error. Nothing falls
+ * back to the service role.
  */
 export async function agentInsert<T = any>(
   agentWallet: string,
@@ -75,41 +102,35 @@ export async function agentInsert<T = any>(
   row: Record<string, any>,
   select?: string,
 ): Promise<{ data: T | null; error: { message: string } | null }> {
-  try {
-    const client = getAgentClient(agentWallet);
-    const query = client.from(table).insert(row);
-    const result = select
-      ? await query.select(select).single()
-      : await query.select().single();
-
-    if (!result.error) {
-      return { data: result.data as T, error: null };
-    }
-
-    // RLS policy rejection (42501 / row-level security violation): the scoped
-    // role refused — surface it, never bypass it.
-    const msg = result.error.message || '';
-    if (msg.includes('row-level security') || (result.error as any).code === '42501') {
-      console.error(`[agentDbClient] RLS refused agent insert into ${table}:`, msg);
-      return { data: null, error: result.error };
-    }
-
-    // Infrastructure failure — fall back to admin, loudly, so the gap is
-    // visible in logs until resolved.
-    console.warn(
-      `[agentDbClient] scoped insert into ${table} failed (${msg}) — falling back to service role. ` +
-        'Check that migration 20260818000001_agent_scoped_role.sql is applied.',
-    );
-  } catch (err) {
-    console.warn(
-      `[agentDbClient] scoped client unavailable (${err instanceof Error ? err.message : err}) — ` +
-        `falling back to service role for ${table}.`,
-    );
+  const permit = await agentMayPost(agentWallet);
+  if (!permit.ok) {
+    console.error(`[agentDbClient] refusing insert into ${table}: ${permit.reason}`);
+    return { data: null, error: { message: `Agent may not post: ${permit.reason}` } };
   }
 
-  const fallback = supabaseAdmin.from(table).insert(row);
+  let client: SupabaseClient;
+  try {
+    client = getAgentClient(agentWallet);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[agentDbClient] scoped client unavailable for ${table}: ${message}`);
+    return { data: null, error: { message } };
+  }
+
+  const query = client.from(table).insert(row);
   const result = select
-    ? await fallback.select(select).single()
-    : await fallback.select().single();
-  return { data: (result.data as T) ?? null, error: result.error };
+    ? await query.select(select).single()
+    : await query.select().single();
+
+  if (result.error) {
+    const msg = result.error.message || '';
+    const rls = msg.includes('row-level security') || (result.error as any).code === '42501';
+    console.error(
+      `[agentDbClient] ${rls ? 'RLS refused' : 'scoped insert failed for'} ${table}: ${msg}` +
+        (rls ? '' : ' — check migration 20260818000001_agent_scoped_role.sql; no fallback is taken.'),
+    );
+    return { data: null, error: result.error };
+  }
+
+  return { data: result.data as T, error: null };
 }

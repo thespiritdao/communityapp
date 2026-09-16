@@ -12,7 +12,7 @@ import { getWalletFromRequest, isPodLeader, isExecutiveLeader } from '@/lib/serv
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { ensureAgentProfile } from '@/services/communityAgent/configService';
 import { deriveAgentWallet } from '@/services/communityAgent/types';
-import { getOrCreateAgentWallet, registerAgentOnchain } from '@/services/communityAgent/agentWalletService';
+import { getOrCreateAgentWallet, ensureAgentRegistered } from '@/services/communityAgent/agentWalletService';
 
 export const runtime = 'nodejs';
 
@@ -299,15 +299,16 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
 
       // Provision a real CDP smart wallet + on-chain registry entry, falling
       // back to the legacy derived address if wallet infra isn't configured.
+      // Registration is awaited (audit Phase 2): until the registry agrees,
+      // the agent exists but cannot post — agentInsert refuses unregistered
+      // wallets — and the config records why.
       let agentWallet = agentCfg.agent_wallet || deriveAgentWallet(podId);
       if (process.env.AGENT_WALLET_MASTER_KEY) {
         try {
           agentWallet = await getOrCreateAgentWallet(podId);
-          registerAgentOnchain(podId, agentWallet).catch((err) =>
-            console.warn('[pod modules] agent registry registration failed (non-critical):', err),
-          );
+          await ensureAgentRegistered(podId, agentWallet);
         } catch (err) {
-          console.warn('[pod modules] agent wallet provisioning failed, using legacy address:', err);
+          console.warn('[pod modules] agent wallet provisioning/registration incomplete; agent cannot post until registered:', err);
         }
       }
 

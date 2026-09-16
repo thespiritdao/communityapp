@@ -39,7 +39,7 @@ import {
   REFERENDUM_LEAD_DAYS,
   GRANT_REFERENDUM_CADENCE_DAYS,
 } from '@/services/communityAgent/types';
-import { getOrCreateAgentWallet, registerAgentOnchain } from '@/services/communityAgent/agentWalletService';
+import { getOrCreateAgentWallet, ensureAgentRegistered } from '@/services/communityAgent/agentWalletService';
 import { ensureAgentProfile } from '@/services/communityAgent/configService';
 
 export const runtime = 'nodejs';
@@ -483,10 +483,10 @@ export async function GET(req: NextRequest) {
           if (process.env.AGENT_WALLET_MASTER_KEY) {
             try {
               const agentWallet = await getOrCreateAgentWallet(podId);
-              registerAgentOnchain(podId, agentWallet).catch((err) =>
-                console.warn('[RenewalReferendums] admission registry registration failed:', err),
-              );
               await ensureAgentProfile(agentWallet, cfg.agent_name || meta.agent_name || 'Community Agent');
+              // Awaited: the admitted agent may not post until the chain
+              // says it is registered (audit Phase 2).
+              await ensureAgentRegistered(podId, agentWallet);
             } catch (err) {
               console.warn('[RenewalReferendums] admission wallet provisioning failed:', err);
             }

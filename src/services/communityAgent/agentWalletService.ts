@@ -272,6 +272,64 @@ export async function registerAgentOnchain(podId: string, agentAddress: string):
   return txHash;
 }
 
+/** Is this wallet registered in the on-chain AgentRegistry right now? */
+export async function isAgentRegisteredOnchain(agentAddress: string): Promise<boolean> {
+  return getPublicClient().readContract({
+    address: getRegistryAddress(),
+    abi: AGENT_REGISTRY_ABI,
+    functionName: 'isRegistered',
+    args: [agentAddress as `0x${string}`],
+  });
+}
+
+/**
+ * Register the agent and do not return until the chain agrees — or until the
+ * attempts are spent, in which case the failure is recorded on the config
+ * (`agent_registration_pending`) and rethrown. Registration used to be
+ * fire-and-forget; an agent could then post for as long as the registration
+ * silently failed, which is exactly what the constitution monitor promises
+ * cannot happen. (Audit Phase 2, step 2.)
+ */
+export async function ensureAgentRegistered(
+  podId: string,
+  agentAddress: string,
+  attempts = 3,
+): Promise<void> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      await registerAgentOnchain(podId, agentAddress);
+      if (await isAgentRegisteredOnchain(agentAddress)) {
+        await patchAgentConfig(podId, { agent_registration_pending: false, agent_registration_error: null });
+        return;
+      }
+      lastError = new Error('registration transaction sent but isRegistered is still false');
+    } catch (err) {
+      lastError = err;
+      console.warn(`[agentWallet] registration attempt ${attempt}/${attempts} failed for ${agentAddress}:`, err);
+    }
+    if (attempt < attempts) await new Promise((r) => setTimeout(r, 4_000 * attempt));
+  }
+  const message = lastError instanceof Error ? lastError.message : String(lastError);
+  await patchAgentConfig(podId, { agent_registration_pending: true, agent_registration_error: message });
+  throw new Error(`Agent ${agentAddress} could not be registered on-chain: ${message}`);
+}
+
+async function patchAgentConfig(podId: string, patch: Record<string, unknown>): Promise<void> {
+  const { data: row } = await supabaseAdmin
+    .from('pod_modules')
+    .select('community_agent_config')
+    .eq('pod_id', podId)
+    .single();
+  await supabaseAdmin
+    .from('pod_modules')
+    .update({
+      community_agent_config: { ...(row?.community_agent_config || {}), ...patch },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('pod_id', podId);
+}
+
 /**
  * Full identity view for an agent — wallet address, type, and live on-chain
  * registration status. Used by the agent identity API/UI.
