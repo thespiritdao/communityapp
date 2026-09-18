@@ -1,6 +1,7 @@
 // src/features/conference/hooks/useParticipantName.ts
 
 import { useState, useEffect } from 'react';
+import { fetchParticipantName } from '../services/participantName';
 
 export function useParticipantName(walletAddress: string | null | undefined): string {
   const [name, setName] = useState('');
@@ -8,10 +9,9 @@ export function useParticipantName(walletAddress: string | null | undefined): st
   useEffect(() => {
     if (!walletAddress) return;
     const w = walletAddress.toLowerCase();
-    fetch(`/api/conference/participant-name?wallet=${encodeURIComponent(w)}`)
-      .then(r => r.json())
-      .then(({ name }) => {
-        if (name) setName(name);
+    fetchParticipantName(w)
+      .then((resolved) => {
+        if (resolved) setName(resolved);
         else setName(`${w.slice(0, 6)}…${w.slice(-4)}`);
       })
       .catch(() => setName(`${w.slice(0, 6)}…${w.slice(-4)}`));

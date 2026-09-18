@@ -40,7 +40,7 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
       try {
         setLoadingUsers(true);
         const { data, error } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select('wallet_address, first_name, last_name, profile_picture')
           .order('first_name', { ascending: true });
 

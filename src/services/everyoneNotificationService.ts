@@ -115,7 +115,7 @@ class EveryoneNotificationService {
   async getSenderName(senderAddress: string): Promise<string | undefined> {
     try {
       const { data: profile } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('full_name, username, basename')
         .eq('wallet_address', senderAddress.toLowerCase())
         .maybeSingle();

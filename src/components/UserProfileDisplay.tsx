@@ -45,7 +45,7 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('wallet_address, first_name, last_name, profile_picture')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single();

@@ -1,7 +1,14 @@
 # Spec — Member Email Privacy (public_profiles view)
 
-*Status: partially shipped. Highest-exposure surfaces fixed 2026-07. The
-database-level boundary is DEFERRED to a post-onboarding hardening pass.*
+*Status: step 1 SHIPPED 2026-09-18. The `public_profiles` view exists in
+production (`supabase/migrations/20260918000001_public_profiles_view.sql`),
+every peer-facing client read uses it, `ProfileService.getOwnByWallet` is the
+only client path that reads private columns (own row), the conference
+`participant-name` route requires a session and no longer falls back to the
+email local-part, and `scripts/check-profile-email-leaks.mjs` now fails
+(exit 1) on regressions. Step 2, tightening the base-table SELECT policy to
+own-row, is pending a week of clean production; the SQL is in the migration
+header.*
 
 ## Problem
 

@@ -299,7 +299,7 @@ export async function getUserProfile(address: string): Promise<{
 } | null> {
   try {
     const { data, error } = await supabase
-      .from('user_profiles')
+      .from('public_profiles')
       .select('first_name, last_name')
       .eq('wallet_address', address.toLowerCase())
       .single();

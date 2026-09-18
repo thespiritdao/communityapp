@@ -51,7 +51,7 @@ export default function UserRecipientSelector({
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select('wallet_address, first_name, last_name, profile_picture')
           .not('first_name', 'is', null)
           .not('last_name', 'is', null);

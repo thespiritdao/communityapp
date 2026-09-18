@@ -1957,7 +1957,7 @@ export const HatsModulePodCreationForm: React.FC<
           // Fetch leader profiles for better UX
           try {
             const { data: profiles } = await supabase
-              .from('user_profiles')
+              .from('public_profiles')
               .select('wallet_address, first_name, last_name, profile_picture')
               .in(
                 'wallet_address',

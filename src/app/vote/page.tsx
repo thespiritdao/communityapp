@@ -122,7 +122,7 @@ export default function VotePage() {
         // Fetch all user profiles for modal lookup. Public columns only:
         // email is private and must not reach other members' clients.
         const { data: usersData } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select(
             'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect',
           );
@@ -142,7 +142,7 @@ export default function VotePage() {
                 proposerProfile = userProfileCache[queryAddress];
               } else {
                 const { data: userProfile } = await supabase
-                  .from('user_profiles')
+                  .from('public_profiles')
                   .select(
                     'first_name, last_name, wallet_address, profile_picture, bio, website, interests, seeking, open_to_connect, twitter, tiktok, instagram, facebook, discord, youtube, twitch, github, linkedin',
                   )

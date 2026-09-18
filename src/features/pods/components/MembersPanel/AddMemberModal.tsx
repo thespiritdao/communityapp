@@ -103,7 +103,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         setLoading(true);
 
         const { data: profiles, error } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select('wallet_address, first_name, last_name, profile_picture')
           .not('wallet_address', 'is', null)
           .order('first_name', { ascending: true });

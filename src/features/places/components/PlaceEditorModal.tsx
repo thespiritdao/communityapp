@@ -84,7 +84,7 @@ export function PlaceEditorModal({ podId, existing, places, defaultCenter, onClo
         const wallets = [...new Set((pm ?? []).map((m: { wallet: string }) => String(m.wallet).toLowerCase()))];
         if (wallets.length) {
           const { data: profs } = await supabase
-            .from('user_profiles')
+            .from('public_profiles')
             .select('wallet_address, first_name, last_name')
             .in('wallet_address', wallets);
           const byW = new Map((profs ?? []).map((p: { wallet_address: string; first_name: string | null; last_name: string | null }) => [

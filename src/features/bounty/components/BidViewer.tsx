@@ -56,7 +56,7 @@ async function mergeUserNamesIntoBids(bids: any[]) {
   );
   if (uniqueAddresses.length === 0) return bids;
   const { data: profiles, error } = await supabase
-    .from('user_profiles')
+    .from('public_profiles')
     .select('wallet_address, first_name, last_name')
     .in('wallet_address', uniqueAddresses);
   if (error) {

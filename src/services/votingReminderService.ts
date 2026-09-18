@@ -76,7 +76,7 @@ class VotingReminderService {
       // This would integrate with your token balance checking logic
       // For now, we'll get users from profiles who have any tokens
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('wallet_address')
         .not('wallet_address', 'is', null);
 

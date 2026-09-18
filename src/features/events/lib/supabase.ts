@@ -1398,7 +1398,6 @@ export class EventService {
     discord?: string | null;
     github?: string | null;
     linkedin?: string | null;
-    email?: string | null;
     tiktok?: string | null;
     instagram?: string | null;
     facebook?: string | null;
@@ -1409,8 +1408,8 @@ export class EventService {
     open_to_connect?: string | null;
   } | null> {
     const { data, error } = await supabase
-      .from('user_profiles')
-      .select('user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, email, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect')
+      .from('public_profiles')
+      .select('user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect')
       .eq('wallet_address', walletAddress.toLowerCase())
       .single();
 

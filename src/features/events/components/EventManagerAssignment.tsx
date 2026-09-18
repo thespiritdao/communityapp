@@ -48,7 +48,7 @@ export const EventManagerAssignment: React.FC<EventManagerAssignmentProps> = ({
       if (assignedManager) {
         try {
           const { data: profileData } = await supabase
-            .from('user_profiles')
+            .from('public_profiles')
             .select('wallet_address, first_name, last_name, profile_picture')
             .eq('wallet_address', assignedManager.toLowerCase())
             .single();
@@ -70,7 +70,7 @@ export const EventManagerAssignment: React.FC<EventManagerAssignmentProps> = ({
 
       // Get user's token balances
       const { data: profileData } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('wallet_address, first_name, last_name')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single();
@@ -184,7 +184,7 @@ export const EventManagerAssignment: React.FC<EventManagerAssignmentProps> = ({
 
       // Fetch manager profile for display
       const { data: profileData } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('wallet_address, first_name, last_name, profile_picture')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single();

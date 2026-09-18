@@ -117,7 +117,7 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
         const wallets = [...new Set(data.map((c) => c.wallet_address))];
         if (wallets.length > 0) {
           const { data: profileData } = await supabase
-            .from('user_profiles')
+            .from('public_profiles')
             .select('wallet_address, first_name, last_name, profile_picture')
             .in('wallet_address', wallets);
           if (profileData) {

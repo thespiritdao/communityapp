@@ -62,7 +62,7 @@ export class PodGovernanceService {
     let creatorDisplay = `\`${podData.created_by_address}\``;
     try {
       const { data: creatorProfile } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('first_name, last_name')
         .eq('wallet_address', podData.created_by_address.toLowerCase())
         .single();
@@ -82,7 +82,7 @@ export class PodGovernanceService {
     if (podData.pod_leads && podData.pod_leads.length > 0) {
       try {
         const { data: fetchedProfiles } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select('wallet_address, first_name, last_name')
           .in(
             'wallet_address',

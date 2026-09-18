@@ -33,6 +33,7 @@ import { FloatingReactions }  from './FloatingReactions';
 import { ReactionBar }        from './ReactionBar';
 import { HostControls }       from './HostControls';
 import { setHandRaised }      from '../services/conferenceService';
+import { fetchParticipantName } from '../services/participantName';
 import type { ConferenceRoom as ConferenceRoomType, ParticipantRole } from '../types/conference';
 
 interface ConferenceRoomProps {
@@ -93,9 +94,8 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
     unseen.forEach(w => {
       fetchedWallets.current.add(w); // mark before fetch to prevent duplicate requests
       console.log('🏷️ fetching name for:', w);
-      fetch(`/api/conference/participant-name?wallet=${encodeURIComponent(w)}`)
-        .then(r => r.json())
-        .then(({ name }) => {
+      fetchParticipantName(w)
+        .then((name) => {
           console.log('🏷️ resolved:', w, '→', name);
           // Only store real names — don't cache a truncated wallet here.
           // SpeakerView/ParticipantTile fall back to participant.name (from

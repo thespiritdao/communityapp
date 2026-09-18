@@ -31,7 +31,7 @@ export const IncomingCallBanner: React.FC = () => {
       return;
     }
     supabase
-      .from('user_profiles')
+      .from('public_profiles')
       .select('wallet_address, first_name, last_name, profile_picture')
       .eq('wallet_address', incomingCall.initiator_wallet)
       .single()

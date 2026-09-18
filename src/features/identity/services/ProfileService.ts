@@ -7,16 +7,21 @@ import type { UserProfile } from '../types';
  *
  * Provides clean API for profile data access with proper error handling
  * and consistent return types.
+ *
+ * Reads of OTHER members go through the `public_profiles` view, which has no
+ * private columns (email, phone, address, date of birth). Only the caller's
+ * own row is read from `user_profiles` (getOwnByWallet), and only writes
+ * touch the base table.
  */
 export class ProfileService {
   /**
-   * Get a single user profile by wallet address
+   * Get a single user profile by wallet address (public columns only)
    */
   static async getByWallet(walletAddress: string): Promise<UserProfile | null> {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*') // Select all fields to match ProfileDisplay requirements
+        .from('public_profiles')
+        .select('*') // every column of the view; none are private
         .eq('wallet_address', walletAddress.toLowerCase())
         .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 errors
 
@@ -31,6 +36,25 @@ export class ProfileService {
       console.error('Profile fetch error for', walletAddress, error);
       throw error;
     }
+  }
+
+  /**
+   * Get the CALLER'S OWN profile, including private columns (email, phone,
+   * address) for the edit form. Reads the base table, so RLS limits it to the
+   * caller's row once the own-row policy is in place.
+   */
+  static async getOwnByWallet(walletAddress: string): Promise<UserProfile | null> {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching own profile for', walletAddress, ':', error);
+      throw error;
+    }
+    return data;
   }
 
   /**
@@ -51,7 +75,7 @@ export class ProfileService {
       );
 
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('*') // Select all fields to match ProfileDisplay requirements
         .in('wallet_address', normalizedAddresses);
 
@@ -135,7 +159,7 @@ export class ProfileService {
       const safeTerm = sanitizeSearchTerm(searchTerm);
       if (!safeTerm) return [];
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('*') // Select all fields to match ProfileDisplay requirements
         .or(`first_name.ilike.%${safeTerm}%,last_name.ilike.%${safeTerm}%`)
         .limit(limit);

@@ -51,7 +51,7 @@ export default function MembersPage() {
       // members). Select explicit public columns only: email is private and
       // must not be exposed to other members. Contact happens via in-app DM.
       const { data: profiles } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select(
           'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect, tos_signed_at',
         )

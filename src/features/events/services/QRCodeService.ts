@@ -535,7 +535,7 @@ export class QRCodeService {
   ): Promise<UserProfile | null> {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('public_profiles')
         .select('*')
         .eq('wallet_address', walletAddress.toLowerCase())
         .single();

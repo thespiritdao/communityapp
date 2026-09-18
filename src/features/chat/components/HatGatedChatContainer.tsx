@@ -336,7 +336,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             // Public display columns only — email is private, not exposed to
             // other members' clients.
             const { data: usersData, error: usersError } = await supabase
-              .from('user_profiles')
+              .from('public_profiles')
               .select(
                 'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect',
               )
@@ -396,7 +396,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
               !users.find((u) => u.wallet_address === newMessage.sender_wallet_id)
             ) {
               const { data: userData } = await supabase
-                .from('user_profiles')
+                .from('public_profiles')
                 .select(
                   'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect',
                 )

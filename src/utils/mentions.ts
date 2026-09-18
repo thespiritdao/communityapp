@@ -44,7 +44,7 @@ export async function extractMentionedWalletsEnhanced(
   // Try to resolve plain mentions to wallet addresses
   try {
     const { data: users, error } = await supabase
-      .from('user_profiles')
+      .from('public_profiles')
       .select('wallet_address, first_name, last_name')
       .or(
         plainMentions

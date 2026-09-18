@@ -2,22 +2,27 @@
 /**
  * check-profile-email-leaks.mjs
  *
- * Guard against re-leaking member email to other members' browsers.
+ * Guard against re-leaking member private data to other members' browsers.
  *
- * Member email is PRIVATE: it must never be pulled into a peer's client. Client
- * code must select explicit public columns from `user_profiles` (never `*`, and
- * never `email`) except when reading the CURRENT user's OWN row, or on the
- * server via the service-role key.
+ * Member email, phone, address and date of birth are PRIVATE: they must never
+ * be pulled into a peer's client. Client code reads OTHER members through the
+ * `public_profiles` view (which has no private columns). The base table
+ * `user_profiles` is for the CURRENT user's OWN row, for writes, and for
+ * server code using the service-role key.
  *
- * This script flags client-side `.from('user_profiles').select('*')` and any
- * client select that includes `email`, so a future careless query doesn't
- * silently re-open the leak. Run in CI or before deploy:
+ * This script flags, in client-side code:
+ *   - `.from('user_profiles')` followed by `.select('*')` that is not an
+ *     own-row read (no `.eq('user_id', …)` in the next few lines)
+ *   - any `.from('user_profiles')` select whose column list names email, phone,
+ *     date_of_birth, or an address column, unless the read is own-row
+ *
+ * Run in CI or before deploy:
  *
  *   node scripts/check-profile-email-leaks.mjs
  *
- * It is intentionally conservative: it reports, it does not auto-fix. Review each
- * hit — if it is an own-row read (.eq('user_id', <self>)) or a server/service-role
- * file, add it to ALLOWLIST below with a reason.
+ * Exit code 1 on any finding. If a hit is a legitimate own-row read that the
+ * heuristic cannot see, or a server/service-role file, add it to ALLOWLIST
+ * below with a reason.
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs';
@@ -27,7 +32,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.join(__dirname, '..', 'src');
 
-// Files that legitimately read email (own-row reads, or server/service-role).
+// Files that legitimately read private columns (own-row reads, or server/service-role).
 // Keep this list short and justified.
 const ALLOWLIST = [
   'lib/emailDigest.ts', // server-side, service-role
@@ -36,7 +41,11 @@ const ALLOWLIST = [
   'app/page.tsx', // auth/onboarding own-flow email lookup
   'components/DebugAuth.tsx', // own row only (debug)
   'features/identity/components/ProfileEditForm.tsx', // user editing own email
+  'features/identity/services/ProfileService.ts', // getOwnByWallet: own row, base table
+  'app/marketplace/orders/[id]/page.tsx', // seller reads buyer shipping address (no email)
 ];
+
+const PRIVATE_COLUMNS = /\b(email|phone|date_of_birth|address_1|address_2|city|state|zip)\b/;
 
 function walk(dir) {
   const out = [];
@@ -45,7 +54,7 @@ function walk(dir) {
     const full = path.join(dir, name);
     const st = statSync(full);
     if (st.isDirectory()) out.push(...walk(full));
-    else if (/\.(ts|tsx)$/.test(name)) out.push(full);
+    else if (/\.(ts|tsx|js|jsx)$/.test(name)) out.push(full);
   }
   return out;
 }
@@ -55,43 +64,43 @@ for (const file of walk(SRC)) {
   const rel = path.relative(SRC, file).replace(/\\/g, '/');
   if (ALLOWLIST.some((a) => rel.endsWith(a))) continue;
 
-  // Only client-executed code can leak email to a PEER's browser. Skip
-  // server-side surfaces: API routes (src/app/api/**) and route.ts handlers
-  // run on the server (often with the service-role key) and are out of scope
-  // for the peer-exposure guard. The eventual DB-level boundary (a
-  // public_profiles view) is what will cover server queries too.
+  // Only client-executed code can leak to a PEER's browser. API routes run on
+  // the server; the public_profiles view and RLS are the boundary there.
   if (rel.startsWith('app/api/') || /(^|\/)route\.ts$/.test(rel)) continue;
 
   const text = readFileSync(file, 'utf8');
-  if (!text.includes("from('user_profiles')")) continue;
+  if (!/from\(['"]user_profiles['"]\)/.test(text)) continue;
 
   const lines = text.split('\n');
   lines.forEach((line, i) => {
-    // Flag select('*') that likely targets user_profiles (same file uses it).
-    if (/\.select\(\s*['"]\*['"]\s*\)/.test(line)) {
-      findings.push(`${rel}:${i + 1}  select('*') near user_profiles`);
-    }
-    // Flag any select list that includes the email column.
-    if (/\.select\([^)]*\bemail\b[^)]*\)/.test(line)) {
-      findings.push(`${rel}:${i + 1}  select includes 'email'`);
+    if (!/\.from\(['"]user_profiles['"]\)/.test(line)) return;
+    // The query chain that follows the from(): a small window is enough.
+    const chain = lines.slice(i, i + 8).join('\n');
+    // Writes (insert/update/upsert) return only the caller's own row under
+    // RLS, so a trailing .select('*') there is not a peer read.
+    if (/\.(insert|update|upsert)\(/.test(chain)) return;
+    const selectMatch = chain.match(/\.select\(\s*([\s\S]*?)\)/);
+    if (!selectMatch) return;
+    const selectArg = selectMatch[1];
+    const ownRow = /\.eq\(\s*['"]user_id['"]\s*,/.test(chain);
+    if (ownRow) return;
+    if (/^['"]\*['"]$/.test(selectArg.trim())) {
+      findings.push(`${rel}:${i + 1}  select('*') on user_profiles for a peer row — use public_profiles`);
+    } else if (PRIVATE_COLUMNS.test(selectArg)) {
+      findings.push(`${rel}:${i + 1}  selects a private column from user_profiles for a peer row`);
     }
   });
 }
 
 if (findings.length) {
-  console.warn('\n⚠️  Potential member-email exposure in client queries:\n');
-  findings.forEach((f) => console.warn('  ' + f));
-  console.warn(
-    `\n${findings.length} client user_profiles queries select '*' or 'email'.\n` +
-      'Member email is private. These pull email into the browser (even if not\n' +
-      'displayed). The definitive fix is a `public_profiles` DB view without the\n' +
-      'email column, which closes all of these at once — see\n' +
-      'docs/spec-member-email-privacy.md. This check is ADVISORY (exit 0) until\n' +
-      'that view lands; the highest-exposure surfaces (members directory, DM/chat\n' +
-      'peer lists) are already fixed to omit email.\n',
+  console.error('\n✖ Member private data exposed to peer browsers:\n');
+  findings.forEach((f) => console.error('  ' + f));
+  console.error(
+    `\n${findings.length} client user_profiles read(s) pull private columns for other members.\n` +
+      "Read other members through .from('public_profiles') instead; keep the base\n" +
+      'table for the current user\'s own row and for writes. See\n' +
+      'docs/spec-member-email-privacy.md.\n',
   );
-  // Advisory only — do not fail the build. Flip to process.exit(1) once the
-  // public_profiles view is in place and the remaining call sites are migrated.
-  process.exit(0);
+  process.exit(1);
 }
-console.log('✓ No member-email leaks found in client user_profiles queries.');
+console.log('✓ No member private-data leaks found in client user_profiles queries.');

@@ -1177,7 +1177,7 @@ export default function Cart({
     if (products.length > 0 && products[0].creator_wallet) {
       try {
         const { data: ownerProfile } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select('wallet_address, first_name, last_name, profile_picture')
           .eq('wallet_address', products[0].creator_wallet.toLowerCase())
           .single();

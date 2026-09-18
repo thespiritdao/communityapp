@@ -72,8 +72,9 @@ export function useUserProfile(walletAddress: string | undefined) {
         await signIn(walletAddress);
       }
 
-      // Use ProfileService for data operations
-      let profileData = await ProfileService.getByWallet(walletAddress);
+      // This hook loads the signed-in user's OWN profile (identity page and
+      // edit form need email/phone/address), so read the base table.
+      let profileData = await ProfileService.getOwnByWallet(walletAddress);
 
       if (!profileData && session) {
         // Create new profile using ProfileService

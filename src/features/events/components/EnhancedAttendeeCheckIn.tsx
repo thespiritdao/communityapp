@@ -58,7 +58,7 @@ export const EnhancedAttendeeCheckIn: React.FC<
       try {
         // This would use the existing user profile service
         const { data, error } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select('*')
           .eq('wallet_address', address.toLowerCase())
           .single();

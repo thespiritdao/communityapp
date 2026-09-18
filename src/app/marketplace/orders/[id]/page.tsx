@@ -364,11 +364,13 @@ export default function OrderDetailPage() {
         setStatusHistory(historyData || []);
       }
 
-      // Get buyer's profile information for shipping details
+      // Get buyer's profile information for shipping details. Stays on the
+      // base table because the view has no address columns; email is
+      // deliberately not read (contact is via in-app messages).
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select(
-          'first_name, last_name, address_1, address_2, city, state, zip, email, phone',
+          'first_name, last_name, address_1, address_2, city, state, zip, phone',
         )
         .eq('wallet_address', orderData.buyer_address.toLowerCase())
         .single();
@@ -660,13 +662,6 @@ export default function OrderDetailPage() {
                       </div>
                     </div>
                   </Value>
-                </InfoRow>
-              )}
-
-              {buyerProfile.email && (
-                <InfoRow>
-                  <Label>Email:</Label>
-                  <Value>{buyerProfile.email}</Value>
                 </InfoRow>
               )}
 

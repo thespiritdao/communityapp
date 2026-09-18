@@ -37,7 +37,7 @@ export function UserSelector({
     async function fetchUsers() {
       try {
         const { data, error } = await supabase
-          .from('user_profiles')
+          .from('public_profiles')
           .select('wallet_address, first_name, last_name, profile_picture');
 
         if (error) {

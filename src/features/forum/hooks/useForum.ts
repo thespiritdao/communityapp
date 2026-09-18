@@ -59,7 +59,7 @@ async function lookupWalletsByNames(names: string[]): Promise<string[]> {
   if (!safeNames.length) return [];
   // Try to match first_name or last_name (case-insensitive)
   const { data, error } = await supabase
-    .from('user_profiles')
+    .from('public_profiles')
     .select('wallet_address, first_name, last_name')
     .in('first_name', safeNames)
     .or(`last_name.in.(${safeNames.map((n) => `"${n}"`).join(',')})`);
