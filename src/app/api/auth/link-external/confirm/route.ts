@@ -81,8 +81,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Rebuild the exact signed message and verify the signature came from the
-  // claimed address.
-  const message = buildLinkMessage(address, nonce, nonceRow.expires_at);
+  // claimed address. The nonce route put a millisecond ISO string
+  // ("...T18:20:00.123Z") in the message; PostgREST returns the stored
+  // timestamptz as "...T18:20:00.123000+00:00", so normalise it back or the
+  // rebuilt message never matches and every valid signature is rejected.
+  const expiresAtIso = new Date(nonceRow.expires_at).toISOString();
+  const message = buildLinkMessage(address, nonce, expiresAtIso);
   let valid = false;
   try {
     valid = await verifyMessage({
