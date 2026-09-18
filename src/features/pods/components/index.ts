@@ -92,11 +92,5 @@ export { UserSearchInput } from './UserSearchInput';
 export { default as UserRecipientSelector } from './UserRecipientSelector';
 export { TokenBalanceInput } from './TokenBalanceInput';
 
-// Distribution and treasury tools
-export {
-  prepareDirectDistribution,
-  prepareDirectEqualDistribution,
-} from './DirectDistribution';
-
 // Development and deployment helpers
 export { RemixDeploymentHelper } from './RemixDeploymentHelper';

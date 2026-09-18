@@ -8,6 +8,15 @@
 
 ## Audit result: which proxy paths are used (so we can't just delete)
 
+> **2026-09-18 update:** the table below is the original (August) audit and is
+> now historical. The dead direct-to-treasury helpers, `setupProxyAllowance`,
+> `DirectDistribution`, the `/pods/fix-proxy` page and the
+> `/api/bounty/treasury-distribute` route were removed. The only app spend
+> paths today are `proxyDistributeTokens` and `proxyDistributeTokensEvenly`
+> from `TreasuryManagement` via `PodTreasuryService`; `proxyReceiveTokens`
+> is called inline from `FundingModal`. `useTreasuryProposals` (the
+> propose/approve path) still has no consumer.
+
 Every `proxy*` function traced to its app call site:
 
 | Function | App usage | Risk | Decision |

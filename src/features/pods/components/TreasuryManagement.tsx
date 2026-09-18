@@ -36,16 +36,12 @@ import {
 import UserRecipientSelector from './UserRecipientSelector';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { getTreasuryAddress } from '../utils/treasuryAddressUtils';
-import {
-  prepareDirectDistribution,
-  prepareDirectEqualDistribution,
-} from './DirectDistribution';
 import ConsolidatedTreasuryDeployer from './ConsolidatedTreasuryDeployer';
 
-// Treasury Proxy address from environment
+// Treasury Proxy address from environment. All spends go through the proxy;
+// PodTreasuryV3 rejects direct calls (onlyAuthorizedProxy).
 const TREASURY_PROXY_ADDRESS = process.env
   .NEXT_PUBLIC_TREASURY_PROXY as `0x${string}`;
-const proxyMissing = !TREASURY_PROXY_ADDRESS;
 
 interface TreasuryManagementProps {
   podId: string;
@@ -135,9 +131,6 @@ export function TreasuryManagement({
     loadTreasuryData,
     refreshBalances,
     refreshTransactions,
-    prepareDistribution,
-    prepareEqualDistribution,
-    prepareAddToken,
     prepareProxyDistribution,
     prepareProxyEqualDistribution,
   } = usePodTreasury(treasuryAddress ?? undefined, podId);
@@ -299,12 +292,6 @@ export function TreasuryManagement({
     try {
       let calls;
 
-      // Get token decimals for amount conversion
-      const selectedTokenData = balances.find(
-        (t) => t.address === selectedToken,
-      );
-      const decimals = selectedTokenData?.decimals || 18;
-
       // IMPORTANT: Always use proxy for scalable sponsorship
       if (treasuryAddress && TREASURY_PROXY_ADDRESS) {
         // Use Treasury Proxy for sponsored transactions (Coinbase Smart Wallet compatible)
@@ -362,47 +349,12 @@ export function TreasuryManagement({
             ),
           ];
         }
-      } else if (treasuryAddress) {
-        // Fallback to direct treasury calls if proxy not available
-        console.log(
-          '⚠️  No Treasury Proxy - using direct calls (will not be sponsored)',
+      } else {
+        throw new Error(
+          treasuryAddress
+            ? 'Treasury proxy is not configured for this build'
+            : 'Treasury address not available',
         );
-        console.log('📍 Direct treasury address:', treasuryAddress);
-
-        if (distributionType === 'equal' && totalAmount) {
-          calls = [
-            prepareDirectEqualDistribution(
-              treasuryAddress,
-              selectedToken,
-              validRecipients.map((r) => r.address),
-              totalAmount,
-              decimals,
-              reason,
-            ),
-          ];
-        } else {
-          const addresses = validRecipients.map((r) => r.address);
-          const amounts = validRecipients.map((r) => r.amount || '0');
-
-          // Validate amounts
-          const invalidAmounts = amounts.filter(
-            (amount) => !amount || Number.parseFloat(amount) <= 0,
-          );
-          if (invalidAmounts.length > 0) {
-            throw new Error('All recipient amounts must be greater than 0');
-          }
-
-          calls = [
-            prepareDirectDistribution(
-              treasuryAddress,
-              selectedToken,
-              addresses,
-              amounts,
-              decimals,
-              reason,
-            ),
-          ];
-        }
       }
 
       // Get token info for debugging
@@ -421,16 +373,6 @@ export function TreasuryManagement({
         totalAmount: distributionType === 'equal' ? totalAmount : 'individual',
         calls,
       });
-
-      // Debug HAT permissions before transaction (async debug moved to separate effect)
-      console.log('🎩 HAT permissions should be validated separately');
-
-      // TODO: Move HAT debug to useEffect or separate async function
-      // if (address) {
-      //   debugTreasuryHatMismatch(address, podId).then(debugResult => {
-      //     console.log('🎩 HAT Debug result:', debugResult);
-      //   }).catch(console.warn);
-      // }
 
       return calls;
     } catch (error) {
@@ -985,13 +927,6 @@ export function TreasuryManagement({
 
               {/* Transaction Section */}
               <div className="border-t pt-6 mt-6">
-                {proxyMissing && (
-                  <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 text-sm">
-                    ⚠️ Sponsorship disabled: NEXT_PUBLIC_TREASURY_PROXY is not
-                    set for this build. Distributions will use direct treasury
-                    calls (unsponsored).
-                  </div>
-                )}
                 <div className="bg-gray-50 p-4 rounded-lg">
                   {evmAddress &&
                   treasuryAddress &&

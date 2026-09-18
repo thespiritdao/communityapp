@@ -72,7 +72,7 @@ admin EOA.
 | `/auth` | Wallet auth, JWT issuance, multi-device linking |
 | `/pods` | Pod CRUD, review, permissions, role sync |
 | `/governance` | Proposals, vote recording, thresholds |
-| `/bounty` | Create / bid / assign / work / dispute / treasury-distribute |
+| `/bounty` | Create / bid / assign / work / dispute |
 | `/events` | Event creation, calendar, check-in |
 | `/donations` | Stripe checkout → $SYSTEM minting flow |
 | `/webhooks/stripe` | Payment settlement + downstream minting |
