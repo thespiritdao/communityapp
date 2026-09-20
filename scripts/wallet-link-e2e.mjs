@@ -122,11 +122,12 @@ try {
   step('linked-wallets now shows both, external typed correctly', r.json?.wallets?.length === 2 && extRow?.walletType === 'external' && extRow?.isCanonical === false, `n=${r.json?.wallets?.length} type=${extRow?.walletType}`);
 
   // ── Identity resolution after linking ─────────────────────────────────────
-  r = await api(`/api/debug/whoami?cdpWallet=${extAddr}`, { token: A.token });
-  step('whoami resolves the linked wallet to the same user', r.status === 200 && r.json?.cdpWalletIsLinked === true && r.json?.linkedWallets?.length === 2, `HTTP ${r.status} cdpWalletIsLinked=${r.json?.cdpWalletIsLinked}`);
-
-  // Wallet-scoped bearer: JWT minted for the external wallet, same sub
+  // A session presenting the linked wallet must resolve to the same account
+  // and see the same wallet set as a session presenting the canonical one.
   const extToken = mint(A.id, extAddr);
+  r = await api('/api/auth/linked-wallets', { token: extToken });
+  const canonicalSeen = r.json?.wallets?.some(w => w.walletAddress === A.wallet && w.isCanonical);
+  step('a session on the linked wallet resolves to the same account', r.status === 200 && r.json?.wallets?.length === 2 && canonicalSeen, `HTTP ${r.status} n=${r.json?.wallets?.length}`);
   r = await api('/api/auth/link-code', { method: 'POST', token: extToken, body: {} });
   step('a session on the linked wallet can issue link codes too', r.status === 200, `HTTP ${r.status}`);
 

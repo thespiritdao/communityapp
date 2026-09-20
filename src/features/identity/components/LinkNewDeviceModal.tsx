@@ -10,8 +10,8 @@
 // Flow:
 //   1. User is shown an explanation + 6-char code input.
 //   2. They go to a device that's already linked (e.g. their desktop)
-//      and use the /debug/whoami "Issue link code" button (until the
-//      proper Settings UI ships in Phase 4 full).
+//      and press "Get a code for another device" under Linked Devices on
+//      the Identity page (LinkDeviceSection).
 //   3. They enter the code here; we POST to /api/auth/link-confirm
 //      with the new device's CDP wallet; the server links it and
 //      returns a Supabase JWT.
@@ -255,12 +255,12 @@ export function LinkNewDeviceModal() {
                 How do I get a code?
               </summary>
               <p style={{ marginTop: 8, lineHeight: 1.5 }}>
-                On a device you're already signed in on (like your
-                desktop), open{' '}
-                <code>https://app.spiritdao.org/debug/whoami</code> and
-                use the "Issue link code" button. You'll get a 6-character
-                code that's valid for 10 minutes. Type that code into the
-                box above.
+                On a device you&apos;re already signed in on (like your
+                desktop), open your <strong>Identity</strong> page and find{' '}
+                <strong>Linked Devices</strong>. Press &ldquo;Get a code for
+                another device&rdquo;. You&apos;ll get a 6-character code
+                that&apos;s valid for 10 minutes. Type that code into the box
+                above.
               </p>
               <p style={{ marginTop: 8, fontSize: 11 }}>
                 <strong>Why?</strong> Coinbase creates a new wallet on

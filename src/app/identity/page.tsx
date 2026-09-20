@@ -8,6 +8,7 @@ import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
 import { TenureBand } from '@/features/identity/components/TenureBand';
 import { LinkedWalletsSection } from '@/features/identity/components/LinkedWalletsSection';
+import { LinkDeviceSection } from '@/features/identity/components/LinkDeviceSection';
 import { AppearanceSection } from '@/features/identity/components/AppearanceSection';
 import { LocationSection } from '@/features/identity/components/LocationSection';
 import { InviteFriendsSection } from '@/features/identity/components/InviteFriendsSection';
@@ -188,6 +189,9 @@ function IdentityPageContent() {
 
       {/* Linked Wallets - external wallet identity */}
       <LinkedWalletsSection walletAddress={address} />
+
+      {/* Linked Devices — issue a one-time code for a second device */}
+      <LinkDeviceSection />
 
       {/* Pod Faces — wear a community's published look */}
       <AppearanceSection />
