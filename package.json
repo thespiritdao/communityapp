@@ -42,7 +42,13 @@
     "dev:testnet": "cross-env NODE_ENV=development DOTENV_CONFIG_PATH=.env.testnet next dev",
     "build:testnet": "cross-env DOTENV_CONFIG_PATH=.env.testnet next build",
     "start:testnet": "cross-env DOTENV_CONFIG_PATH=.env.testnet next start",
-    "pwa:icons": "node scripts/generate-pwa-icons.mjs"
+    "pwa:icons": "node scripts/generate-pwa-icons.mjs",
+    "verify:static": "node scripts/check-profile-email-leaks.mjs",
+    "verify:exposure": "node scripts/check-anon-exposure.mjs",
+    "verify:authority": "node scripts/audit-probes.mjs && node scripts/verify-authority.mjs",
+    "verify:linking": "node scripts/wallet-link-e2e.mjs",
+    "verify:prod": "npm run verify:static && npm run verify:exposure && npm run verify:authority && npm run verify:linking",
+    "hooks:install": "node scripts/install-hooks.mjs"
   },
   "peerDependencies": {
     "@types/react": "^18",

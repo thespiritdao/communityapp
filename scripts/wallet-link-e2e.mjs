@@ -11,11 +11,22 @@ import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 
-const env = Object.fromEntries(
-  fs.readFileSync('.env', 'utf8').split(/\r?\n/)
-    .filter(l => /^[A-Z_]+=/.test(l))
-    .map(l => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; })
-);
+// Read .env when it exists (local runs); fall back to the process environment
+// so this also runs in CI, where secrets arrive as environment variables.
+const env = (() => {
+  const fromFile = fs.existsSync('.env')
+    ? Object.fromEntries(
+        fs.readFileSync('.env', 'utf8').split(/\r?\n/)
+          .filter(l => /^[A-Z_]+=/.test(l))
+          .map(l => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).replace(/^"|"$/g, '')]; }),
+      )
+    : {};
+  return { ...fromFile, ...Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined)) };
+})();
+
+for (const k of ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_JWT_SECRET']) {
+  if (!env[k]) { console.error(`Missing ${k}`); process.exit(1); }
+}
 const BASE = 'https://app.spiritdao.org';
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 

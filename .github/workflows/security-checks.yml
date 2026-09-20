@@ -1,0 +1,96 @@
+name: Security checks
+
+# The three suites in scripts/ only ever ran when somebody remembered. This
+# runs them for us: the static guard on every push, and the production suites
+# after the deploy that push produced has gone live.
+#
+# Requires these repository secrets (Settings → Secrets → Actions):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   SUPABASE_SERVICE_ROLE_KEY
+#   SUPABASE_JWT_SECRET
+#   VERCEL_TOKEN            (read-only use: poll deployment status)
+# See docs/secrets-and-key-custody.md for what each one can do.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two production sweeps at once; they create and delete test rows.
+concurrency:
+  group: security-checks-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  static:
+    name: Static guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # No secrets needed: this one reads the source, not the database.
+      - name: Member private data must not reach a peer's browser
+        run: npm run verify:static
+
+  production:
+    name: Production suites
+    # Pull requests from forks cannot hold secrets, and these suites write to
+    # the live database, so they run only for pushes to main.
+    if: github.event_name != 'pull_request'
+    needs: static
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      # The suites probe the deployed app, so wait for this commit to be live.
+      # Give up rather than test the previous build and call it a pass.
+      - name: Wait for this commit to reach production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROJECT_ID: prj_VH34S4a0cEfEbRRhkxiTd0LUSX5J
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            state=$(curl -sf -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=$PROJECT_ID&target=production&limit=20" \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                  const d=(JSON.parse(s).deployments||[]).find(x=>(x.meta&&x.meta.githubCommitSha)===process.env.GITHUB_SHA);
+                  console.log(d ? d.state : "PENDING")})')
+            echo "attempt $i: $state"
+            case "$state" in
+              READY) echo "live"; exit 0 ;;
+              ERROR|CANCELED) echo "deployment $state — not testing it"; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "timed out waiting for this commit to go live"; exit 1
+
+      # The schema listing lags DDL, so give a migration time to show up.
+      - name: Settle
+        run: sleep 30
+
+      - name: Nothing reachable without a session
+        run: npm run verify:exposure
+
+      - name: Authority decisions match the chain, escalation refused
+        run: npm run verify:authority
+
+      - name: Wallet linking end to end
+        run: npm run verify:linking

@@ -1,0 +1,31 @@
+#!/bin/sh
+# Fast, offline gate before anything leaves this machine.
+#
+# Deploys happen on push to main, so this is the last point where a mistake is
+# free to fix. It deliberately runs only checks that need no network and no
+# secrets; the suites that probe production run in CI after the deploy lands.
+#
+# Install with: npm run hooks:install
+# Bypass in an emergency with: git push --no-verify
+
+set -e
+
+echo "pre-push: member private data must not reach a peer's browser"
+node scripts/check-profile-email-leaks.mjs
+
+# A secret committed once lives in the history forever, so refuse the push
+# rather than ask someone to notice it in review.
+echo "pre-push: no secrets in the commits being pushed"
+staged_secrets=$(git diff --stat @{push}..HEAD -- \
+  ':(glob)**/.env' ':(glob)**/.env.*' ':(glob)**/*.pem' ':(glob)**/*.key' \
+  2>/dev/null || true)
+if [ -n "$staged_secrets" ]; then
+  echo ""
+  echo "  Refusing: these commits touch a secrets file:"
+  echo "$staged_secrets"
+  echo ""
+  echo "  Remove it from the history before pushing."
+  exit 1
+fi
+
+echo "pre-push: ok"
