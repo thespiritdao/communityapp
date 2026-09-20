@@ -22,6 +22,10 @@ ones by hash, without printing either:
 | `SUPABASE_DB_PASSWORD` | 2024-12-06 | yes |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 2024-12-06 | yes, and public by design — not a concern |
 
+Both API keys are JWTs signed by `SUPABASE_JWT_SECRET`. Anyone holding the
+secret can mint their own service role key at any time, so the secret being in
+history is the whole of the problem; the keys are downstream of it.
+
 That is 652 days. What each one grants to anyone holding it:
 
 - **Service role key** — reads and writes every table, bypassing all row
@@ -97,39 +101,47 @@ item in the plan (13) and a governance question as much as a technical one.
 
 ## Rotation runbook
 
-Do them in this order. Each is short; the risk is in doing them out of order or
-half-way.
+**Corrected 2026-09-20 after checking how the keys are actually built.** The
+anon key and the service role key are not independent secrets: both are JWTs
+signed by `SUPABASE_JWT_SECRET`, issued 2024-12-06 and valid until 2034.
+Verified by checking each one's signature against the secret.
 
-### 1. Service role key
+That has one large consequence: **rotating the JWT secret invalidates both API
+keys at once.** They are not three rotations, they are two — the database
+password, and everything else together. Rotating the secret without replacing
+both keys in the same sitting takes the app down, because the old keys stop
+verifying the moment the secret changes.
 
-1. Supabase dashboard → Project Settings → API → rotate the service role key.
-2. Update `SUPABASE_SERVICE_ROLE_KEY` in Vercel (production, preview,
-   development) and in local `.env`.
-3. Redeploy production.
-4. Verify with `npm run verify:prod`. Every suite uses this key, so a failure
-   here means the rotation is incomplete.
+### 1. Database password — do this first, nothing breaks
 
-Downtime: server routes fail between the rotation and the redeploy finishing.
-Do it when nobody is mid-checkout.
+1. Supabase dashboard → Project Settings → Database → Reset database password.
+2. Put the new value in local `.env` as `SUPABASE_DB_PASSWORD`, and update the
+   Vercel entry (`dPUhOvGL15lpVwsV`).
+3. Nothing deployed authenticates with it; it is used for applying migrations
+   from a developer machine.
 
-### 2. Database password
+Downtime: none. Sessions: unaffected.
 
-1. Supabase dashboard → Project Settings → Database → reset password.
-2. Update `SUPABASE_DB_PASSWORD` in local `.env`. Nothing deployed uses it; it
-   is only used for applying migrations from a developer machine.
-3. Verify by applying a no-op query through the pooler.
+### 2. JWT secret, anon key and service role key — one operation
 
-Downtime: none.
+This ends every signed-in session. Announce it, or accept that members will be
+asked to sign in again with no warning.
 
-### 3. JWT secret — signs everyone out
+1. Supabase dashboard → Project Settings → API → JWT Settings → generate a new
+   JWT secret. The anon and service role keys shown on that page are reissued
+   at the same time.
+2. Copy all three new values: JWT secret, anon key, service role key.
+3. Update all three in local `.env` **and** in Vercel, across production,
+   preview and development. The entry ids are `id5AehaVTvrH9xyQ` (JWT secret),
+   `tfTy4t7uHfktnfy3` (anon key) and `nmTcXoSwIVy1qQmj` (service role key).
+4. Redeploy production. The anon key is compiled into the browser bundle, so a
+   redeploy is required, not optional.
+5. Verify with `npm run verify:prod`. Every suite authenticates with the new
+   values, so a pass is real evidence the rotation is complete.
+6. Sign in as a member and confirm a normal session works.
 
-1. Announce it. Every member will be asked to sign in again.
-2. Supabase dashboard → Project Settings → API → rotate the JWT secret.
-3. Update `SUPABASE_JWT_SECRET` in Vercel and local `.env`.
-4. Redeploy production.
-5. Verify with `npm run verify:prod`, then sign in as a real member.
-
-Downtime: all sessions end. Choose a quiet hour.
+Downtime: the window between step 1 and the redeploy finishing. Sessions: all
+of them end.
 
 ### 4. Contract keys — needs a decision first
 
