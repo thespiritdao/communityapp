@@ -391,11 +391,16 @@ Link it before performing this action.   [Link now]
 - Wrap each of the 12 on-chain-action files with the linking check
 - Action-blocked toast component
 
-### Phase 4 — UI (2 days)
+### Phase 4 — UI (2 days) — ✅ DONE 2026-09-20
 
-- Settings → Linked Devices page
-- Link modal (on issuing device)
-- Link prompt (on new device, post-auth)
+- Settings → Linked Devices — shipped as `LinkDeviceSection` on the Identity
+  page (not a separate page): issues a code, copy button, live countdown,
+  clears itself on expiry.
+- Link prompt on the new device — `LinkNewDeviceModal`, shipped earlier; its
+  instructions now point at Identity → Linked Devices.
+- Until this landed the modal sent members to `/debug/whoami`, which was the
+  only place a code could be issued. That page and the two `/api/debug/*`
+  routes were deleted in the same change.
 
 ### Phase 5 — Cleanup (1 day)
 
