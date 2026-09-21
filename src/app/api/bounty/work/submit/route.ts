@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // submitterAddress must be the authenticated caller (service-role write).
-    const walletOrDenied = requireWalletMatch(request, submitterAddress);
+    const walletOrDenied = await requireWalletMatch(request, submitterAddress);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     if (!submissionTitle?.trim() || !submissionDescription?.trim()) {

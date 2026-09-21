@@ -45,7 +45,7 @@ function podIdFromRequest(req: NextRequest): string {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const wallet = getWalletFromRequest(req);
+  const wallet = await getWalletFromRequest(req);
   if (!wallet) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const podId = podIdFromRequest(req);
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(req: NextRequest): Promise<NextResponse> {
-  const wallet = getWalletFromRequest(req);
+  const wallet = await getWalletFromRequest(req);
   if (!wallet) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const podId = podIdFromRequest(req);

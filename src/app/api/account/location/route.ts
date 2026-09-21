@@ -33,7 +33,7 @@ export interface MemberLocation {
 const SELECT = 'wallet, lat, lng, precision, address, share_with_pods, updated_at';
 
 export async function GET(req: NextRequest) {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 
@@ -133,7 +133,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 

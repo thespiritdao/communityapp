@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
-function getWalletFromToken(token: string): string | null {
+async function getWalletFromToken(token: string): Promise<string | null> {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     if (!JWT_SECRET) return null;
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     return payload.wallet_address || payload.user_metadata?.wallet_address || null;
   } catch {
     return null;
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (!authToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const callerAddress = getWalletFromToken(authToken);
+    const callerAddress = await getWalletFromToken(authToken);
     if (!callerAddress) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -64,7 +65,7 @@ export async function DELETE(request: NextRequest) {
     if (!authToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const callerAddress = getWalletFromToken(authToken);
+    const callerAddress = await getWalletFromToken(authToken);
     if (!callerAddress) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

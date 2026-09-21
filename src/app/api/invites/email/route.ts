@@ -27,7 +27,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
-  const wallet = getWalletFromRequest(req);
+  const wallet = await getWalletFromRequest(req);
   if (!wallet) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

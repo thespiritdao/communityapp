@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     // The approving executive is the VERIFIED caller — never a body field.
     // Previously executiveWallet was taken from the body and only checked for
     // the hat, letting anyone forge an approval attributed to a real exec.
-    const callerAddress = getWalletFromRequest(request);
+    const callerAddress = await getWalletFromRequest(request);
     if (!callerAddress) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

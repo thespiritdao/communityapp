@@ -4,6 +4,7 @@ import { createPublicClient, http, getAddress } from 'viem';
 import { base } from 'viem/chains';
 import jwt from 'jsonwebtoken';
 import { getHatId } from '@/lib/hatRegistry';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 /**
  * Exec-Pod-only admin API for community governance tokens.
@@ -56,11 +57,11 @@ const ERC20_ABI = [
   },
 ] as const;
 
-function getWalletFromToken(token: string): string | null {
+async function getWalletFromToken(token: string): Promise<string | null> {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     if (!JWT_SECRET) return null;
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     return (
       payload.wallet_address || payload.user_metadata?.wallet_address || null
     );
@@ -80,7 +81,7 @@ async function requireExec(req: NextRequest): Promise<
       res: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     };
   }
-  const wallet = getWalletFromToken(token);
+  const wallet = await getWalletFromToken(token);
   if (!wallet) {
     return {
       ok: false,

@@ -7,6 +7,7 @@ import { base } from 'viem/chains';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getHatId } from '@/lib/hatRegistry';
 import jwt from 'jsonwebtoken';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
@@ -47,11 +48,11 @@ async function wearsAnyHat(caller: string, hatIds: string[]): Promise<boolean> {
   return false;
 }
 
-function getWalletFromToken(token: string): string | null {
+async function getWalletFromToken(token: string): Promise<string | null> {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     if (!JWT_SECRET) return null;
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     return (
       payload.wallet_address ||
       payload.user_metadata?.wallet_address ||
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const moderatorAddress = getWalletFromToken(token);
+    const moderatorAddress = await getWalletFromToken(token);
     if (!moderatorAddress) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

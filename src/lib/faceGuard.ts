@@ -19,7 +19,7 @@ export async function requireFaceManager(
   );
   if (!(walletOrDenied instanceof NextResponse)) return walletOrDenied;
 
-  const wallet = getWalletFromRequest(req);
+  const wallet = await getWalletFromRequest(req);
   if (wallet && (await isExecutiveLeader(wallet))) return wallet.toLowerCase();
 
   return walletOrDenied;

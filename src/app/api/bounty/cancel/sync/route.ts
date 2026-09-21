@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // cancelerAddress must be the authenticated caller.
-    const walletOrDenied = requireWalletMatch(request, cancelerAddress);
+    const walletOrDenied = await requireWalletMatch(request, cancelerAddress);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     // Get bounty details

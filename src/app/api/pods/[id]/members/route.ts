@@ -29,7 +29,7 @@ function podIdFrom(req: NextRequest): string {
 }
 
 async function requireLead(req: NextRequest, podId: string): Promise<string | NextResponse> {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const auth = await resolvePodAuthority(walletOrDenied, podId);
   if (!auth.isLeader) {

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     // G2 guard: re-pointing an event's payment/registration contract is an
     // integrity-critical mutation. Only the event's creator or an Executive
     // leader may do it. Fails closed.
-    const walletOrDenied = requireWallet(request);
+    const walletOrDenied = await requireWallet(request);
     if (walletOrDenied instanceof Response) return walletOrDenied;
     const wallet = walletOrDenied;
 

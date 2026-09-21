@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     // Audit F5: this was callable by anyone with any text, delivering it as a
     // notification to every Executive member. Only the pod's creator or a lead
     // may announce a pod.
-    const walletOrDenied = requireWallet(req);
+    const walletOrDenied = await requireWallet(req);
     if (walletOrDenied instanceof Response) return walletOrDenied;
     const caller = walletOrDenied;
 

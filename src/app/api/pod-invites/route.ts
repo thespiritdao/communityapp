@@ -27,7 +27,7 @@ async function authorize(
   req: NextRequest,
   podId: string,
 ): Promise<{ wallet: string } | NextResponse> {
-  const wallet = getWalletFromRequest(req);
+  const wallet = await getWalletFromRequest(req);
   if (!wallet) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

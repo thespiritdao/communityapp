@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const podId = req.nextUrl.pathname.match(/\/api\/pods\/([^/]+)\/members\/claim-hat/)?.[1] ?? '';
   if (!podId) return NextResponse.json({ error: 'Missing pod ID' }, { status: 400 });
 
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 

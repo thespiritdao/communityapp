@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // The voter must be the authenticated caller — this route writes the
     // DB mirror of an on-chain vote with the service role, so it cannot
     // take `voter` on faith.
-    const walletOrDenied = requireWalletMatch(request, voter);
+    const walletOrDenied = await requireWalletMatch(request, voter);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);

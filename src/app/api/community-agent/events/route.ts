@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest) {
   // Audit F5: the leader check compared pod_leads against a wallet taken from
   // the request body, which anyone can set. It now uses the session wallet;
   // the body's walletAddress is ignored.
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const walletAddress = walletOrDenied;
 

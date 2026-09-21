@@ -14,6 +14,7 @@ import jwt from 'jsonwebtoken';
 import { isAddress } from 'viem';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { findUserByWallet } from '@/services/userWalletsService';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 const NONCE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   let payload: any;
   try {
-    payload = jwt.verify(token, secret);
+    payload = (await verifySessionTokenOrThrow(token));
   } catch {
     return NextResponse.json({ error: 'invalid token' }, { status: 401 });
   }

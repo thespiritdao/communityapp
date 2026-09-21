@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     // userAddress must be the authenticated caller. This route never accepts
     // a private key: it only prepares calldata for the caller's own wallet.
-    const walletOrDenied = requireWalletMatch(request, userAddress);
+    const walletOrDenied = await requireWalletMatch(request, userAddress);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     console.log(

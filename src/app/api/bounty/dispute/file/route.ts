@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     });
 
     // filerAddress must be the authenticated caller.
-    const walletOrDenied = requireWalletMatch(request, filerAddress);
+    const walletOrDenied = await requireWalletMatch(request, filerAddress);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     // =====================================================

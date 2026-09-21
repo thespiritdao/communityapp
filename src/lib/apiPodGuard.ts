@@ -25,8 +25,8 @@ const deny = (error: string, status: number) =>
  * Authenticate the request's JWT and return the caller's wallet.
  * Returns a 401 Response if unauthenticated.
  */
-export function requireWallet(req: Request): string | NextResponse {
-  const wallet = getWalletFromRequest(req);
+export async function requireWallet(req: Request): Promise<string | NextResponse> {
+  const wallet = await getWalletFromRequest(req);
   if (!wallet) {
     return deny('Authentication required: send your session token', 401);
   }
@@ -40,14 +40,14 @@ export function requireWallet(req: Request): string | NextResponse {
  * caller's lowercased wallet, or a 401/403 Response.
  *
  * Usage:
- *   const walletOrDenied = requireWalletMatch(req, body.submitterAddress);
+ *   const walletOrDenied = await requireWalletMatch(req, body.submitterAddress);
  *   if (walletOrDenied instanceof Response) return walletOrDenied;
  */
-export function requireWalletMatch(
+export async function requireWalletMatch(
   req: Request,
   claimedAddress: string | null | undefined,
-): string | NextResponse {
-  const walletOrDenied = requireWallet(req);
+): Promise<string | NextResponse> {
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
   if (!claimedAddress || claimedAddress.toLowerCase() !== wallet) {
@@ -71,7 +71,7 @@ export async function requirePodPermission(
   podId: string,
   permission: keyof HatPermissions,
 ): Promise<string | NextResponse> {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 
@@ -93,7 +93,7 @@ export async function requirePodMember(
   req: Request,
   podId: string,
 ): Promise<string | NextResponse> {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 
@@ -117,7 +117,7 @@ export async function requirePodPermissionOrLeader(
   podId: string,
   permission: keyof HatPermissions,
 ): Promise<string | NextResponse> {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
   const wallet = walletOrDenied;
 

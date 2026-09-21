@@ -14,6 +14,7 @@ import { isAddress, verifyMessage } from 'viem';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { insertLinkedWallet } from '@/services/userWalletsService';
 import { buildLinkMessage } from '../nonce/route';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   let payload: any;
   try {
-    payload = jwt.verify(token, secret);
+    payload = (await verifySessionTokenOrThrow(token));
   } catch {
     return NextResponse.json({ error: 'invalid token' }, { status: 401 });
   }

@@ -14,7 +14,7 @@ export const runtime = 'nodejs';
 // GET /api/account/active-face — the caller's selection plus the resolved
 // published face (null when unset, unpublished, or deleted).
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof NextResponse) return walletOrDenied;
   const wallet = walletOrDenied;
 
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 // PUT /api/account/active-face — body { podId: string | null }.
 // null reverts to the default appearance.
 export async function PUT(req: NextRequest): Promise<NextResponse> {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof NextResponse) return walletOrDenied;
   const wallet = walletOrDenied;
 

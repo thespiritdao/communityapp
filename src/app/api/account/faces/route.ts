@@ -10,7 +10,7 @@ import { requireWallet } from '@/lib/apiPodGuard';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof NextResponse) return walletOrDenied;
   const wallet = walletOrDenied;
 

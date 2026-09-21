@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     // Audit F5: anyone could send arbitrary text to every leader of any pod.
     // The caller must be signed in, and creatorAddress is the session wallet
     // rather than whatever the body says.
-    const walletOrDenied = requireWallet(req);
+    const walletOrDenied = await requireWallet(req);
     if (walletOrDenied instanceof Response) return walletOrDenied;
     const caller = walletOrDenied;
 

@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { RoomServiceClient, TrackSource } from 'livekit-server-sdk';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -28,9 +29,9 @@ interface JwtPayload {
   user_metadata?: { wallet_address?: string };
 }
 
-function verifyAppToken(token: string): { userId: string; walletAddress: string } | null {
+async function verifyAppToken(token: string): Promise<{ userId: string; walletAddress: string } | null> {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const payload = (await verifySessionTokenOrThrow(token)) as JwtPayload;
     const walletAddress = payload?.user_metadata?.wallet_address;
     if (!payload.sub || !walletAddress) return null;
     return { userId: payload.sub, walletAddress };
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     const token = authHeader.replace('Bearer ', '').trim();
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const decoded = verifyAppToken(token);
+    const decoded = await verifyAppToken(token);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const callerWallet = decoded.walletAddress.toLowerCase();

@@ -16,16 +16,17 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
 import { authorizeOwnedWallet } from '@/services/walletAuthService';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
-function getWalletFromAuthHeader(authHeader: string | null): string | null {
+async function getWalletFromAuthHeader(authHeader: string | null): Promise<string | null> {
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.slice(7);
   const secret = process.env.SUPABASE_JWT_SECRET;
   if (!secret) return null;
   try {
-    const payload = jwt.verify(token, secret) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     const w =
       payload?.wallet_address ??
       payload?.user_metadata?.wallet_address ??

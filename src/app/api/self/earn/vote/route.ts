@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 import {
   getCurrentEpoch,
   queueVoteCredit,
@@ -17,11 +18,11 @@ import {
 
 export const runtime = 'nodejs';
 
-function walletFromToken(token: string): string | null {
+async function walletFromToken(token: string): Promise<string | null> {
   try {
     const secret = process.env.SUPABASE_JWT_SECRET;
     if (!secret) return null;
-    const p = jwt.verify(token, secret) as any;
+    const p = (await verifySessionTokenOrThrow(token)) as any;
     return p.wallet_address || p.user_metadata?.wallet_address || null;
   } catch {
     return null;
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('Authorization')?.replace('Bearer ', '');
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const caller = walletFromToken(token);
+    const caller = await walletFromToken(token);
     if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { podId, proposalId } = await req.json();

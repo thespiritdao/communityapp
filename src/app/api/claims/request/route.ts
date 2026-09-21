@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Audit F5: any wallet plus any payout email could open a claim. A claim
     // may only be opened for the session's own wallet.
-    const walletOrDenied = requireWalletMatch(request, walletAddress);
+    const walletOrDenied = await requireWalletMatch(request, walletAddress);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     // ─── Validation ───────────────────────────────────────────────────────────

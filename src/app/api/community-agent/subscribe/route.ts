@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   // Audit sweep: the leader check compared pod_leads against a wallet taken
   // from the body. The claimed wallet must be the session's own.
-  const walletOrDenied = requireWalletMatch(req, walletAddress);
+  const walletOrDenied = await requireWalletMatch(req, walletAddress);
   if (walletOrDenied instanceof Response) return walletOrDenied;
 
   if (!podId || !txHash || !walletAddress) {

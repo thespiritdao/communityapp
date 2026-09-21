@@ -16,7 +16,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     // Only the post's author may ask the agent to reply to it, and the
     // content we scan is the stored post, not whatever the client sends.
-    const walletOrDenied = requireWallet(req);
+    const walletOrDenied = await requireWallet(req);
     if (walletOrDenied instanceof Response) return walletOrDenied;
     const wallet = walletOrDenied;
 

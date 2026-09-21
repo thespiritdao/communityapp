@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     // Audit sweep: "creator or pod leader" was decided against cancelerAddress
     // from the body, which anyone can set. It must be the session's wallet.
-    const walletOrDenied = requireWalletMatch(request, cancelerAddress);
+    const walletOrDenied = await requireWalletMatch(request, cancelerAddress);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     console.log('🚫 Bounty cancellation request:', {

@@ -14,14 +14,15 @@ import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getCorpusSummary } from '@/services/communityAgent/forumCorpusService';
 import { TN_POD_ID } from '@/services/communityAgent/types';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
-function getWalletFromToken(token: string): string | null {
+async function getWalletFromToken(token: string): Promise<string | null> {
   try {
     const secret = process.env.SUPABASE_JWT_SECRET;
     if (!secret) return null;
-    const payload = jwt.verify(token, secret) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     return payload.wallet_address || payload.user_metadata?.wallet_address || null;
   } catch {
     return null;
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   let myOptOut: boolean | null = null;
   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
   if (token) {
-    const wallet = getWalletFromToken(token);
+    const wallet = await getWalletFromToken(token);
     if (wallet) {
       const { data: profile } = await supabaseAdmin
         .from('user_profiles')

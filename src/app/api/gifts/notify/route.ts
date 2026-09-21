@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const walletOrDenied = requireWalletMatch(request, sender_wallet);
+    const walletOrDenied = await requireWalletMatch(request, sender_wallet);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     // Look up sender name for the email

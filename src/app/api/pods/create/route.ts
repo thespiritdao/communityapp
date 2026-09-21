@@ -14,6 +14,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
 import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
@@ -46,11 +47,11 @@ const POD_CREATION_MANAGER_ABI = [
   },
 ] as const;
 
-function getWalletFromToken(token: string): string | null {
+async function getWalletFromToken(token: string): Promise<string | null> {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     if (!JWT_SECRET) return null;
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     return (
       payload.wallet_address ||
       payload.user_metadata?.wallet_address ||
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const callerAddress = getWalletFromToken(token);
+    const callerAddress = await getWalletFromToken(token);
     if (!callerAddress) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

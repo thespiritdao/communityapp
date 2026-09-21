@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    const walletOrDenied = requireWallet(request);
+    const walletOrDenied = await requireWallet(request);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     console.log('🔍 IPFS Route Debug:');

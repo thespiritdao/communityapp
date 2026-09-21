@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // G2 guard (light): syncing writes only chain-derived truth, but require
     // an authenticated session so anonymous callers can't spam the indexer.
     const { requireWallet } = await import('@/lib/apiPodGuard');
-    const walletOrDenied = requireWallet(request);
+    const walletOrDenied = await requireWallet(request);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     const { podId } = await request.json();

@@ -18,7 +18,7 @@ export const runtime = 'nodejs';
 const APP_URL = 'https://app.spiritdao.org';
 
 export async function GET(req: NextRequest) {
-  const wallet = getWalletFromRequest(req);
+  const wallet = await getWalletFromRequest(req);
   if (!wallet) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

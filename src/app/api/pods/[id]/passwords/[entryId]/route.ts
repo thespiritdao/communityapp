@@ -11,17 +11,18 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
-function getCallerWallet(req: NextRequest): string | null {
+async function getCallerWallet(req: NextRequest): Promise<string | null> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.slice(7);
   const secret = process.env.SUPABASE_JWT_SECRET;
   if (!secret) return null;
   try {
-    const payload = jwt.verify(token, secret) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     const w =
       payload?.wallet_address ?? payload?.user_metadata?.wallet_address;
     return typeof w === 'string' ? w.toLowerCase() : null;
@@ -105,7 +106,7 @@ export async function GET(
   { params }: { params: { id: string; entryId: string } },
 ) {
   const { id: podId, entryId } = params;
-  const caller = getCallerWallet(req);
+  const caller = await getCallerWallet(req);
   if (!caller) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
@@ -197,7 +198,7 @@ export async function PUT(
   { params }: { params: { id: string; entryId: string } },
 ) {
   const { id: podId, entryId } = params;
-  const caller = getCallerWallet(req);
+  const caller = await getCallerWallet(req);
   if (!caller) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
@@ -301,7 +302,7 @@ export async function DELETE(
   { params }: { params: { id: string; entryId: string } },
 ) {
   const { id: podId, entryId } = params;
-  const caller = getCallerWallet(req);
+  const caller = await getCallerWallet(req);
   if (!caller) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }

@@ -10,7 +10,7 @@ import { geocode, normalizeGeocodeQuery } from '@/lib/geocode';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
-  const walletOrDenied = requireWallet(req);
+  const walletOrDenied = await requireWallet(req);
   if (walletOrDenied instanceof Response) return walletOrDenied;
 
   const q = normalizeGeocodeQuery(req.nextUrl.searchParams.get('q'));

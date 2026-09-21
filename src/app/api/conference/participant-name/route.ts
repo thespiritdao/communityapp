@@ -8,16 +8,17 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET!;
 
-function isAuthenticated(req: NextRequest): boolean {
+async function isAuthenticated(req: NextRequest): Promise<boolean> {
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '').trim();
   if (!token || !JWT_SECRET) return false;
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { sub?: string };
+    const payload = (await verifySessionTokenOrThrow(token)) as { sub?: string };
     return Boolean(payload?.sub);
   } catch {
     return false;
@@ -25,7 +26,7 @@ function isAuthenticated(req: NextRequest): boolean {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAuthenticated(req)) {
+  if (!await isAuthenticated(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

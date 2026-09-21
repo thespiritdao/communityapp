@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     // Previously walletAddress came from the body and the claim was matched
     // against that same body value (circular), letting anyone confirm a burn on
     // another member's claim.
-    const callerAddress = getWalletFromRequest(request);
+    const callerAddress = await getWalletFromRequest(request);
     if (!callerAddress) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

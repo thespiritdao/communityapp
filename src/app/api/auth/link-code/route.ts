@@ -12,6 +12,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 import {
   issueLinkCode,
   isLinkedWallet,
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   let payload: any;
   try {
-    payload = jwt.verify(token, secret);
+    payload = (await verifySessionTokenOrThrow(token));
   } catch {
     return NextResponse.json({ error: 'invalid token' }, { status: 401 });
   }

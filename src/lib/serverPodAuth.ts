@@ -6,12 +6,13 @@
 
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
-export function getWalletFromToken(token: string): string | null {
+export async function getWalletFromToken(token: string): Promise<string | null> {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     if (!JWT_SECRET) return null;
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     return (
       payload.wallet_address || payload.user_metadata?.wallet_address || null
     );
@@ -20,10 +21,10 @@ export function getWalletFromToken(token: string): string | null {
   }
 }
 
-export function getWalletFromRequest(req: Request): string | null {
+export async function getWalletFromRequest(req: Request): Promise<string | null> {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
   if (!token) return null;
-  return getWalletFromToken(token);
+  return await getWalletFromToken(token);
 }
 
 export async function isPodLeader(

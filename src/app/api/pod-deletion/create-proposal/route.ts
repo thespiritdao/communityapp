@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     // session — never from the request body. Fails closed.
     const { requireWallet } = await import('@/lib/apiPodGuard');
     const { isPodLeader } = await import('@/lib/serverPodAuth');
-    const walletOrDenied = requireWallet(request);
+    const walletOrDenied = await requireWallet(request);
     if (walletOrDenied instanceof Response) return walletOrDenied;
     const wallet = walletOrDenied;
 

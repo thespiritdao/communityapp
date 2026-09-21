@@ -11,6 +11,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 import {
   getUserWallets,
   revokeWallet,
@@ -19,7 +20,7 @@ import {
 
 export const runtime = 'nodejs';
 
-function authenticate(req: NextRequest): { userId: string } | NextResponse {
+async function authenticate(req: NextRequest): Promise<{ userId: string } | NextResponse> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -33,7 +34,7 @@ function authenticate(req: NextRequest): { userId: string } | NextResponse {
     );
   }
   try {
-    const payload = jwt.verify(token, secret) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     const userId = payload?.sub as string | undefined;
     if (!userId) {
       return NextResponse.json(
@@ -48,7 +49,7 @@ function authenticate(req: NextRequest): { userId: string } | NextResponse {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = authenticate(req);
+  const auth = await authenticate(req);
   if (auth instanceof NextResponse) return auth;
 
   const wallets = await getUserWallets(auth.userId);
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = authenticate(req);
+  const auth = await authenticate(req);
   if (auth instanceof NextResponse) return auth;
 
   let body: { walletAddress?: string };
@@ -81,7 +82,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = authenticate(req);
+  const auth = await authenticate(req);
   if (auth instanceof NextResponse) return auth;
 
   let body: { walletAddress?: string; nickname?: string | null };

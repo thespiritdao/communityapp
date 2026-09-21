@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // reviewerAddress must be the authenticated caller; an approval here
     // queues $SELF earnings and updates escrow state via the service role.
-    const walletOrDenied = requireWalletMatch(request, reviewerAddress);
+    const walletOrDenied = await requireWalletMatch(request, reviewerAddress);
     if (walletOrDenied instanceof Response) return walletOrDenied;
 
     if (!['approved', 'rejected', 'revision_requested'].includes(status)) {

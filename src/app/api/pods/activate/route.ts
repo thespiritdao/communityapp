@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -24,11 +25,11 @@ const HATS_BALANCE_ABI = [
   },
 ] as const;
 
-function getWalletFromToken(token: string | undefined): string | null {
+async function getWalletFromToken(token: string | undefined): Promise<string | null> {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     if (!token || !JWT_SECRET) return null;
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = (await verifySessionTokenOrThrow(token)) as any;
     return payload.wallet_address || payload.user_metadata?.wallet_address || null;
   } catch {
     return null;
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     // anonymously. Verify the caller, then confirm they lead this pod (wears the
     // management hat on-chain, or is listed in pod_leads as a fallback).
     const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    const callerAddress = getWalletFromToken(token);
+    const callerAddress = await getWalletFromToken(token);
     if (!callerAddress) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

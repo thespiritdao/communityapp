@@ -65,7 +65,7 @@ export async function DELETE(
     const messageId = params.id;
 
     // Who is calling? The JWT's wallet claim (verified signature).
-    const callerWallet = getWalletFromToken(accessToken)?.toLowerCase();
+    const callerWallet = (await getWalletFromToken(accessToken))?.toLowerCase();
     if (!callerWallet) {
       return NextResponse.json({ error: 'Unauthorized - No wallet in session' }, { status: 401 });
     }

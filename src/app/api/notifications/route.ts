@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     // Authenticated members only; each case below also requires that the
     // "sender" of the notification is the caller (no spoofed senders).
-    const walletOrDenied = requireWallet(request);
+    const walletOrDenied = await requireWallet(request);
     if (walletOrDenied instanceof Response) return walletOrDenied;
     const callerWallet = walletOrDenied;
     const mustBeCaller = (addr: unknown) =>

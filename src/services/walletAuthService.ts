@@ -19,6 +19,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { getUserWallets, type UserWallet } from './userWalletsService';
+import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export interface AuthContext {
   userId: string;
@@ -55,7 +56,7 @@ export async function getAuthContext(
 
   let payload: any;
   try {
-    payload = jwt.verify(token, secret);
+    payload = (await verifySessionTokenOrThrow(token));
   } catch {
     return null;
   }

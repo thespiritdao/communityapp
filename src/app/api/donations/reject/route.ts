@@ -21,7 +21,7 @@ const supabase = createClient(
  */
 export async function POST(request: NextRequest) {
   try {
-    const callerAddress = getWalletFromRequest(request);
+    const callerAddress = await getWalletFromRequest(request);
     if (!callerAddress) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
