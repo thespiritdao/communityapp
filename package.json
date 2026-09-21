@@ -48,7 +48,8 @@
     "verify:authority": "node scripts/audit-probes.mjs && node scripts/verify-authority.mjs",
     "verify:linking": "node scripts/wallet-link-e2e.mjs",
     "verify:prod": "npm run verify:static && npm run verify:exposure && npm run verify:authority && npm run verify:linking",
-    "hooks:install": "node scripts/install-hooks.mjs"
+    "hooks:install": "node scripts/install-hooks.mjs",
+    "verify:session": "node scripts/verify-issued-session.mjs"
   },
   "peerDependencies": {
     "@types/react": "^18",
