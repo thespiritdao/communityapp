@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
+import { issueSupabaseSession, sessionIssuance } from '@/lib/issueSession';
 import {
   consumeLinkCode,
   getCanonicalWallet,
@@ -72,6 +73,19 @@ export async function POST(req: NextRequest) {
   }
 
   const canonicalWallet = (await getCanonicalWallet(userId)) ?? newWallet;
+
+  // New path: Supabase issues the session; the access-token hook stamps the
+  // canonical wallet from user_wallets, which is the same source used here.
+  if (sessionIssuance() === 'supabase') {
+    const issued = await issueSupabaseSession(userId);
+    console.log(`✅ Link confirm: wallet ${newWallet} linked to user ${userId} (Supabase-issued session)`);
+    return NextResponse.json({
+      supabaseToken: issued.accessToken,
+      supabaseRefreshToken: issued.refreshToken,
+      userId,
+      linkedWallet: result.wallet,
+    });
+  }
 
   const now = Math.floor(Date.now() / 1000);
   const jwtPayload = {

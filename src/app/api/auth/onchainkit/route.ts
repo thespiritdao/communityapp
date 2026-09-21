@@ -20,6 +20,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
+import { issueSupabaseSession, sessionIssuance } from '@/lib/issueSession';
 import {
   findUserByWallet,
   insertCanonicalWallet,
@@ -365,6 +366,20 @@ export async function POST(req: NextRequest) {
     // Multiple accounts can share the same CDP embedded wallet; the profile wallet
     // is the canonical identity used by RLS policies, conference tokens, etc.
     const canonicalWallet = existingUserProfile?.wallet_address || normalizedAddress;
+
+    // New path: Supabase issues the session and the access-token hook stamps
+    // the wallet claim from the user's own row. Selected by SESSION_ISSUANCE so
+    // it can be turned on, and off, without a deploy. The legacy path below
+    // signs with the shared secret and goes away when that secret is revoked.
+    if (sessionIssuance() === 'supabase') {
+      const issued = await issueSupabaseSession(userId);
+      console.log('✅ Auth API: Supabase-issued session (hook stamps wallet)');
+      return NextResponse.json({
+        supabaseToken: issued.accessToken,
+        supabaseRefreshToken: issued.refreshToken,
+        userId,
+      });
+    }
 
     const now = Math.floor(Date.now() / 1000);
     const jwtPayload = {
