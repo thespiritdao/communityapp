@@ -42,6 +42,7 @@ async function issue(userId) {
 }
 
 let userId = null;
+let agentId = null;
 const wallet = '0x' + 'c0ffee'.repeat(6) + 'c0ff';
 try {
   const email = `issued-session-check-${Date.now()}@spiritdao.org`;
@@ -73,6 +74,25 @@ try {
   const asMember = createClient(SB, ANON, { auth: { persistSession: false }, global: { headers: { Authorization: `Bearer ${session.access_token}` } } });
   const { data: mine, error: me } = await asMember.from('user_wallets').select('wallet_address').eq('user_id', userId);
   step('session can read its own wallet row through row security', !me && (mine?.length ?? 0) === 1, me?.message ?? `rows=${mine?.length}`);
+
+  // ── Agent accounts: the hook must stamp the narrow role, and the database
+  //    must honour it. Uses a second throwaway account.
+  const agentWallet = '0x' + 'a6e7'.repeat(10);
+  const { data: ag, error: age } = await admin.auth.admin.createUser({
+    email: `${agentWallet}@agents.spiritdao.org`, email_confirm: true, app_metadata: { agent_wallet: agentWallet },
+  });
+  if (age) throw new Error('agent createUser: ' + age.message);
+  agentId = ag.user.id;
+  const agentSession = await issue(agentId);
+  const ac = decode(agentSession.access_token);
+  step('agent token carries the narrow role and the agent wallet', ac.role === 'community_agent' && ac.wallet_address === agentWallet, `role=${ac.role}`);
+  const asAgent = createClient(SB, ANON, { auth: { persistSession: false }, global: { headers: { Authorization: `Bearer ${agentSession.access_token}` } } });
+  const okRead = await asAgent.from('pod_modules').select('pod_id').limit(1);
+  step('agent may read a table its role is granted', !okRead.error, okRead.error?.message ?? '');
+  const refusals = await Promise.all(['user_wallets', 'treasury_transactions', 'governance_votes', 'user_profiles'].map((t) => asAgent.from(t).select('*').limit(1)));
+  step('agent is refused on wallets, treasury, votes and profiles', refusals.every((r) => !!r.error));
+  const badWrite = await asAgent.from('pod_members').insert({ pod_id: '00000000-0000-0000-0000-000000000000', wallet_address: agentWallet });
+  step('agent cannot insert into memberships', !!badWrite.error);
 } catch (e) {
   console.log('ERROR', e?.message ?? e);
   results.push(false);
@@ -80,8 +100,9 @@ try {
   if (userId) {
     await admin.from('user_wallets').delete().eq('user_id', userId);
     await admin.auth.admin.deleteUser(userId);
-    console.log('cleanup: throwaway account removed');
   }
+  if (agentId) await admin.auth.admin.deleteUser(agentId);
+  if (userId || agentId) console.log('cleanup: throwaway accounts removed');
 }
 
 const failed = results.filter((r) => !r).length;
