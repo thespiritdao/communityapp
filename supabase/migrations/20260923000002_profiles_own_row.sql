@@ -1,3 +1,4 @@
+-- Applied to production 2026-09-23.
 -- Profiles become own-row only (app review Phase 4, step 2).
 --
 -- Before: "Authenticated users can read all profiles" USING (true), so any
