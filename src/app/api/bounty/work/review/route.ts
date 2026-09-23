@@ -7,6 +7,7 @@ import {
   queueBountyCompletion,
 } from '@/features/self/services/selfEarnTriggers';
 import { requireWalletMatch } from '@/lib/apiPodGuard';
+import { readOnchainBounty } from '@/lib/bountyOnchain';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,22 @@ const supabase = createClient(
 );
 
 export const runtime = 'nodejs';
+
+/** Why a $SELF credit must not be queued for this approval, or null if it may. */
+async function selfCreditDenial(
+  bounty: { onchain_id: string | number | null; creator_address: string | null; pod_id: string | null },
+  bidder: string,
+  reviewer: string,
+): Promise<string | null> {
+  if (bounty.onchain_id === null || bounty.onchain_id === undefined) return 'bounty has no on-chain id';
+  const onchain = await readOnchainBounty(bounty.onchain_id);
+  if (!onchain) return `on-chain bounty ${bounty.onchain_id} does not exist`;
+  if (onchain.creator !== bounty.creator_address?.toLowerCase()) return 'creator does not match chain';
+  if (onchain.podId !== bounty.pod_id) return 'pod does not match chain';
+  if (onchain.assignee !== bidder.toLowerCase()) return 'worker is not the on-chain assignee';
+  if (reviewer.toLowerCase() === onchain.assignee) return 'worker cannot approve their own work';
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,15 +96,29 @@ export async function POST(request: NextRequest) {
 
     // Verify reviewer is authorized (bounty creator or pod leader)
     const bounty = submission.bounties;
-    let isAuthorized =
-      bounty.creator_address?.toLowerCase() === reviewerAddress.toLowerCase();
+    // For on-chain bounties the creator comes from BountyManager, not the
+    // member-writable row.
+    let creator = bounty.creator_address?.toLowerCase();
+    let podId: string | null = bounty.pod_id;
+    if (bounty.onchain_id !== null && bounty.onchain_id !== undefined) {
+      const onchain = await readOnchainBounty(bounty.onchain_id);
+      if (!onchain) {
+        return NextResponse.json(
+          { error: 'This bounty does not exist on-chain' },
+          { status: 409 },
+        );
+      }
+      creator = onchain.creator;
+      podId = onchain.podId || null;
+    }
+    let isAuthorized = creator === reviewerAddress.toLowerCase();
 
-    if (!isAuthorized && bounty.pod_id) {
+    if (!isAuthorized && podId) {
       // Check if reviewer is a pod leader
       const { data: pod } = await supabase
         .from('pods')
         .select('pod_leads')
-        .eq('id', bounty.pod_id)
+        .eq('id', podId)
         .single();
 
       if (pod && pod.pod_leads) {
@@ -197,9 +228,16 @@ export async function POST(request: NextRequest) {
       // $SELF earn: credit the completer the bounty's estimated hours. Approval
       // is the attestation that the work was accepted (what $SELF rewards).
       // Fire-and-forget + idempotent on bounty id — never blocks the review.
+      // The bounties/bids rows are member-writable, so the credit only goes
+      // out when BountyManager agrees: the bounty exists on-chain with this
+      // creator and pod, the worker is the on-chain assignee, and the
+      // approver is not the worker.
       try {
         const estHours = Number(bounty.estimated_hours) || 0;
-        if (estHours > 0 && bounty.pod_id) {
+        const denial = await selfCreditDenial(bounty, bid.bidder_address, reviewerAddress);
+        if (denial) {
+          console.warn(`⚠️  $SELF bounty credit withheld for bounty ${bounty.id}: ${denial}`);
+        } else if (estHours > 0 && bounty.pod_id) {
           const epoch = await getCurrentEpoch();
           if (epoch !== null) {
             await queueBountyCompletion({
