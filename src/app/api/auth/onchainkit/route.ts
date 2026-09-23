@@ -278,7 +278,7 @@ export async function POST(req: NextRequest) {
       // Assign invite code immediately for new users
       try {
         const { assignInviteCodeToUser } = await import('@/services/inviteCodeService');
-        const inviteCode = await assignInviteCodeToUser(normalizedAddress);
+        const inviteCode = await assignInviteCodeToUser(normalizedAddress, supabaseAdmin);
         console.log(`✅ Auth API: Assigned invite code: ${inviteCode}`);
       } catch (codeError) {
         console.error('⚠️ Auth API: Failed to assign invite code (non-critical):', codeError);

@@ -9,7 +9,11 @@
  * - First user exception handling
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+
+// Server routes pass their service-role client as `db`: they have no user
+// session, and anon holds no table grants. Browser callers use the default.
 
 // ============================================================
 // Constants
@@ -60,7 +64,9 @@ function generateInviteCode(): string {
  * Generate a unique invite code that doesn't exist in database
  * Retries until a unique code is found
  */
-export async function generateUniqueInviteCode(): Promise<string> {
+export async function generateUniqueInviteCode(
+  db: SupabaseClient = supabase,
+): Promise<string> {
   const maxAttempts = 10;
   let attempts = 0;
 
@@ -68,7 +74,7 @@ export async function generateUniqueInviteCode(): Promise<string> {
     const code = generateInviteCode();
 
     // Check if code exists
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('user_profiles')
       .select('referral_key')
       .eq('referral_key', code)
@@ -93,10 +99,11 @@ export async function generateUniqueInviteCode(): Promise<string> {
  */
 export async function assignInviteCodeToUser(
   walletAddress: string,
+  db: SupabaseClient = supabase,
 ): Promise<string> {
-  const code = await generateUniqueInviteCode();
+  const code = await generateUniqueInviteCode(db);
 
-  const { error } = await supabase
+  const { error } = await db
     .from('user_profiles')
     .update({ referral_key: code })
     .eq('wallet_address', walletAddress.toLowerCase());
@@ -211,9 +218,10 @@ export async function recordInviteCodeUsage(
   inviteCode: string,
   newUserWallet: string,
   referrerWallet?: string,
+  db: SupabaseClient = supabase,
 ): Promise<void> {
   try {
-    const { error } = await supabase.from('referral_validations').insert({
+    const { error } = await db.from('referral_validations').insert({
       invite_code: inviteCode.toUpperCase(),
       used_by_wallet: newUserWallet.toLowerCase(),
       referrer_wallet: referrerWallet?.toLowerCase(),
@@ -234,11 +242,12 @@ export async function recordInviteCodeUsage(
 export async function updateUserWithReferrer(
   newUserWallet: string,
   referrerWallet: string,
+  db: SupabaseClient = supabase,
 ): Promise<void> {
   try {
     console.log(`📝 Updating user ${newUserWallet} with referrer ${referrerWallet}`);
 
-    const { error } = await supabase
+    const { error } = await db
       .from('user_profiles')
       .update({
         invited_by: referrerWallet.toLowerCase(),

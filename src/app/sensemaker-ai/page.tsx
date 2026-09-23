@@ -6,6 +6,7 @@ import { Send, Trash2, Mic, MicOff } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styles from './SensemakerAI.module.css';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -69,9 +70,14 @@ export default function SensemakerAIPage() {
 
     try {
       // Send to API
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
       const response = await fetch('/api/sensemaker/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           message: userMessage,
           conversationHistory: messages.slice(-6).map((m) => ({

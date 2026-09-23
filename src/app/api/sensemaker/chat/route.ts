@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { classifyQuery } from '@/services/sensemaker/routingService';
 import { queryPinecone } from '@/services/sensemaker/pineconeService';
 import { generateResponse } from '@/services/sensemaker/responseService';
-import { supabase } from '@/utils/supabaseClient';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import {
   rateLimiters,
   getClientIp,
@@ -149,6 +149,7 @@ export async function POST(req: NextRequest) {
 
     // Log conversation to database (async, don't block response)
     logConversation({
+      bearerToken: req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || null,
       sessionId: sessionId || null,
       userMessage: message,
       assistantResponse: response,
@@ -279,7 +280,9 @@ async function logConversation({
   relevanceScore,
   responseTimeMs,
   conversationHistory,
+  bearerToken,
 }: {
+  bearerToken: string | null;
   sessionId: string | null;
   userMessage: string;
   assistantResponse: string;
@@ -291,25 +294,26 @@ async function logConversation({
   conversationHistory: any[];
 }) {
   try {
-    // Get user info if authenticated
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Attribute the log to a member only when the request carries their
+    // Supabase session token; otherwise it is logged anonymously. The route
+    // itself has no session, so it writes with the service-role client.
+    const user = bearerToken
+      ? (await supabaseAdmin.auth.getUser(bearerToken)).data.user
+      : null;
 
-    // Get wallet address from profiles if user is authenticated
     let walletAddress = null;
     if (user) {
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseAdmin
         .from('user_profiles')
         .select('wallet_address')
-        .eq('id', user.id)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       walletAddress = profile?.wallet_address || null;
     }
 
     // Log user message
-    await supabase.from('sensemaker_conversations').insert({
+    await supabaseAdmin.from('sensemaker_conversations').insert({
       user_id: user?.id || null,
       user_address: walletAddress,
       role: 'user',
@@ -324,7 +328,7 @@ async function logConversation({
     });
 
     // Log assistant response
-    await supabase.from('sensemaker_conversations').insert({
+    await supabaseAdmin.from('sensemaker_conversations').insert({
       user_id: user?.id || null,
       user_address: walletAddress,
       role: 'assistant',

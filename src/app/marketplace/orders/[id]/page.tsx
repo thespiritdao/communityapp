@@ -364,16 +364,15 @@ export default function OrderDetailPage() {
         setStatusHistory(historyData || []);
       }
 
-      // Get buyer's profile information for shipping details. Stays on the
-      // base table because the view has no address columns; email is
-      // deliberately not read (contact is via in-app messages).
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select(
-          'first_name, last_name, address_1, address_2, city, state, zip, phone',
-        )
-        .eq('wallet_address', orderData.buyer_address.toLowerCase())
-        .single();
+      // Buyer's shipping details. Profiles are own-row only, so this goes
+      // through get_order_buyer_contact, which returns them only to the
+      // buyer, the order's fulfillment manager, or a marketplaceManage holder
+      // in the product's pod. Email is deliberately not returned.
+      const { data: profileRows, error: profileError } = await supabase.rpc(
+        'get_order_buyer_contact',
+        { p_order_id: orderId },
+      );
+      const profileData = profileRows?.[0] ?? null;
 
       if (profileError) {
         console.error('Error fetching buyer profile:', profileError);

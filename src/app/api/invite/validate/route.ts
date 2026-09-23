@@ -205,12 +205,14 @@ export async function POST(request: NextRequest) {
       normalizedCode,
       normalizedWallet,
       profile.wallet_address,
+      supabaseAdmin,
     );
 
     // Update new user's profile with referrer info
     await updateUserWithReferrer(
       normalizedWallet,
       profile.wallet_address,
+      supabaseAdmin,
     );
 
     // Pulse: surface "X invited Y" via the invitee's actor row. The card

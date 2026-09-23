@@ -28,6 +28,39 @@ export default function Page() {
   return <PageContent />;
 }
 
+type OnboardingProfile = {
+  wallet_address: string;
+  referral_key: string | null;
+  onboarded_at: string | null;
+};
+
+// Pre-session profile lookup (wallet, then Coinbase-verified email). Runs on
+// the server because the browser can only read its own profile row, and
+// before sign-in it has no session at all.
+async function fetchOnboardingProfile(
+  walletAddress: string,
+  email?: string | null,
+): Promise<OnboardingProfile | null> {
+  const res = await cdpFetch('/api/onboarding/status', {
+    walletAddress,
+    email: email ?? undefined,
+  });
+  if (!res.ok) {
+    console.warn(`📋 onboarding status check failed (${res.status})`);
+    return null;
+  }
+  const s = await res.json();
+  if (!s.hasProfile) return null;
+  if (s.matchedBy === 'email') {
+    console.log(`📋 Found profile by email (canonical wallet: ${s.walletAddress})`);
+  }
+  return {
+    wallet_address: s.walletAddress,
+    referral_key: s.referralKey,
+    onboarded_at: s.onboarded ? 'true' : null,
+  };
+}
+
 function PageContent() {
   // Core Hooks
   const router = useRouter();
@@ -127,36 +160,9 @@ function PageContent() {
 
     console.log('🚀 handleAuthReady: checking onboarding for fast-path auth');
     try {
-      // Use direct DB check (bypasses RLS) so this works without an existing session.
-      // Mirror the auth endpoint: try email lookup first, then wallet lookup.
-      // This handles the case where a user signed up with email OTP (wallet A)
-      // and later logs in with Google OAuth (wallet B, same email).
-      const { supabase: supabaseAdmin } = await import('@/utils/supabaseClient');
-
-      let profile: { onboarded_at: string | null; wallet_address: string } | null = null;
-
-      // 1. Try email lookup first (handles cross-wallet returning users)
-      if (email) {
-        const { data } = await supabaseAdmin
-          .from('user_profiles')
-          .select('onboarded_at, wallet_address')
-          .eq('email', email)
-          .maybeSingle();
-        if (data) {
-          profile = data;
-          console.log(`🚀 handleAuthReady: found profile by email (canonical wallet: ${data.wallet_address})`);
-        }
-      }
-
-      // 2. Fall back to CDP wallet lookup
-      if (!profile) {
-        const { data } = await supabaseAdmin
-          .from('user_profiles')
-          .select('onboarded_at, wallet_address')
-          .eq('wallet_address', address.toLowerCase())
-          .maybeSingle();
-        if (data) profile = data;
-      }
+      // Server-side lookup: works without a session and covers a member
+      // signing in on a new wallet with the same (Coinbase-verified) email.
+      const profile = await fetchOnboardingProfile(address, email);
 
       const completed = !!profile?.onboarded_at || await hasCompletedOnboarding(address);
       if (completed) {
@@ -335,37 +341,9 @@ function PageContent() {
         setIsFirstUserAccount(firstUser);
         console.log(`👤 First user check: ${firstUser}`);
 
-        // Use admin client to check existing profile — bypasses RLS so this works
-        // even before a Supabase session exists (e.g. on fresh page load after deploy).
-        // Mirror the auth endpoint: try email lookup first, then wallet lookup.
-        // This handles the case where a user signed up with email OTP (wallet A)
-        // and later logs in with Google OAuth (wallet B, same email).
-        const { supabase: supabaseAdmin } = await import('@/utils/supabaseClient');
-
-        let existingProfile: { wallet_address: string; referral_key: string | null; onboarded_at: string | null } | null = null;
-
-        // 1. Try email lookup first (handles cross-wallet returning users)
-        if (resolvedEmail) {
-          const { data } = await supabaseAdmin
-            .from('user_profiles')
-            .select('wallet_address, referral_key, onboarded_at')
-            .eq('email', resolvedEmail)
-            .maybeSingle();
-          if (data) {
-            existingProfile = data;
-            console.log(`📋 Found profile by email (canonical wallet: ${data.wallet_address})`);
-          }
-        }
-
-        // 2. Fall back to CDP wallet lookup
-        if (!existingProfile) {
-          const { data } = await supabaseAdmin
-            .from('user_profiles')
-            .select('wallet_address, referral_key, onboarded_at')
-            .eq('wallet_address', walletAddress.toLowerCase())
-            .maybeSingle();
-          if (data) existingProfile = data;
-        }
+        // Server-side lookup: works before a Supabase session exists and
+        // covers a member on a new wallet with the same verified email.
+        const existingProfile = await fetchOnboardingProfile(walletAddress, resolvedEmail);
 
         step2FoundProfileRef.current = !!existingProfile;
 

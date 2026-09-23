@@ -2,7 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, type Abi } from 'viem';
 import { base } from 'viem/chains';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
-import { supabase } from '@/utils/supabaseClient';
+// Service role: this route runs without a user session and anon holds no
+// table grants. It only reads proposal metadata and writes the status cache.
+import { supabaseAdmin as supabase } from '@/utils/supabaseAdminClient';
 import { recordExplorerEvent, type ExplorerEventType } from '@/lib/explorerEvents';
 
 // Governor state enum → Pulse event type. Only transitions into one of
@@ -29,15 +31,6 @@ async function getProposalIdsFromSupabase() {
     .not('onchain_proposal_id', 'is', null);
   if (error) throw error;
   return data.map((row: any) => row.onchain_proposal_id);
-}
-
-// Helper: fetch user addresses (for demo, you might want to limit this)
-async function getUserAddresses() {
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('wallet_address');
-  if (error) throw error;
-  return data.map((row: any) => row.wallet_address);
 }
 
 export async function GET(req: NextRequest) {

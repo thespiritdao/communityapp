@@ -5,11 +5,15 @@
  *
  * Called after successful invite validation and NFT/hat minting
  * Marks user as onboarded (tokens available via faucet at /faucet)
+ *
+ * Server-side writes use the service-role client: this route has no Supabase
+ * session, and anon holds no table grants. Status checks live in
+ * /api/onboarding/status (the old unauthenticated GET here was removed).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { assignInviteCodeToUser } from '@/services/inviteCodeService';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
 
 // nodejs (not edge): @coinbase/cdp-sdk needs the Node crypto runtime.
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Assign invite code to user (if not already assigned)
     try {
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseAdmin
         .from('user_profiles')
         .select('referral_key')
         .eq('wallet_address', normalizedWallet)
@@ -90,7 +94,7 @@ export async function POST(request: NextRequest) {
 
       if (!profile?.referral_key) {
         console.log('📝 Assigning invite code to user...');
-        await assignInviteCodeToUser(normalizedWallet);
+        await assignInviteCodeToUser(normalizedWallet, supabaseAdmin);
       }
     } catch (error) {
       console.error('Error assigning invite code:', error);
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Mark user as onboarded
     console.log('✅ Marking user as onboarded...');
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('user_profiles')
       .update({
         onboarded_at: new Date().toISOString(),
@@ -127,61 +131,6 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'An error occurred while completing onboarding',
-      },
-      { status: 500 },
-    );
-  }
-}
-
-// ============================================================
-// GET Handler (Check Onboarding Status)
-// ============================================================
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const walletAddress = searchParams.get('wallet');
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Wallet address is required',
-        },
-        { status: 400 },
-      );
-    }
-
-    const normalizedWallet = walletAddress.toLowerCase();
-
-    // Check onboarding status
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('onboarded_at, referral_key')
-      .eq('wallet_address', normalizedWallet)
-      .single();
-
-    if (error || !data) {
-      return NextResponse.json({
-        success: true,
-        onboarded: false,
-        hasProfile: false,
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      onboarded: !!data.onboarded_at,
-      hasProfile: true,
-      onboardedAt: data.onboarded_at,
-      inviteCode: data.referral_key,
-    });
-  } catch (error) {
-    console.error('Error checking onboarding status:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'An error occurred while checking onboarding status',
       },
       { status: 500 },
     );

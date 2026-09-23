@@ -33,6 +33,8 @@ type Verified = {
   userId: string;
   /** Lowercased EVM addresses (EOAs + smart accounts) owned by the user. */
   accounts: string[];
+  /** Lowercased emails Coinbase verified for this user (email OTP / OAuth). */
+  emails: string[];
 };
 type Denied = { ok: false; status: number; error: string };
 export type CdpVerification = Verified | Denied;
@@ -111,6 +113,17 @@ function collectAccounts(endUser: unknown): string[] {
   return [...out];
 }
 
+function collectEmails(endUser: unknown): string[] {
+  const methods = ((endUser ?? {}) as Record<string, unknown>).authenticationMethods;
+  if (!Array.isArray(methods)) return [];
+  const out = new Set<string>();
+  for (const m of methods) {
+    const email = m && typeof m === 'object' ? (m as Record<string, unknown>).email : null;
+    if (typeof email === 'string' && email.includes('@')) out.add(email.trim().toLowerCase());
+  }
+  return [...out];
+}
+
 /**
  * Validate a CDP end-user access token and return the user's EVM accounts.
  * Does not check any particular address — see verifyCdpWalletOwnership.
@@ -128,7 +141,7 @@ export async function validateCdpAccessToken(accessToken: string): Promise<CdpVe
     if (!userId) {
       return { ok: false, status: 401, error: 'Coinbase session could not be verified.' };
     }
-    return { ok: true, userId, accounts };
+    return { ok: true, userId, accounts, emails: collectEmails(endUser) };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     // Distinguish "our server credentials are wrong" from "the user's token is
