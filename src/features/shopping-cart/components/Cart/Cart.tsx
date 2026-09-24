@@ -42,7 +42,7 @@ import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from '@/config/wagmi.client';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
-import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
+import { cdpAuthHeaders, requestSupabaseSession } from '@/features/identity/lib/cdpSession';
 import { getAuthHeaders } from '@/lib/authHeaders';
 import {
   Dialog,
@@ -1272,6 +1272,26 @@ export default function Cart({
         throw new Error(`Authentication failed: ${(authError as any).message}`);
       }
 
+      // The server records the orders once the payment is proven on-chain
+      // (buyer, products and amount); the browser can no longer insert them.
+      const orderRes = await fetch('/api/marketplace/orders', {
+        method: 'POST',
+        headers: { ...(await cdpAuthHeaders()), ...(await getAuthHeaders()) },
+        body: JSON.stringify({
+          address: address!.toLowerCase(),
+          userOpHash: txHash,
+          token: selectedToken.symbol,
+          items: products.map((p) => ({ productId: p.id.toString(), quantity: p.quantity || 1 })),
+        }),
+      });
+      const orderBody = await orderRes.json().catch(() => null);
+      if (!orderRes.ok) {
+        console.error('Failed to record orders:', orderBody?.error ?? orderRes.status);
+      }
+      const ordersByProduct = new Map<string, any>(
+        (orderBody?.orders ?? []).map((o: any) => [String(o.product_id), o]),
+      );
+
       const orderPromises = products.map(async (product) => {
         console.log('ðŸ“¦ Creating order record for product:', {
           productName: product.name || product.title,
@@ -1300,24 +1320,9 @@ export default function Cart({
           calculatedSystemPrice: productSystemPrice,
         });
 
-        // Create order record in database
-        const { data: orderData, error: orderError } = await supabase
-          .from('marketplace_orders')
-          .insert({
-            buyer_address: address!.toLowerCase(),
-            product_id: product.id.toString(),
-            product_name: product.name || product.title,
-            quantity: product.quantity || 1,
-            price_paid_self: productSelfPrice,
-            price_paid_system: productSystemPrice,
-            transaction_hash: txHash, // Use userOperationHash
-            status: 'processing',
-          })
-          .select()
-          .single();
-
-        if (orderError) {
-          console.error('Failed to create order record:', orderError);
+        const orderData = ordersByProduct.get(product.id.toString());
+        if (!orderData) {
+          console.error('No order recorded for product:', product.id);
           return null;
         }
 
