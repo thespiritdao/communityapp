@@ -64,13 +64,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    // Checked-in attendees (dual attestation requirement).
-    const { data: regs, error: regErr } = await supabase
+    // Checked-in attendees (dual attestation requirement). checked_in_by is
+    // stamped by the database from the session that performed the check-in
+    // (only the event's organizers may); a check-in without one, or by the
+    // attendee themselves, does not earn.
+    const { data: allRegs, error: regErr } = await supabase
       .from('event_registrations')
-      .select('id, user_address, checked_in_at')
+      .select('id, user_address, checked_in_at, checked_in_by')
       .eq('event_id', eventId)
-      .not('checked_in_at', 'is', null);
+      .not('checked_in_at', 'is', null)
+      .not('checked_in_by', 'is', null);
     if (regErr) throw regErr;
+    const regs = (allRegs ?? []).filter(
+      (r) => r.checked_in_by!.toLowerCase() !== r.user_address.toLowerCase(),
+    );
     if (!regs || regs.length === 0) {
       return NextResponse.json({ success: true, queued: 0, message: 'No checked-in attendees' });
     }

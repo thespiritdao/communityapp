@@ -45,6 +45,8 @@ import type { Event } from '../types/event';
 
 // Import the contract ABI and address
 import EventManagerABI from '@/abis/EventManager.json';
+import { cdpAuthHeaders } from '@/features/identity/lib/cdpSession';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 const EVENT_MANAGER_CONTRACT = CONTRACT_ADDRESSES.EVENT_MANAGER;
 
 const BASE_CHAIN_ID = 8453;
@@ -490,33 +492,19 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         }
       }
 
-      // Get the current session to include user_id for RLS policies
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+      // The server records the registration once EventManager confirms it;
+      // payment fields are no longer writable from the browser.
+      const txHash = response?.transactionReceipts?.[0]?.transactionHash ?? null;
+      console.log('💾 Recording registration for', address, txHash);
 
-      // Store registration in Supabase using upsert to handle duplicates
-      const registrationData = {
-        event_id: event.id,
-        user_address: address!.toLowerCase(), // matches existing schema
-        registration_status: 'registered',
-        payment_amount: getEventPrice().amount,
-        payment_token: event.price_token,
-        payment_tx_hash: response?.transactionReceipts?.[0]?.transactionHash,
-        payment_status: 'completed',
-        registered_at: new Date().toISOString(), // Update timestamp on upsert
-      };
-
-      // Note: RLS policies use user_address for event_registrations table
-
-      console.log('💾 Storing registration in database:', registrationData);
-
-      const { error: upsertError } = await supabase
-        .from('event_registrations')
-        .upsert(registrationData, {
-          onConflict: 'event_id,user_address', // Handle the unique constraint
-          ignoreDuplicates: false, // Update existing record if found
-        });
+      const registerRes = await fetch(`/api/events/${event.id}/register`, {
+        method: 'POST',
+        headers: { ...(await cdpAuthHeaders()), ...(await ensureAuthHeaders()) },
+        body: JSON.stringify({ address: address!.toLowerCase(), txHash }),
+      });
+      const upsertError = registerRes.ok
+        ? null
+        : new Error((await registerRes.json().catch(() => null))?.error ?? `HTTP ${registerRes.status}`);
 
       if (upsertError) {
         console.error('Error storing registration:', upsertError);
