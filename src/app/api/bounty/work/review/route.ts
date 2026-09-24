@@ -8,6 +8,7 @@ import {
 } from '@/features/self/services/selfEarnTriggers';
 import { requireWalletMatch } from '@/lib/apiPodGuard';
 import { readOnchainBounty } from '@/lib/bountyOnchain';
+import { walletsForBalanceCheck } from '@/services/userWalletsService';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,8 +28,10 @@ async function selfCreditDenial(
   if (!onchain) return `on-chain bounty ${bounty.onchain_id} does not exist`;
   if (onchain.creator !== bounty.creator_address?.toLowerCase()) return 'creator does not match chain';
   if (onchain.podId !== bounty.pod_id) return 'pod does not match chain';
-  if (onchain.assignee !== bidder.toLowerCase()) return 'worker is not the on-chain assignee';
-  if (reviewer.toLowerCase() === onchain.assignee) return 'worker cannot approve their own work';
+  // The on-chain assignee may be one of the worker's linked device wallets.
+  const workerWallets = await walletsForBalanceCheck(bidder);
+  if (!onchain.assignee || !workerWallets.includes(onchain.assignee)) return 'worker is not the on-chain assignee';
+  if (workerWallets.includes(reviewer.toLowerCase())) return 'worker cannot approve their own work';
   return null;
 }
 

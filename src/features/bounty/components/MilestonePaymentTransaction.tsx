@@ -20,10 +20,11 @@ import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { encodeFunctionData, type Abi, type TransactionReceipt } from 'viem';
-import { parseEther } from 'viem';
+import { formatEther, parseEther } from 'viem';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
+import { walletsBelongToSameMember } from '../utils/sameMemberWallets';
 
 const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
@@ -311,6 +312,29 @@ export const MilestonePaymentTransaction: React.FC<
 
       const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
+      // The amount and worker come from database rows. Before signing, check
+      // them against the escrow: the payee must be the on-chain assignee and
+      // the release must fit in what is still escrowed.
+      if (!publicClient) throw new Error('Blockchain client not available');
+      const amountWei = parseEther(paymentAmount);
+      const [assignee, , escrowAmount, paidAmount] = (await publicClient.readContract({
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'getAssignment',
+        args: [BigInt(onchainBountyId)],
+      })) as readonly [string, string, bigint, bigint];
+      if (!(await walletsBelongToSameMember(assignee, workerAddress))) {
+        throw new Error(
+          `This bounty is assigned on-chain to ${assignee}, not ${workerAddress}. Payment stopped.`,
+        );
+      }
+      const remaining = escrowAmount - paidAmount;
+      if (amountWei <= 0n || amountWei > remaining) {
+        throw new Error(
+          `Milestone amount ${paymentAmount} exceeds the ${formatEther(remaining)} still in escrow. Payment stopped.`,
+        );
+      }
+
       // V5 removed per-milestone on-chain accounting; partial releases go
       // through releasePayment(bountyId, amount). Which milestone this pays
       // is tracked in the database (syncMilestonePaymentState).
@@ -351,7 +375,7 @@ export const MilestonePaymentTransaction: React.FC<
     } finally {
       setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, onchainMilestoneId, paymentAmount, handleSuccess, handleError]);
+  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, onchainMilestoneId, paymentAmount, workerAddress, publicClient, handleSuccess, handleError]);
 
   // ============================================================================
   // RENDER

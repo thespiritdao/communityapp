@@ -21,11 +21,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
-import { encodeFunctionData, parseEther, type Abi, type TransactionReceipt } from 'viem';
+import { encodeFunctionData, formatEther, parseEther, type Abi, type TransactionReceipt } from 'viem';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
+import { walletsBelongToSameMember } from '../utils/sameMemberWallets';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 
 const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
@@ -458,6 +459,24 @@ export const BountyPaymentTransaction: React.FC<
         return;
       }
 
+      // The amount and payee come from database rows; check them against
+      // the escrow before signing.
+      const [assignee, , escrowAmount, paidAmount] = (await publicClient.readContract({
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'getAssignment',
+        args: [BigInt(onchainBountyId)],
+      })) as readonly [string, string, bigint, bigint];
+      if (!(await walletsBelongToSameMember(assignee, bidderAddress))) {
+        onError(new Error(`This bounty is assigned on-chain to ${assignee}, not ${bidderAddress}. Payment stopped.`));
+        return;
+      }
+      const remaining = escrowAmount - paidAmount;
+      if (amountWei <= 0n || amountWei > remaining) {
+        onError(new Error(`Payment of ${paymentAmount} exceeds the ${formatEther(remaining)} still in escrow. Payment stopped.`));
+        return;
+      }
+
       const callData = encodeFunctionData({
         abi: BountyManagerABI,
         functionName: 'releasePayment',
@@ -596,7 +615,7 @@ export const BountyPaymentTransaction: React.FC<
     } finally {
       setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, paymentAmount, handleSuccess, handleError]);
+  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, paymentAmount, bidderAddress, publicClient, handleSuccess, handleError]);
 
   // ============================================================================
   // TRANSACTION STATUS HANDLER WITH POLLING FALLBACK (LEGACY - NOT USED)

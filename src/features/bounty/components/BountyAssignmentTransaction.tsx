@@ -27,6 +27,7 @@ import { encodeFunctionData, type Abi, type TransactionReceipt } from 'viem';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
+import { walletsBelongToSameMember } from '../utils/sameMemberWallets';
 
 const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
@@ -491,6 +492,22 @@ export const BountyAssignmentTransaction: React.FC<
 
       const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
+      // The bid index comes from a database row; assign only if the chain
+      // agrees that bid belongs to the bidder being approved. Otherwise a
+      // rewritten index would hand the escrow to someone else.
+      if (!publicClient) throw new Error('Blockchain client not available');
+      const onchainBid = (await publicClient.readContract({
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'bids',
+        args: [BigInt(onchainBountyId), BigInt(onchainBidIndex)],
+      })) as readonly [string, ...unknown[]];
+      if (!onchainBid[0] || !(await walletsBelongToSameMember(onchainBid[0], bidderAddress))) {
+        throw new Error(
+          `On-chain bid #${onchainBidIndex} belongs to ${onchainBid[0]}, not the approved bidder ${bidderAddress}. Assignment stopped.`,
+        );
+      }
+
       // EXACT FAUCET PATTERN: Encode call data
       const callData = encodeFunctionData({
         abi: BountyManagerABI,
@@ -614,7 +631,7 @@ export const BountyAssignmentTransaction: React.FC<
     } finally {
       setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, onchainBidIndex, reviewer, approver, handleSuccess, handleError]);
+  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, onchainBidIndex, bidderAddress, publicClient, reviewer, approver, handleSuccess, handleError]);
 
   // ============================================================================
   // TRANSACTION STATUS HANDLER WITH POLLING FALLBACK (LEGACY - NOT USED)
