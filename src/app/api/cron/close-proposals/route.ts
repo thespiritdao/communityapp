@@ -78,10 +78,14 @@ export async function GET(req: NextRequest) {
 
     for (const proposal of proposals ?? []) {
       try {
+        // Eligibility is enforced when a vote is written (governance_votes
+        // RLS + can_vote_on_pod_proposal); the database also stamps the vote
+        // time, so anything after the deadline is not counted.
         const { data: votes } = await supabaseAdmin
           .from('governance_votes')
           .select('*')
           .eq('proposal_id', proposal.id)
+          .lte('timestamp', proposal.voting_deadline)
           .order('timestamp', { ascending: true });
 
         const tally = {
