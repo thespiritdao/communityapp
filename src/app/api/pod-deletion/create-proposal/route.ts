@@ -76,6 +76,11 @@ export async function POST(request: Request) {
       typeof body.required_approvals === 'number' ? body.required_approvals : 0,
     );
 
+    const proposerApproves =
+      Array.isArray(body.current_approvals) &&
+      body.current_approvals.some((a: unknown) => String(a).toLowerCase() === wallet);
+    const initialApprovals = proposerApproves ? [wallet] : [];
+
     // Insert proposal using service role (bypasses RLS)
     const { data, error } = await supabaseAdmin
       .from('pod_deletion_proposals')
@@ -85,8 +90,11 @@ export async function POST(request: Request) {
         proposed_by: body.proposed_by.toLowerCase(),
         required_approvals: effectiveRequired,
         approval_threshold_bps: podConfig.operational.approval_bps,
-        current_approvals: body.current_approvals || [],
-        status: 'pending',
+        // Only the proposer's own approval can be recorded at creation; other
+        // leaders approve through add_pod_deletion_approval themselves.
+        current_approvals: initialApprovals,
+        status: initialApprovals.length >= effectiveRequired ? 'approved' : 'pending',
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         management_hat_id: body.management_hat_id || null,
         membership_hat_id: body.membership_hat_id || null,
       })
