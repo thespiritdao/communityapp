@@ -11,13 +11,11 @@
 // See docs/spec-platform-identity-multi-wallet.md.
 
 import { type NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
-import { issueSupabaseSession, sessionIssuance } from '@/lib/issueSession';
+import { issueSupabaseSession } from '@/lib/issueSession';
 import {
   consumeLinkCode,
-  getCanonicalWallet,
 } from '@/services/userWalletsService';
 
 export const runtime = 'nodejs';
@@ -60,63 +58,14 @@ export async function POST(req: NextRequest) {
 
   const userId = result.userId;
 
-  // Issue a Supabase JWT for the newly-linked device. The token still
-  // carries the user's canonical wallet (for backwards compatibility
-  // with code that reads jwt.wallet_address) — the new wallet's
-  // recognition is via user_wallets, not via the JWT claim.
-  const canonicalWallet = (await getCanonicalWallet(userId)) ?? newWallet;
-
-  // New path: Supabase issues the session; the access-token hook stamps the
-  // canonical wallet from user_wallets, which is the same source used here.
-  if (sessionIssuance() === 'supabase') {
-    const issued = await issueSupabaseSession(userId);
-    console.log(`✅ Link confirm: wallet ${newWallet} linked to user ${userId} (Supabase-issued session)`);
-    return NextResponse.json({
-      supabaseToken: issued.accessToken,
-      supabaseRefreshToken: issued.refreshToken,
-      userId,
-      linkedWallet: result.wallet,
-    });
-  }
-
-  // Legacy only: needs the shared secret (SESSION_ISSUANCE=legacy).
-  const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-  if (!JWT_SECRET) {
-    return NextResponse.json(
-      { error: 'server configuration error' },
-      { status: 500 },
-    );
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const jwtPayload = {
-    sub: userId,
-    aud: 'authenticated',
-    role: 'authenticated',
-    iat: now,
-    exp: now + 60 * 60 * 24 * 7, // 7 days
-    wallet_address: canonicalWallet,
-    user_metadata: { wallet_address: canonicalWallet },
-  };
-  const supabaseToken = jwt.sign(jwtPayload, JWT_SECRET, {
-    algorithm: 'HS256',
-  });
-  const refreshPayload = {
-    ...jwtPayload,
-    exp: now + 60 * 60 * 24 * 30,
-    token_type: 'refresh',
-  };
-  const supabaseRefreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
-    algorithm: 'HS256',
-  });
-
-  console.log(
-    `✅ Link confirm: wallet ${newWallet} linked to user ${userId} (canonical=${canonicalWallet})`,
-  );
-
+  // Supabase issues the session for the newly linked device; the access-token
+  // hook stamps the member's canonical wallet from user_wallets. The new
+  // device wallet is recognised through user_wallets, not the token claim.
+  const issued = await issueSupabaseSession(userId);
+  console.log(`✅ Link confirm: wallet ${newWallet} linked to user ${userId} (Supabase-issued session)`);
   return NextResponse.json({
-    supabaseToken,
-    supabaseRefreshToken,
+    supabaseToken: issued.accessToken,
+    supabaseRefreshToken: issued.refreshToken,
     userId,
     linkedWallet: result.wallet,
   });

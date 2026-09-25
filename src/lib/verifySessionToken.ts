@@ -2,22 +2,14 @@
 //
 // One place that decides whether a bearer token is a real session.
 //
-// Why this exists: every route used to verify the bearer token itself, against
-// the legacy symmetric secret and nothing else. Supabase is
-// moving to asymmetric signing keys, where the private key never leaves their
-// side and tokens are signed ES256. The moment the project's signing key is
-// rotated, every one of those direct calls would reject every token Supabase
-// issues — and because our own sign-in still mints HS256 tokens, members would
-// appear to sign in and then be refused by the routes.
+// Tokens are signed by Supabase with the project's asymmetric signing keys
+// (ES256; RS256 also accepted) and checked against the keys it publishes
+// (JWKS). The private key never leaves Supabase.
 //
-// So this verifier accepts both, chosen by the token's own header:
-//
-//   ES256 (and RS256)  ->  verified against the project's published keys (JWKS)
-//   HS256              ->  verified against the legacy shared secret
-//
-// That makes the rotation a non-event: deploy this first, rotate afterwards.
-// Once session minting no longer uses the legacy secret and that secret is
-// revoked, delete the HS256 branch and the SUPABASE_JWT_SECRET import with it.
+// History: until 2026-09-25 this also accepted HS256 tokens signed with the
+// legacy shared secret, which had been exposed in git history since
+// 2024-12-06. That secret is revoked and the HS256 branch is gone: a token
+// signed with it is now refused here as it is by Supabase.
 //
 // See docs/secrets-and-key-custody.md for where this sits in the sequence.
 
@@ -32,7 +24,6 @@ export interface SessionClaims {
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const LEGACY_SECRET = process.env.SUPABASE_JWT_SECRET;
 
 // Built lazily and cached by jose, which also honours the cache headers on the
 // JWKS response, so this is one fetch per server instance rather than per call.
@@ -62,25 +53,18 @@ export async function verifySessionToken(
 ): Promise<SessionClaims | null> {
   if (!token) return null;
 
-  let alg: string | undefined;
   try {
-    alg = decodeProtectedHeader(token).alg;
+    decodeProtectedHeader(token);
   } catch {
     return null; // not a JWT at all
   }
 
   try {
-    if (alg === 'HS256') {
-      if (!LEGACY_SECRET) return null;
-      const { payload } = await jwtVerify(
-        token,
-        new TextEncoder().encode(LEGACY_SECRET),
-      );
-      return payload as unknown as SessionClaims;
-    }
-
-    // Anything asymmetric is checked against the keys the project publishes.
-    const { payload } = await jwtVerify(token, publishedKeys());
+    // Only the project's published asymmetric keys; symmetric (HS256) tokens
+    // are refused outright.
+    const { payload } = await jwtVerify(token, publishedKeys(), {
+      algorithms: ['ES256', 'RS256'],
+    });
     return payload as unknown as SessionClaims;
   } catch {
     return null;

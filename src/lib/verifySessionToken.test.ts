@@ -5,11 +5,11 @@
 //
 // Tests for the session verifier.
 //
-// The asymmetric path cannot be exercised against the real project until the
-// signing key is rotated, and rotating before knowing it works is the wrong
-// order. So a real HTTP server serves a key pair generated here at the path
-// the verifier looks for. That exercises the genuine code path, including the
-// fetch, rather than a stub standing in for it.
+// A real HTTP server serves a key pair generated here at the path the
+// verifier looks for, which exercises the genuine code path including the
+// fetch. The legacy shared secret is set in the environment on purpose: since
+// its revocation (2026-09-25) a token signed with it must be refused even when
+// the server still happens to have the value.
 
 import { createServer, type Server } from 'node:http';
 import { type AddressInfo } from 'node:net';
@@ -59,13 +59,12 @@ async function hs256(claims: Record<string, unknown>) {
 }
 
 describe('verifySessionToken', () => {
-  it('accepts a legacy HS256 token, which is what sign-in still mints', async () => {
+  it('refuses an HS256 token signed with the revoked legacy secret', async () => {
     const token = await hs256({ sub: 'user-1', wallet_address: '0xABC' });
-    const claims = await verifySessionToken(token);
-    expect(claims?.sub).toBe('user-1');
+    expect(await verifySessionToken(token)).toBeNull();
   });
 
-  it('accepts an ES256 token signed by a published key, which is what rotation produces', async () => {
+  it('accepts an ES256 token signed by a published key, which is what Supabase issues', async () => {
     const token = await new SignJWT({ sub: 'user-2', role: 'authenticated' })
       .setProtectedHeader({ alg: 'ES256', kid: 'test-key' })
       .setIssuedAt()
@@ -98,10 +97,10 @@ describe('verifySessionToken', () => {
   it('refuses an expired token', async () => {
     const now = Math.floor(Date.now() / 1000);
     const token = await new SignJWT({ sub: 'user-3' })
-      .setProtectedHeader({ alg: 'HS256' })
+      .setProtectedHeader({ alg: 'ES256', kid: 'test-key' })
       .setIssuedAt(now - 7200)
       .setExpirationTime(now - 3600)
-      .sign(legacyKey());
+      .sign(privateKey);
     expect(await verifySessionToken(token)).toBeNull();
   });
 

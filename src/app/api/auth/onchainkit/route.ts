@@ -17,10 +17,9 @@
 //   See docs/spec-platform-identity-multi-wallet.md.
 
 import { type NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
-import { issueSupabaseSession, sessionIssuance } from '@/lib/issueSession';
+import { issueSupabaseSession } from '@/lib/issueSession';
 import {
   findUserByWallet,
   insertCanonicalWallet,
@@ -28,7 +27,7 @@ import {
   touchWalletSeen,
 } from '@/services/userWalletsService';
 
-// IMPORTANT: Must use Node.js runtime (not Edge) because jsonwebtoken requires crypto module
+// Node.js runtime: the CDP SDK used for wallet proof needs Node crypto.
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
@@ -351,65 +350,14 @@ export async function POST(req: NextRequest) {
       console.error('⚠️ Auth API: could not link CDP sibling wallets:', linkErr);
     }
 
-    // Sign a JWT directly with the Supabase JWT secret.
-    // This is the correct approach for wallet-based auth — we know exactly which
-    // userId and wallet_address to embed, bypassing email-based session flows that
-    // would pick the wrong auth user when multiple accounts share an email.
-    // The RLS policy reads wallet_address from this JWT claim directly.
-    // For existing users, embed their profile wallet (not the CDP EVM address).
-    // Multiple accounts can share the same CDP embedded wallet; the profile wallet
-    // is the canonical identity used by RLS policies, conference tokens, etc.
-    const canonicalWallet = existingUserProfile?.wallet_address || normalizedAddress;
-
-    // New path: Supabase issues the session and the access-token hook stamps
-    // the wallet claim from the user's own row. Selected by SESSION_ISSUANCE so
-    // it can be turned on, and off, without a deploy. The legacy path below
-    // signs with the shared secret and goes away when that secret is revoked.
-    if (sessionIssuance() === 'supabase') {
-      const issued = await issueSupabaseSession(userId);
-      console.log('✅ Auth API: Supabase-issued session (hook stamps wallet)');
-      return NextResponse.json({
-        supabaseToken: issued.accessToken,
-        supabaseRefreshToken: issued.refreshToken,
-        userId,
-      });
-    }
-
-    // Legacy only: needs the shared secret (SESSION_ISSUANCE=legacy).
-    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!JWT_SECRET) {
-      console.error('❌ Auth API: SESSION_ISSUANCE=legacy but SUPABASE_JWT_SECRET is not set');
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    const jwtPayload = {
-      sub: userId,
-      aud: 'authenticated',
-      role: 'authenticated',
-      iat: now,
-      exp: now + 60 * 60 * 24 * 7, // 7 days
-      wallet_address: canonicalWallet,
-      user_metadata: {
-        wallet_address: canonicalWallet,
-      },
-    };
-
-    const supabaseToken = jwt.sign(jwtPayload, JWT_SECRET, { algorithm: 'HS256' });
-
-    // Separate long-lived refresh token (30 days)
-    const refreshPayload = {
-      ...jwtPayload,
-      exp: now + 60 * 60 * 24 * 30, // 30 days
-      token_type: 'refresh',
-    };
-    const supabaseRefreshToken = jwt.sign(refreshPayload, JWT_SECRET, { algorithm: 'HS256' });
-
-    console.log('✅ Auth API: Generated JWT tokens (access: 7d, refresh: 30d)');
-
+    // Supabase issues the session; the custom access-token hook stamps the
+    // canonical wallet claim from the user's own rows (user_wallets, then
+    // user_profiles), which RLS policies read. The app never signs tokens.
+    const issued = await issueSupabaseSession(userId);
+    console.log('✅ Auth API: Supabase-issued session (hook stamps wallet)');
     return NextResponse.json({
-      supabaseToken,
-      supabaseRefreshToken,
+      supabaseToken: issued.accessToken,
+      supabaseRefreshToken: issued.refreshToken,
       userId,
     });
   } catch (err) {

@@ -83,11 +83,3 @@ export async function issueSupabaseSession(userId: string): Promise<IssuedSessio
     expiresAt: session.expires_at ?? Math.floor(Date.now() / 1000) + (session.expires_in ?? 3600),
   };
 }
-
-/**
- * Which way sign-in issues sessions. Defaults to the legacy self-signed path
- * until the switch is thrown, so this can be turned off without a deploy.
- */
-export function sessionIssuance(): 'supabase' | 'legacy' {
-  return process.env.SESSION_ISSUANCE === 'supabase' ? 'supabase' : 'legacy';
-}

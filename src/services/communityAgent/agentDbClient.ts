@@ -25,23 +25,16 @@
 //   has an auth account whose server-controlled metadata carries its wallet,
 //   and the custom access token hook stamps `role=community_agent` and the
 //   wallet onto every token Supabase issues for it. Nothing here signs
-//   anything. The legacy path stays behind SESSION_ISSUANCE until the secret
-//   is revoked, then goes.
+//   anything. The legacy self-signed path was removed when the secret was
+//   revoked on 2026-09-25.
 
-import { createHmac } from 'crypto';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { isRegisteredAgent } from '@/lib/agentGuard';
-import { issueSupabaseSession, sessionIssuance } from '@/lib/issueSession';
-
-const TOKEN_TTL_SECONDS = 15 * 60;
+import { issueSupabaseSession } from '@/lib/issueSession';
 
 // Reserved address space for agent accounts. Nothing is ever mailed to these;
 // they exist because Supabase issues sessions by email.
 const AGENT_EMAIL_DOMAIN = 'agents.spiritdao.org';
-
-function base64url(input: Buffer | string): string {
-  return Buffer.from(input).toString('base64url');
-}
 
 function supabaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -55,30 +48,6 @@ function adminClient(): SupabaseClient {
   return createClient(supabaseUrl(), key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-}
-
-// ── Legacy: self-signed token (until the shared secret is revoked) ──────────
-
-/** Sign a short-lived JWT for the community_agent role. Legacy path. */
-function signAgentToken(agentWallet: string): string {
-  const secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) throw new Error('SUPABASE_JWT_SECRET not configured');
-
-  const now = Math.floor(Date.now() / 1000);
-  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = base64url(
-    JSON.stringify({
-      role: 'community_agent',
-      wallet_address: agentWallet.toLowerCase(),
-      iss: 'commapp-agent',
-      iat: now,
-      exp: now + TOKEN_TTL_SECONDS,
-    }),
-  );
-  const signature = createHmac('sha256', secret)
-    .update(`${header}.${payload}`)
-    .digest('base64url');
-  return `${header}.${payload}.${signature}`;
 }
 
 // ── Current: an account per agent, a Supabase-issued token ──────────────────
@@ -153,10 +122,7 @@ export async function getAgentClient(agentWallet: string): Promise<SupabaseClien
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!anonKey) throw new Error('Supabase env not configured');
 
-  const token =
-    sessionIssuance() === 'supabase'
-      ? await agentAccessToken(agentWallet)
-      : signAgentToken(agentWallet);
+  const token = await agentAccessToken(agentWallet);
 
   return createClient(supabaseUrl(), anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },

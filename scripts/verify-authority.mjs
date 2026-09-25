@@ -9,22 +9,19 @@
 //   node scripts/verify-authority.mjs [--base https://app.spiritdao.org]
 
 import { createClient } from '@supabase/supabase-js';
-import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { realSession, signOutTestSessions } from './lib/testSessions.mjs';
 
 dotenv.config({ path: '.env' });
 
 const SB = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SECRET = process.env.SUPABASE_JWT_SECRET;
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const BASE = (() => { const i = process.argv.indexOf('--base'); return i > -1 ? process.argv[i + 1] : 'https://app.spiritdao.org'; })();
 const TN = 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0';
 
 const admin = createClient(SB, SERVICE);
-const token = (uid, w) => {
-  const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ sub: uid, aud: 'authenticated', role: 'authenticated', iat: now, exp: now + 600, wallet_address: w, user_metadata: { wallet_address: w } }, SECRET, { algorithm: 'HS256' });
-};
+const token = (uid) => realSession(admin, SB, ANON, uid);
 
 const { data: pod } = await admin.from('pods').select('pod_leads').eq('id', TN).single();
 const lead = pod.pod_leads[0].toLowerCase();
@@ -34,7 +31,7 @@ const { data: profs } = await admin.from('user_profiles').select('user_id, walle
 const mp = profs.find((p) => p.wallet_address.toLowerCase() !== lead);
 const member = mp.wallet_address.toLowerCase();
 
-const sessions = { lead: token(lp.user_id, lead), member: token(mp.user_id, member) };
+const sessions = { lead: await token(lp.user_id), member: await token(mp.user_id) };
 console.log(`lead ${lead.slice(0, 10)}…  member ${member.slice(0, 10)}…  against ${BASE}\n`);
 
 // Reads that any member may make are not authority checks. These are the
@@ -104,5 +101,6 @@ for (const [label, method, path, body, who, expect] of cases) {
   }
 }
 
+await signOutTestSessions(admin);
 console.log(`\n${failed === 0 ? 'Authority decisions match the chain.' : `${failed} mismatch(es).`}`);
 process.exit(failed ? 1 : 0);

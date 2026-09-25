@@ -1,14 +1,15 @@
 // scripts/wallet-link-e2e.mjs
 // Headless end-to-end test of the wallet-linking routes against production.
-// Run: node scripts/wallet-link-e2e.mjs   (needs .env with service-role key and JWT secret)
-// Creates two throwaway auth users, drives the API with locally minted app
-// JWTs and a throwaway external key, and removes everything it created.
+// Run: node scripts/wallet-link-e2e.mjs   (needs .env with the service-role key)
+// Creates two throwaway auth users, drives the API with real Supabase-issued
+// sessions (scripts/lib/testSessions.mjs) and a throwaway external key, and
+// removes everything it created.
 // The device-code REDEMPTION half needs a real Coinbase session token and is
 // only asserted to fail closed here.
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import { realSession, signOutTestSessions, tokenWallet } from './lib/testSessions.mjs';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
 
 // Read .env when it exists (local runs); fall back to the process environment
@@ -24,7 +25,7 @@ const env = (() => {
   return { ...fromFile, ...Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined)) };
 })();
 
-for (const k of ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_JWT_SECRET']) {
+for (const k of ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
   if (!env[k]) { console.error(`Missing ${k}`); process.exit(1); }
 }
 const BASE = 'https://app.spiritdao.org';
@@ -33,10 +34,7 @@ const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_RO
 const results = [];
 const step = (name, ok, extra = '') => { results.push({ name, ok, extra }); console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${extra ? ' — ' + extra : ''}`); };
 const randWallet = () => '0x' + crypto.randomBytes(20).toString('hex');
-const mint = (sub, wallet) => jwt.sign(
-  { sub, aud: 'authenticated', role: 'authenticated', wallet_address: wallet, user_metadata: { wallet_address: wallet } },
-  env.SUPABASE_JWT_SECRET, { expiresIn: '10m' },
-);
+const mint = (sub) => realSession(admin, env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, sub);
 const api = async (path, { method = 'GET', token, body, headers = {} } = {}) => {
   const res = await fetch(BASE + path, {
     method,
@@ -60,7 +58,7 @@ async function makeUser(tag) {
   const w = await admin.from('user_wallets').insert({ user_id: id, wallet_address: wallet, is_canonical: true, wallet_type: 'device' });
   if (w.error) throw new Error('user_wallets insert: ' + w.error.message);
   created.wallets.push(wallet);
-  return { id, wallet, token: mint(id, wallet) };
+  return { id, wallet, token: await mint(id) };
 }
 
 async function cleanup() {
@@ -133,14 +131,16 @@ try {
   step('linked-wallets now shows both, external typed correctly', r.json?.wallets?.length === 2 && extRow?.walletType === 'external' && extRow?.isCanonical === false, `n=${r.json?.wallets?.length} type=${extRow?.walletType}`);
 
   // ── Identity resolution after linking ─────────────────────────────────────
-  // A session presenting the linked wallet must resolve to the same account
-  // and see the same wallet set as a session presenting the canonical one.
-  const extToken = mint(A.id, extAddr);
+  // Since the legacy secret was revoked every session is Supabase-issued and
+  // the access-token hook stamps the canonical wallet, whatever device signed
+  // in. A fresh session after linking must still carry the canonical wallet
+  // and see the same wallet set.
+  const extToken = await mint(A.id);
   r = await api('/api/auth/linked-wallets', { token: extToken });
   const canonicalSeen = r.json?.wallets?.some(w => w.walletAddress === A.wallet && w.isCanonical);
-  step('a session on the linked wallet resolves to the same account', r.status === 200 && r.json?.wallets?.length === 2 && canonicalSeen, `HTTP ${r.status} n=${r.json?.wallets?.length}`);
+  step('a fresh session after linking carries the canonical wallet and sees both', r.status === 200 && r.json?.wallets?.length === 2 && canonicalSeen && tokenWallet(extToken) === A.wallet, `HTTP ${r.status} n=${r.json?.wallets?.length} claim=${tokenWallet(extToken).slice(0, 10)}`);
   r = await api('/api/auth/link-code', { method: 'POST', token: extToken, body: {} });
-  step('a session on the linked wallet can issue link codes too', r.status === 200, `HTTP ${r.status}`);
+  step('that session can issue link codes too', r.status === 200, `HTTP ${r.status}`);
 
   // ── Revocation ────────────────────────────────────────────────────────────
   r = await api('/api/auth/linked-wallets', { method: 'DELETE', token: A.token, body: { walletAddress: A.wallet } });
@@ -152,6 +152,7 @@ try {
 } catch (e) {
   console.log('ERROR', e?.message ?? e);
 } finally {
+  await signOutTestSessions(admin);
   await cleanup();
   const failed = results.filter(r => !r.ok).length;
   console.log(`\n${results.length - failed}/${results.length} passed`);

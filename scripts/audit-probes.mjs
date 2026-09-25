@@ -12,15 +12,14 @@
 // Exit code 1 if anything is still open.
 
 import { createClient } from '@supabase/supabase-js';
-import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { realSession, signOutTestSessions, tokenWallet } from './lib/testSessions.mjs';
 
 dotenv.config({ path: '.env' });
 
 const SB = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SECRET = process.env.SUPABASE_JWT_SECRET;
 const BASE = (() => {
   const i = process.argv.indexOf('--base');
   return i > -1 ? process.argv[i + 1] : 'https://app.spiritdao.org';
@@ -52,13 +51,9 @@ async function ordinaryMember() {
   const row = rows.find((r) => !leads.includes(r.wallet.toLowerCase())
     && profs.some((p) => p.wallet_address.toLowerCase() === r.wallet.toLowerCase()));
   const prof = profs.find((p) => p.wallet_address.toLowerCase() === row.wallet.toLowerCase());
-  const w = row.wallet.toLowerCase();
-  const now = Math.floor(Date.now() / 1000);
-  const token = jwt.sign(
-    { sub: prof.user_id, aud: 'authenticated', role: 'authenticated', iat: now, exp: now + 600,
-      wallet_address: w, user_metadata: { wallet_address: w } },
-    SECRET, { algorithm: 'HS256' },
-  );
+  const token = await realSession(admin, SB, ANON, prof.user_id);
+  // The hook stamps the account's canonical wallet; probes act as that wallet.
+  const w = tokenWallet(token) || row.wallet.toLowerCase();
   const client = createClient(SB, ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
   return { client, token, wallet: w, row };
 }
@@ -160,12 +155,7 @@ console.log('Regression  legitimate flows must still work');
   const { data: pod } = await admin.from('pods').select('pod_leads').eq('id', TN).single();
   const lead = pod.pod_leads[0].toLowerCase();
   const { data: lp } = await admin.from('user_profiles').select('user_id').eq('wallet_address', lead).single();
-  const now = Math.floor(Date.now() / 1000);
-  const ltok = jwt.sign(
-    { sub: lp.user_id, aud: 'authenticated', role: 'authenticated', iat: now, exp: now + 600,
-      wallet_address: lead, user_metadata: { wallet_address: lead } },
-    SECRET, { algorithm: 'HS256' },
-  );
+  const ltok = await realSession(admin, SB, ANON, lp.user_id);
   const L = createClient(SB, ANON, { global: { headers: { Authorization: `Bearer ${ltok}` } } });
 
   // Since Phase 1 step 2 the browser never writes pod_members; leads record
@@ -222,7 +212,7 @@ console.log('Regression  legitimate flows must still work');
   // server records one only after the chain (or a verified message
   // signature) proves it. A claim the chain doesn't back must be refused.
   {
-    const meTok = jwt.sign({ sub: (await admin.from('user_profiles').select('user_id').eq('wallet_address', me.wallet).single()).data.user_id, aud: 'authenticated', role: 'authenticated', iat: now, exp: now + 600, wallet_address: me.wallet, user_metadata: { wallet_address: me.wallet } }, SECRET, { algorithm: 'HS256' });
+    const meTok = me.token;
     const res = await fetch(`${BASE}/api/pods/${TN}/agreements/sign`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${meTok}`, 'Content-Type': 'application/json' },
@@ -240,5 +230,6 @@ console.log('Regression  legitimate flows must still work');
   }
 }
 
+await signOutTestSessions(admin);
 console.log(`\n${open === 0 ? 'All probes blocked; all legitimate flows allowed.' : `${open} check(s) failing.`}`);
 process.exit(open === 0 ? 0 : 1);
