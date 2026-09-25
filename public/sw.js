@@ -213,7 +213,10 @@ self.addEventListener('notificationclick', (event) => {
 
   event.notification.close();
 
-  const urlToOpen = event.notification.data?.url || '/';
+  // Only same-site paths: never open an off-site link from a push.
+  const rawUrl = event.notification.data?.url;
+  const urlToOpen =
+    typeof rawUrl === 'string' && /^\/(?!\/)/.test(rawUrl) && !rawUrl.includes('\\') ? rawUrl : '/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })

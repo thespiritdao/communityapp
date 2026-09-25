@@ -12,6 +12,8 @@ const supabase = createClient(
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_ADDRESS = 'SpiritDAO <community@spiritdao.org>';
+import { appUrl } from '@/lib/safeAppPath';
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -211,8 +213,9 @@ function renderDigestHtml(
             month: 'short',
             day: 'numeric',
           });
-          const link = n.context_url
-            ? `<a href="${APP_URL}${n.context_url}" style="color:#2F5D50;text-decoration:underline;">${escapeHtml(n.title)}</a>`
+          const href = appUrl(APP_URL, n.context_url);
+          const link = href
+            ? `<a href="${escapeHtml(href)}" style="color:#2F5D50;text-decoration:underline;">${escapeHtml(n.title)}</a>`
             : escapeHtml(n.title);
           return `<tr><td style="padding:6px 12px 6px 0;color:#666;white-space:nowrap;font-size:13px;">${date}</td><td style="padding:6px 0;font-size:14px;">${link}</td></tr>`;
         })

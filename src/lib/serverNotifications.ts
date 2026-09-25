@@ -7,6 +7,7 @@
  */
 
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { safeAppPath } from '@/lib/safeAppPath';
 import webpush from 'web-push';
 
 webpush.setVapidDetails(
@@ -267,7 +268,7 @@ async function sendPushNotifications(
     body: message,
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-72.png',
-    data: { url: contextUrl || '/notifications' },
+    data: { url: safeAppPath(contextUrl) || '/notifications' },
   });
 
   await Promise.allSettled(

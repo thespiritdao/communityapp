@@ -14,8 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import webpush from 'web-push';
-import jwt from 'jsonwebtoken';
 import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
+import { safeAppPath } from '@/lib/safeAppPath';
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
@@ -25,8 +25,8 @@ webpush.setVapidDetails(
 
 async function getWalletFromToken(token: string): Promise<string | null> {
   try {
-    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!JWT_SECRET) return null;
+    // verifySessionTokenOrThrow checks Supabase-issued (ES256/JWKS) tokens
+    // itself; it must not depend on the legacy shared secret existing.
     const payload = (await verifySessionTokenOrThrow(token)) as any;
     return payload.wallet_address || payload.user_metadata?.wallet_address || null;
   } catch {
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       isInternalCall,
     });
 
-    const {
+    let {
       recipient_address,
       sender_address,
       notification_type,
@@ -96,9 +96,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For client calls, verify sender_address matches the authenticated caller
+    // Links must stay on the app (digest emails and push taps open them).
+    context_url = safeAppPath(context_url);
+
+    // For client calls, verify sender_address matches the authenticated caller.
+    // 'system' is for server-side senders; from a browser it is attributed to
+    // the member who sent it, so nobody can send official-looking notices.
+    if (!isInternalCall && callerAddress && sender_address === 'system') {
+      sender_address = callerAddress.toLowerCase();
+    }
     if (!isInternalCall && callerAddress) {
-      if (sender_address.toLowerCase() !== callerAddress.toLowerCase() && sender_address !== 'system') {
+      if (sender_address.toLowerCase() !== callerAddress.toLowerCase()) {
         return NextResponse.json(
           { error: 'Forbidden: caller does not match sender_address' },
           { status: 403 },
