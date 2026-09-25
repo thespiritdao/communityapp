@@ -2,7 +2,7 @@
 // Generates a signed LiveKit JWT for a participant to join a conference room.
 //
 // Security model:
-// - Decodes the app's custom Supabase JWT (signed with SUPABASE_JWT_SECRET)
+// - Verifies the caller's Supabase session token (verifySessionToken)
 // - Verifies the requested walletAddress matches the wallet embedded in the JWT
 // - Role (host/co_host/speaker/attendee) determines publish permissions
 // - LiveKit API secret never leaves the server
@@ -19,7 +19,6 @@ export const maxDuration = 30;
 const LIVEKIT_API_KEY    = process.env.LIVEKIT_API_KEY!;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET!;
 const LIVEKIT_URL        = process.env.LIVEKIT_URL!;
-const JWT_SECRET         = process.env.SUPABASE_JWT_SECRET!;
 
 const PUBLISH_ROLES = new Set(['host', 'co_host', 'speaker']);
 

@@ -25,8 +25,6 @@ async function getCallerWallet(req: NextRequest): Promise<string | null> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.slice(7);
-  const secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) return null;
   try {
     const payload = (await verifySessionTokenOrThrow(token)) as any;
     const w =

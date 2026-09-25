@@ -48,11 +48,6 @@ export async function getAuthContext(
   if (!authHeader?.startsWith('Bearer ')) return null;
 
   const token = authHeader.slice(7);
-  const secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) {
-    console.error('[walletAuth] SUPABASE_JWT_SECRET not configured');
-    return null;
-  }
 
   let payload: any;
   try {

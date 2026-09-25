@@ -64,14 +64,6 @@ export async function POST(req: NextRequest) {
   // carries the user's canonical wallet (for backwards compatibility
   // with code that reads jwt.wallet_address) — the new wallet's
   // recognition is via user_wallets, not via the JWT claim.
-  const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-  if (!JWT_SECRET) {
-    return NextResponse.json(
-      { error: 'server configuration error' },
-      { status: 500 },
-    );
-  }
-
   const canonicalWallet = (await getCanonicalWallet(userId)) ?? newWallet;
 
   // New path: Supabase issues the session; the access-token hook stamps the
@@ -85,6 +77,15 @@ export async function POST(req: NextRequest) {
       userId,
       linkedWallet: result.wallet,
     });
+  }
+
+  // Legacy only: needs the shared secret (SESSION_ISSUANCE=legacy).
+  const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+  if (!JWT_SECRET) {
+    return NextResponse.json(
+      { error: 'server configuration error' },
+      { status: 500 },
+    );
   }
 
   const now = Math.floor(Date.now() / 1000);

@@ -10,8 +10,6 @@ import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export async function getWalletFromToken(token: string): Promise<string | null> {
   try {
-    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!JWT_SECRET) return null;
     const payload = (await verifySessionTokenOrThrow(token)) as any;
     return (
       payload.wallet_address || payload.user_metadata?.wallet_address || null

@@ -12,11 +12,10 @@ import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET!;
 
 async function isAuthenticated(req: NextRequest): Promise<boolean> {
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '').trim();
-  if (!token || !JWT_SECRET) return false;
+  if (!token) return false;
   try {
     const payload = (await verifySessionTokenOrThrow(token)) as { sub?: string };
     return Boolean(payload?.sub);

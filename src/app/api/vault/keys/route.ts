@@ -23,8 +23,6 @@ export const runtime = 'nodejs';
 async function getWalletFromAuthHeader(authHeader: string | null): Promise<string | null> {
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.slice(7);
-  const secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) return null;
   try {
     const payload = (await verifySessionTokenOrThrow(token)) as any;
     const w =

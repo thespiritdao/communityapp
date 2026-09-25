@@ -356,12 +356,6 @@ export async function POST(req: NextRequest) {
     // userId and wallet_address to embed, bypassing email-based session flows that
     // would pick the wrong auth user when multiple accounts share an email.
     // The RLS policy reads wallet_address from this JWT claim directly.
-    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!JWT_SECRET) {
-      console.error('❌ Auth API: Missing SUPABASE_JWT_SECRET');
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
     // For existing users, embed their profile wallet (not the CDP EVM address).
     // Multiple accounts can share the same CDP embedded wallet; the profile wallet
     // is the canonical identity used by RLS policies, conference tokens, etc.
@@ -379,6 +373,13 @@ export async function POST(req: NextRequest) {
         supabaseRefreshToken: issued.refreshToken,
         userId,
       });
+    }
+
+    // Legacy only: needs the shared secret (SESSION_ISSUANCE=legacy).
+    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('❌ Auth API: SESSION_ISSUANCE=legacy but SUPABASE_JWT_SECRET is not set');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
     const now = Math.floor(Date.now() / 1000);

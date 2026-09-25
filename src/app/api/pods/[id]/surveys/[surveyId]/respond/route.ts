@@ -10,8 +10,6 @@ const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
 
 async function getWalletFromToken(token: string): Promise<string | null> {
   try {
-    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!JWT_SECRET) return null;
     const payload = (await verifySessionTokenOrThrow(token)) as any;
     return payload.wallet_address || payload.user_metadata?.wallet_address || null;
   } catch {

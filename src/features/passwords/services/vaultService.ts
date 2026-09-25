@@ -2,7 +2,7 @@
 //
 // All methods return parsed JSON or throw with a helpful message.
 // Auth tokens are pulled from supabase-js's current session and sent
-// as Bearer headers — server routes verify via SUPABASE_JWT_SECRET.
+// as Bearer headers — server routes verify them with verifySessionToken.
 //
 // This is the only file UI components should import to talk to the
 // vault backend. It does NOT do any crypto — that's vaultCrypto.ts.

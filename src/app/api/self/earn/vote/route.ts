@@ -20,8 +20,6 @@ export const runtime = 'nodejs';
 
 async function walletFromToken(token: string): Promise<string | null> {
   try {
-    const secret = process.env.SUPABASE_JWT_SECRET;
-    if (!secret) return null;
     const p = (await verifySessionTokenOrThrow(token)) as any;
     return p.wallet_address || p.user_metadata?.wallet_address || null;
   } catch {

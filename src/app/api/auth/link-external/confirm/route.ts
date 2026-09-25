@@ -22,13 +22,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const token = authHeader.slice(7);
-  const secret = process.env.SUPABASE_JWT_SECRET;
-  if (!secret) {
-    return NextResponse.json(
-      { error: 'server configuration error' },
-      { status: 500 },
-    );
-  }
 
   let payload: any;
   try {

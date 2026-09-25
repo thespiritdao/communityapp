@@ -17,8 +17,6 @@ export const runtime = 'nodejs';
 
 async function getWalletFromToken(token: string): Promise<string | null> {
   try {
-    const secret = process.env.SUPABASE_JWT_SECRET;
-    if (!secret) return null;
     const payload = (await verifySessionTokenOrThrow(token)) as any;
     return payload.wallet_address || payload.user_metadata?.wallet_address || null;
   } catch {
