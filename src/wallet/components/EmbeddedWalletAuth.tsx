@@ -4,6 +4,20 @@
 import { useState } from 'react';
 import { useSignInWithEmail, useVerifyEmailOTP, useSignInWithOAuth, useEvmAddress, useSignOut } from '@coinbase/cdp-hooks';
 
+// Sign-in requests go straight from the browser to api.cdp.coinbase.com. When a
+// tracker blocker, strict browser privacy mode, VPN or DNS filter stops them,
+// the request never completes and the SDK surfaces a bare network error
+// (axios "Network Error", or the browser's own fetch failure text).
+const BLOCKED_NETWORK_MESSAGE =
+  "Your browser or network is blocking Coinbase sign-in, which SpiritDAO uses to create your account. " +
+  "Try turning off tracker blocking or privacy protection for this site (e.g. the shield icon in Firefox or Brave), " +
+  "pausing ad-blocker extensions, or using a different browser.";
+
+function isBlockedNetworkError(err: any): boolean {
+  const message = `${err?.message ?? ''} ${err?.code ?? ''}`;
+  return /Network Error|NetworkError|Failed to fetch|Load failed|ERR_NETWORK|ERR_BLOCKED/i.test(message);
+}
+
 interface EmbeddedWalletAuthProps {
   isLoading?: boolean;
   onEmailCaptured?: (email: string) => void;
@@ -59,6 +73,10 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
           return;
         }
       }
+      if (isBlockedNetworkError(err)) {
+        setError(BLOCKED_NETWORK_MESSAGE);
+        return;
+      }
       setError(err.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -111,6 +129,8 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
           setFlowId(null);
           setError('');
         }, 3000);
+      } else if (isBlockedNetworkError(err)) {
+        setError(BLOCKED_NETWORK_MESSAGE);
       } else {
         setError(errorMessage || 'Invalid OTP. Please try again.');
       }
@@ -136,7 +156,9 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
       }
     } catch (err: any) {
       console.error('❌ Failed to resend OTP:', err);
-      setError(err.message || 'Failed to resend OTP. Please try again.');
+      setError(isBlockedNetworkError(err)
+        ? BLOCKED_NETWORK_MESSAGE
+        : err.message || 'Failed to resend OTP. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -183,6 +205,12 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
           setIsSubmitting(false);
           return;
         }
+      }
+
+      if (isBlockedNetworkError(err)) {
+        setError(BLOCKED_NETWORK_MESSAGE);
+        setIsSubmitting(false);
+        return;
       }
 
       const errorMessage = err.message || err.toString() || 'Failed to sign in with Google';
