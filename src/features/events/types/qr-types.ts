@@ -9,7 +9,8 @@ export interface QRCodeData {
   registrationId: string;
   timestamp: number;
   expiresAt: number;
-  signature?: string; // For validation
+  signature?: string; // Legacy (v2, forgeable) — no longer accepted
+  token?: string; // v3: server-signed, verified by /api/events/[id]/qr/verify
   version: string; // For backward compatibility
 }
 

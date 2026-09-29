@@ -2,6 +2,7 @@ import QRCode from 'qrcode';
 import { supabase } from '@/utils/supabaseClient';
 import { EventService } from '../lib/supabase';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import type {
   QRCodeData,
   QRValidationResult,
@@ -13,7 +14,8 @@ import type {
 } from '../types/qr-types';
 
 export class QRCodeService {
-  private static readonly QR_VERSION = '2.0';
+  // 3.0: codes carry a server-signed token (see /api/events/[id]/qr).
+  private static readonly QR_VERSION = '3.0';
   private static readonly QR_EXPIRY_HOURS = 24; // QR codes expire after 24 hours
 
   /**
@@ -44,14 +46,26 @@ export class QRCodeService {
         }
       }
 
+      // The server signs the code; only it can verify it at the door.
+      const res = await fetch(`/api/events/${eventId}/qr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await ensureAuthHeaders()) },
+        body: JSON.stringify({ registrationId: registration.id }),
+      });
+      const issued = await res.json().catch(() => null);
+      if (!res.ok || !issued?.token) {
+        throw new Error(issued?.error || `Could not issue check-in code (HTTP ${res.status})`);
+      }
+
       const qrData: QRCodeData = {
         eventId,
         walletAddress: registration.user_address,
         userId: resolvedUserProfile?.user_id || null, // Use proper user_id from profile
         registrationId: registration.id,
         timestamp: now,
-        expiresAt,
+        expiresAt: issued.expiresAt ?? expiresAt,
         version: this.QR_VERSION,
+        token: issued.token,
       };
 
       console.log('🎫 Generating QR code with data:', {
@@ -60,9 +74,6 @@ export class QRCodeService {
         userId: qrData.userId,
         registrationId: qrData.registrationId,
       });
-
-      // Add signature for validation (basic implementation)
-      qrData.signature = await this.generateSignature(qrData);
 
       const qrCodeURL = await QRCode.toDataURL(JSON.stringify(qrData), {
         width: 256,
@@ -188,30 +199,33 @@ export class QRCodeService {
         };
       }
 
-      // Check expiration
-      if (qrData.expiresAt && Date.now() > qrData.expiresAt) {
+      // The server checks the signature, expiry, event and registration owner.
+      if (!qrData.token) {
         return {
           isValid: false,
-          error: 'QR code has expired',
+          error:
+            'This is an older check-in code. Ask the attendee to reopen the event page for a fresh one.',
           canCheckIn: false,
           hasTokenAccess: false,
         };
       }
-
-      // Validate signature
-      console.log('🔐 Validating signature...');
-      const isSignatureValid = await this.validateSignature(qrData);
-      console.log('🔐 Signature validation result:', isSignatureValid);
-
-      if (!isSignatureValid) {
-        console.log('❌ Signature validation failed for QR code');
+      const verifyRes = await fetch(`/api/events/${eventId}/qr/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await ensureAuthHeaders()) },
+        body: JSON.stringify({ token: qrData.token }),
+      });
+      const verified = await verifyRes.json().catch(() => null);
+      if (!verifyRes.ok || !verified?.valid) {
         return {
           isValid: false,
-          error: 'Invalid QR code signature',
+          error: verified?.error || 'Could not verify this check-in code',
           canCheckIn: false,
           hasTokenAccess: false,
         };
       }
+      // Trust only what the server signed, not the rest of the QR's JSON.
+      qrData.registrationId = verified.registrationId;
+      qrData.walletAddress = verified.wallet;
 
       // Get registration details
       const registration = await this.getRegistrationById(
@@ -449,30 +463,6 @@ export class QRCodeService {
   }
 
   // Private helper methods
-
-  private static async generateSignature(qrData: QRCodeData): Promise<string> {
-    // Simple signature generation - in production, use proper cryptographic signing
-    const payload = `${qrData.eventId}-${qrData.walletAddress}-${qrData.timestamp}`;
-    return btoa(payload).substring(0, 16);
-  }
-
-  private static async validateSignature(qrData: QRCodeData): Promise<boolean> {
-    if (!qrData.signature) {
-      console.log('🔐 No signature provided');
-      return false;
-    }
-
-    const expectedSignature = await this.generateSignature(qrData);
-    const isValid = qrData.signature === expectedSignature;
-
-    console.log('🔐 Signature comparison:', {
-      provided: qrData.signature,
-      expected: expectedSignature,
-      isValid,
-    });
-
-    return isValid;
-  }
 
   private static async getRegistrationById(
     registrationId: string,
