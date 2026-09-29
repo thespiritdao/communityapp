@@ -114,3 +114,7 @@ src/app/api/marketing/
 # repo, so a fresh clone has always needed a compile before deploying a contract.
 /artifacts/
 /cache/
+
+# CDP / API key downloads
+*api_key*.json
+*api-key*.json
