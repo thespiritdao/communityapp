@@ -217,6 +217,11 @@ export async function POST(request: NextRequest) {
       notification,
     });
   } catch (error: any) {
+    // Per-sender limits enforced by the notification_rate_limit trigger
+    // (migration 20260929000001).
+    if (error?.code === 'P0429') {
+      return NextResponse.json({ error: error.message }, { status: 429 });
+    }
     console.error('[API] Failed to send notification:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to send notification' },
