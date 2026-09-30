@@ -118,3 +118,6 @@ src/app/api/marketing/
 # CDP / API key downloads
 *api_key*.json
 *api-key*.json
+
+# MapLibre worker, copied at build time (scripts/copy-maplibre-worker.mjs)
+public/maplibre/

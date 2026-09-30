@@ -4,17 +4,22 @@
 // lines between linked pins. Also used in "pick" mode by the editor.
 //
 // Load with next/dynamic({ ssr: false }) — MapLibre touches window.
-// Tiles: OpenFreeMap (no key). CSP: tiles host in connect-src, worker-src blob:.
+// Tiles: OpenFreeMap (no key). CSP: tiles host in connect-src, worker-src 'self'.
 
 'use client';
 
 import { useEffect, useRef } from 'react';
-import maplibregl, { type Map as MLMap, type Marker, type LngLatBoundsLike } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { Map as MLMap, Marker, LngLatBoundsLike } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PodPlace, MemberPin } from '../types';
 import { PLACE_KIND_META } from '../types';
 
 export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+
+// MapLibre v6 cannot find its worker inside Next's bundle; the worker files
+// are copied to public/maplibre by scripts/copy-maplibre-worker.mjs.
+maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
 
 export interface PlacesMapProps {
   places: PodPlace[];
@@ -95,6 +100,8 @@ export default function PlacesMap({
   const fittedRef = useRef(false);
   const pickRef = useRef<{ pickMode: boolean; onPick?: (lat: number, lng: number) => void }>({ pickMode, onPick });
   pickRef.current = { pickMode, onPick };
+  // Latest data pass; the load handler runs it once the sources exist.
+  const applyRef = useRef<(() => void) | null>(null);
 
   // ── init ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -129,8 +136,8 @@ export default function PlacesMap({
         source: 'relations',
         paint: { 'line-color': '#5B6874', 'line-width': 2, 'line-dasharray': [2, 2] },
       });
-      // trigger a data pass now that sources exist
-      map.fire('places:refresh');
+      // run a data pass now that sources exist
+      applyRef.current?.();
     });
     map.on('click', (e) => {
       const { pickMode: pm, onPick: cb } = pickRef.current;
@@ -227,10 +234,10 @@ export default function PlacesMap({
       }
     };
 
+    applyRef.current = apply;
     if (loadedRef.current) apply();
-    map.on('places:refresh', apply);
     return () => {
-      map.off('places:refresh', apply);
+      if (applyRef.current === apply) applyRef.current = null;
     };
   }, [places, members, selectedId, onSelect, defaultCenter]);
 

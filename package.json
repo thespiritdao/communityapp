@@ -4,6 +4,8 @@
   "repository": "https://github.com/thespiritdao",
   "license": "MIT",
   "scripts": {
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
+    "predev": "node scripts/copy-maplibre-worker.mjs",
     "build": "tailwindcss -i ./src/styles/index.css -o ./src/tailwind.css --minify && tailwindcss -i ./src/styles/index-with-tailwind.css -o ./src/styles.css --minify && next build",
     "build:lib": "packemon build --addEngines --addFiles --declaration && npx packemon validate --no-license --no-people --no-repo && tailwindcss -i ./src/styles/index.css -o ./src/tailwind.css --minify && tailwindcss -i ./src/styles/index-with-tailwind.css -o ./src/styles.css --minify",
     "check": "biome check --write .",
@@ -136,7 +138,7 @@
     "livekit-client": "^2.17.2",
     "livekit-server-sdk": "^2.15.0",
     "lucide-react": "^0.468.0",
-    "maplibre-gl": "5.6.0",
+    "maplibre-gl": "^6.11.2",
     "next": "^15.5.26",
     "next-themes": "^0.4.4",
     "openai": "^6.25.0",
