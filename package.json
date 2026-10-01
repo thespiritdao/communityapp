@@ -50,7 +50,8 @@
     "verify:authority": "node scripts/audit-probes.mjs && node scripts/verify-authority.mjs",
     "verify:linking": "node scripts/wallet-link-e2e.mjs",
     "verify:qr": "node scripts/event-qr-e2e.mjs",
-    "verify:prod": "npm run verify:static && npm run verify:exposure && npm run verify:session && npm run verify:authority && npm run verify:linking && npm run verify:qr",
+    "verify:invites": "node scripts/leader-invites-e2e.mjs",
+    "verify:prod": "npm run verify:static && npm run verify:exposure && npm run verify:session && npm run verify:authority && npm run verify:linking && npm run verify:qr && npm run verify:invites",
     "hooks:install": "node scripts/install-hooks.mjs",
     "verify:session": "node scripts/verify-issued-session.mjs"
   },
