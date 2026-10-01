@@ -109,12 +109,11 @@ const InlineSwitch: React.FC<{
   />
 );
 
-// Minimum required pod leaders. Configurable via NEXT_PUBLIC_MIN_POD_LEADERS
-// (build-time inlined — a Vercel change requires a redeploy). Defaults to 1.
-const MIN_POD_LEADERS = Math.max(
-  1,
-  parseInt(process.env.NEXT_PUBLIC_MIN_POD_LEADERS || '1', 10) || 1,
-);
+// A pod can be founded by one person: the creator is its only leader at
+// creation. Anyone else entered in the leader fields is invited and becomes
+// a co-leader only after accepting (src/lib/podLeaderInvites.ts). The
+// database enforces this too (migration 20261001000001).
+const MIN_POD_LEADERS = 1;
 
 export const HatsModulePodCreationForm: React.FC<
   HatsModulePodCreationFormProps
@@ -300,6 +299,8 @@ export const HatsModulePodCreationForm: React.FC<
   const [extractedProxyAddress, setExtractedProxyAddress] =
     useState<string>('');
   const proxyButtonRef = useRef<HTMLButtonElement>(null);
+  // Co-leaders entered in the form; invited once the pod row exists.
+  const coLeaderInviteesRef = useRef<string[]>([]);
   // Holds the Supabase URL uploaded before the tx so handleTransactionSuccess can use it
   const preUploadedImageUrlRef = useRef<string>('');
 
@@ -823,11 +824,18 @@ export const HatsModulePodCreationForm: React.FC<
         }
       }
 
+      // Only the creator leads at creation; the rest are invited after the
+      // pod is saved (handleTransactionSuccess).
+      const creatorLead = (address || '').toLowerCase();
+      coLeaderInviteesRef.current = validation.validLeads.filter(
+        (lead) => lead.toLowerCase() !== creatorLead,
+      );
+
       const config: PodCreationConfig = {
         name: formData.name,
         description: formData.description,
         parentHatId: validParentHatId,
-        podLeaders: validation.validLeads,
+        podLeaders: [creatorLead],
         eligibilityRules: eligibilityRules as any,
         treasuryConfig: formData.enableTreasury
           ? {
@@ -835,8 +843,8 @@ export const HatsModulePodCreationForm: React.FC<
               // treasury_threshold_bps and consumed at activation time, not
               // here. This `threshold` field is the legacy V2 N-of-M shape
               // and is currently dead (see PodOperationsService:159).
-              threshold: validation.validLeads.length,
-              signers: validation.validLeads,
+              threshold: 1,
+              signers: [creatorLead],
             }
           : undefined,
       };
@@ -1734,7 +1742,7 @@ export const HatsModulePodCreationForm: React.FC<
             description: formData.description,
             parentPodId: formData.parentPodId, // UUID for FK
             parentHatId: parentHatId, // HAT ID for child index queries
-            podLeads: validation.validLeads,
+            podLeads: [(address || '').toLowerCase()],
             image: podImageUrl,
             createdByAddress: address || '',
             managementHatId: newHatId,
@@ -1801,16 +1809,39 @@ export const HatsModulePodCreationForm: React.FC<
 
         }
 
+        // Invite the co-leaders named in the form. They become leaders only
+        // after accepting; a failure here never fails the creation.
+        if (podData?.podId && coLeaderInviteesRef.current.length > 0) {
+          try {
+            const inviteRes = await fetch(`/api/pods/${podData.podId}/leader-invites`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...(await ensureAuthHeaders()) },
+              body: JSON.stringify({ invitees: coLeaderInviteesRef.current }),
+            });
+            const inviteData = await inviteRes.json().catch(() => ({}));
+            if (inviteRes.ok && inviteData.invited?.length) {
+              toast({
+                title: 'Co-leaders invited',
+                description: `${inviteData.invited.length} invitation(s) sent. They become leaders once they accept.`,
+              });
+            } else if (!inviteRes.ok) {
+              console.warn('⚠️ Co-leader invitations not sent:', inviteData);
+            }
+          } catch (inviteErr) {
+            console.warn('⚠️ Co-leader invitations failed (non-fatal):', inviteErr);
+          }
+        }
+
         // pod_role_permissions are written with full permissions by the
         // review/activate route on pod approval. Writing them here with an
         // incomplete set caused the review route upsert to be skipped.
         if (podData?.podId && newHatId) {
-          // Add pod leaders to pod_members so the permission system can find them
+          // Add the creator (the only leader at creation) to pod_members so
+          // the permission system can find them
 
             try {
-              // Create pod_members entries for all leaders
               // Using actual schema: id, pod_id, wallet, membership_type, role, hat_id, is_active, joined_at, removed_at, created_at, updated_at
-              const memberEntries = validation.validLeads.map(
+              const memberEntries = [(address || '').toLowerCase()].map(
                 (leaderAddress) => ({
                   pod_id: podData.podId,
                   wallet: leaderAddress.toLowerCase(),
@@ -4013,8 +4044,8 @@ export const HatsModulePodCreationForm: React.FC<
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <Label>Pod Leaders *</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Pod Leaders</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -4023,9 +4054,14 @@ export const HatsModulePodCreationForm: React.FC<
                   className="flex items-center gap-1"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Leader
+                  Invite Co-leader
                 </Button>
               </div>
+              <p className="text-sm mb-4" style={{ color: '#5B6874' }}>
+                You lead the pod from the start. Anyone else you add here is sent
+                an invitation and becomes a co-leader only after accepting. You
+                can also invite co-leaders later from the pod page.
+              </p>
 
               {formData.podLeaders.map((leader, index) => (
                 <div key={index} className="flex items-center gap-2 mb-2">

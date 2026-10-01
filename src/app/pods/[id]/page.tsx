@@ -38,6 +38,7 @@ import { PersonalCalendar } from '@/features/events/components/PersonalCalendar'
 import ActiveSurveysBanner from '@/features/surveys/components/ActiveSurveysBanner';
 import { PodConferenceSection } from '@/features/conference/components/PodConferenceSection';
 import { PodPlacesSection } from '@/features/places/components/PodPlacesSection';
+import { LeaderInviteBanner, LeaderInvitesPanel } from '@/features/pods/components/LeaderInvites';
 import '../../../features/home/styles/HomePage.css';
 
 // Lazy load the agreement signing modal (fixes SSR issues)
@@ -484,6 +485,18 @@ export default function PodDetailPage() {
               treasuryAddress={treasuryAddress}
               onDeployed={(addr) => setTreasuryAddress(addr)}
             />
+          )}
+
+          {/* Leadership invitation for the viewer, and co-leader invites for leaders */}
+          {id && address && (
+            <LeaderInviteBanner
+              podId={String(id)}
+              podName={pod.name}
+              onBecameLeader={() => window.location.reload()}
+            />
+          )}
+          {id && address && isLeader && (
+            <LeaderInvitesPanel podId={String(id)} leaders={pod.pod_leads || []} />
           )}
 
           {/* Active Surveys Banner */}

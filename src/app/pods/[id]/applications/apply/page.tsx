@@ -79,6 +79,7 @@ export default function ApplyToPodPage() {
         .select('*')
         .eq('pod_id', podId)
         .eq('applicant_address', address.toLowerCase())
+        .neq('status', 'invited')
         .order('submitted_at', { ascending: false })
         .limit(1)
         .maybeSingle();

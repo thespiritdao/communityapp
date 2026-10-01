@@ -75,6 +75,7 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
           .from('pod_membership_applications')
           .select('*')
           .eq('pod_id', podId)
+          .neq('status', 'invited') // leader invitations have their own card
           .order('submitted_at', { ascending: false }),
         supabase
           .from('pods')

@@ -15,6 +15,7 @@ import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
 import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
+import { createLeaderInvites } from '@/lib/podLeaderInvites';
 
 export const runtime = 'nodejs';
 
@@ -77,9 +78,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { name, description, podLeaders, imageURI, podId, parentPodId } = body;
 
-    if (!name || !podLeaders?.length || !podId) {
+    if (!name || !podId) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, podLeaders, podId' },
+        { error: 'Missing required fields: name, podId' },
         { status: 400 },
       );
     }
@@ -111,7 +112,12 @@ export async function POST(req: NextRequest) {
     const IMAGE_URI = imageURI ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=400&background=bfe7c6&color=000&bold=true`;
 
-    const podLeadAddresses = podLeaders.map((a: string) => a as `0x${string}`);
+    // The creator is the only leader at creation; everyone else listed is
+    // invited after the pod is saved and leads only once they accept.
+    const podLeadAddresses = [callerAddress.toLowerCase() as `0x${string}`];
+    const coLeaderInvitees = (Array.isArray(podLeaders) ? podLeaders : [])
+      .map((a: string) => String(a).toLowerCase())
+      .filter((a: string) => a !== callerAddress.toLowerCase());
 
     console.log(`Pod create API: calling createPodProposal for "${name}" (podId: ${podId})`);
     console.log(`  Contract: ${POD_CREATION_MANAGER}`);
@@ -208,6 +214,12 @@ export async function POST(req: NextRequest) {
         parentPodId: parentPodId || null,
       }),
     }).catch((e) => console.error('Pod create API: notify-leaders failed:', e));
+
+    if (coLeaderInvitees.length > 0) {
+      await createLeaderInvites(savedPod.id, callerAddress, coLeaderInvitees).catch((e) =>
+        console.error('Pod create API: co-leader invitations failed:', e),
+      );
+    }
 
     return NextResponse.json({
       success: true,
