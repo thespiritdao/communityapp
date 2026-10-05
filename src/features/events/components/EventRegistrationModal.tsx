@@ -221,12 +221,10 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         // Log blockchain verification results
         if (!contractLoading) {
           if (contractError) {
-            console.error('❌ Event NOT found on blockchain:', {
+            console.info('ℹ️ Event is not on the EventManager contract; free events register database-only:', {
               eventId: blockchainEventId,
               error: contractError.message,
-              reason: 'Event was never created on-chain or wrong ID used',
-              solution:
-                'Event must be created on blockchain before registration',
+              note: 'Expected for the seeded recurring community calls. Paid events do need an on-chain record.',
             });
           } else if (onChainEvent) {
             console.log('✅ Event found on blockchain:', {

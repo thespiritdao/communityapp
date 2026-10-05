@@ -28,10 +28,37 @@ export const runtime = 'nodejs';
 const abi = ((EventManagerABI as { abi?: Abi }).abi ?? EventManagerABI) as Abi;
 const isZeroPrice = (v: string | null | undefined) => /^0*(\.0*)?$/.test((v ?? '').trim() || '0');
 
-async function registeredOnchain(eventId: string, accounts: string[]): Promise<boolean> {
+function eventManager() {
   const address = process.env.NEXT_PUBLIC_EVENT_MANAGER as `0x${string}` | undefined;
   if (!address) throw new Error('NEXT_PUBLIC_EVENT_MANAGER is not set');
   const client = createPublicClient({ chain: base, transport: http(process.env.NEXT_PUBLIC_RPC_URL) });
+  return { address, client };
+}
+
+/**
+ * Whether EventManager knows this event at all. The recurring community
+ * calls (Town Hall, First Contact, Feedback Loops) were seeded straight into
+ * the database with slug ids and were never created on-chain, so a
+ * blockchain_event_id on the row does not by itself mean the contract has it.
+ * A revert with "Event not found" is the contract's answer; any other failure
+ * (RPC down, bad address) is rethrown so we fail closed rather than open.
+ */
+async function eventExistsOnchain(eventId: string): Promise<boolean> {
+  const { address, client } = eventManager();
+  try {
+    await client.readContract({ address, abi, functionName: 'getEvent', args: [eventId] });
+    return true;
+  } catch (err) {
+    const text = [(err as { shortMessage?: string }).shortMessage, (err as Error).message]
+      .filter(Boolean)
+      .join('\n');
+    if (/Event not found/i.test(text)) return false;
+    throw err;
+  }
+}
+
+async function registeredOnchain(eventId: string, accounts: string[]): Promise<boolean> {
+  const { address, client } = eventManager();
   // The receipt is in, but give a lagging RPC node one more chance.
   for (let attempt = 0; attempt < 2; attempt++) {
     const results = await Promise.all(
@@ -71,8 +98,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const free = isZeroPrice(event.price_amount) && isZeroPrice(event.price_self_amount);
-  if (event.blockchain_event_id) {
-    if (!(await registeredOnchain(event.blockchain_event_id, cdp.accounts))) {
+  // Paid events are always proven against the contract. Free events are proven
+  // too when the contract has the event; a free event the contract has never
+  // heard of (the seeded recurring calls) is recorded in the database only,
+  // which is what the registration modal falls back to as well.
+  const onchain =
+    !!event.blockchain_event_id &&
+    (!free || (await eventExistsOnchain(event.blockchain_event_id)));
+  if (onchain) {
+    if (!(await registeredOnchain(event.blockchain_event_id as string, cdp.accounts))) {
       return NextResponse.json(
         { error: 'The event contract does not show this registration yet' },
         { status: 409 },
