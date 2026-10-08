@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, Eye, CheckCircle } from 'lucide-react';
 import { BookmarkButton } from './BookmarkButton';
+import { AuthorAvatar, communityStyles } from '@/components/community';
 
 let styles: any = {};
 try {
@@ -65,25 +66,8 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onTagClick }) => {
   return (
     <Link
       href={`/forum/thread/${thread.id}`}
-      style={{
-        display: 'block',
-        padding: '14px 16px',
-        borderRadius: '10px',
-        backgroundColor: '#ffffff',
-        border: '1px solid rgba(209,196,169,0.4)',
-        textDecoration: 'none',
-        color: 'inherit',
-        transition: 'box-shadow 0.2s, transform 0.15s',
-        position: 'relative',
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-        (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-        (e.currentTarget as HTMLElement).style.transform = 'none';
-      }}
+      className={communityStyles.listCard}
+      style={{ display: 'block', padding: '14px 16px', position: 'relative' }}
     >
       {/* Unread dot */}
       {thread.is_unread && (
@@ -95,7 +79,7 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onTagClick }) => {
           width: 8,
           height: 8,
           borderRadius: '50%',
-          backgroundColor: '#3B82F6',
+          backgroundColor: 'var(--cs-primary)',
         }} />
       )}
 
@@ -108,18 +92,13 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onTagClick }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingRight: 32 }}>
         {thread.is_pinned && <span style={{ fontSize: '0.8rem' }}>📌</span>}
         {thread.is_resolved && (
-          <CheckCircle size={14} style={{ color: '#2F5D50', flexShrink: 0 }} />
+          <CheckCircle size={14} style={{ color: 'var(--cs-primary)', flexShrink: 0 }} />
         )}
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, color: '#212121' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, color: 'var(--cs-text)' }}>
           {thread.title}
         </h3>
         {thread.pod_name && (
-          <Badge variant="secondary" style={{
-            fontSize: '0.65rem', padding: '1px 7px',
-            backgroundColor: '#E8F1EE', color: '#2F5D50', border: '1px solid #B8D9CA',
-          }}>
-            {thread.pod_name}
-          </Badge>
+          <span className={communityStyles.badge}>{thread.pod_name}</span>
         )}
         {thread.category_name && (
           <Badge variant="outline" style={{ fontSize: '0.65rem', padding: '1px 7px' }}>
@@ -141,9 +120,9 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onTagClick }) => {
                 fontSize: '0.65rem',
                 padding: '1px 8px',
                 borderRadius: 12,
-                backgroundColor: '#F5EDD7',
-                color: '#8B5E3C',
-                border: '1px solid #D1C4A9',
+                backgroundColor: 'var(--cs-cream)',
+                color: 'var(--cs-brown)',
+                border: '1px solid var(--cs-tan)',
                 cursor: onTagClick ? 'pointer' : 'default',
               }}
             >
@@ -163,27 +142,15 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onTagClick }) => {
       }}>
         {/* Author */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {thread.author_profile_picture ? (
-            <img
-              src={thread.author_profile_picture}
-              alt=""
-              style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }}
-            />
-          ) : (
-            <div style={{
-              width: 22, height: 22, borderRadius: '50%', backgroundColor: '#e0e0e0',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.65rem', fontWeight: 600, color: '#666',
-            }}>
-              {getAuthorDisplayName().charAt(0).toUpperCase()}
-            </div>
-          )}
-          <span style={{ color: '#555', fontWeight: 500 }}>{getAuthorDisplayName()}</span>
-          <span style={{ color: '#999' }}>{formatDate(thread.created_at)}</span>
+          <AuthorAvatar name={getAuthorDisplayName()} src={thread.author_profile_picture} size={22} />
+          <span style={{ color: 'var(--cs-ink)', fontWeight: 500 }}>{getAuthorDisplayName()}</span>
+          <span style={{ color: 'var(--cs-meta)' }} title={new Date(thread.created_at).toLocaleString()}>
+            {formatDate(thread.created_at)}
+          </span>
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#757575' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--cs-meta)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <MessageSquare size={13} />
             {replyCount}

@@ -1,0 +1,227 @@
+/* Shared parts for chat, forum and member lists. Every value comes from the
+   --cs-* tokens in globals.css, which pod faces re-derive. */
+
+/* ── Avatar ─────────────────────────────────────────────────────────── */
+.avatar {
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: var(--cs-sage);
+}
+.avatarFallback {
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--cs-sage);
+  color: var(--cs-primary);
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+.clickable {
+  cursor: pointer;
+}
+
+/* ── Author line ────────────────────────────────────────────────────── */
+.authorLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.authorText {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.authorName {
+  font-weight: 600;
+  color: var(--cs-ink);
+  font-size: var(--cs-text-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.authorNameCompact {
+  font-size: var(--cs-text-meta);
+}
+.authorTime {
+  font-size: var(--cs-text-meta);
+  color: var(--cs-meta);
+  white-space: nowrap;
+}
+
+/* ── List card (forum categories, chat groups) ──────────────────────── */
+.listGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+@media (max-width: 400px) {
+  .listGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.listCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--cs-radius-card);
+  background-color: var(--cs-card);
+  border: 1px solid var(--cs-border);
+  box-shadow: none;
+  text-decoration: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.listCard:hover {
+  box-shadow: var(--cs-shadow-hover);
+  transform: translateY(-2px);
+}
+.listCard:focus-visible {
+  outline: 2px solid var(--cs-primary);
+  outline-offset: 2px;
+}
+.listCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.listCardIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: var(--cs-sage);
+  color: var(--cs-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.listCardIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.listCardTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--cs-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.listCardDescription {
+  margin: 8px 0 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--cs-meta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.listCardFooter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 0.75rem;
+  color: var(--cs-meta);
+}
+.listCardFooterRule {
+  margin-top: 10px;
+  border-top: 1px solid var(--cs-border);
+}
+.listCardFooterItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.listCardFooterStrong {
+  color: var(--cs-primary);
+  font-weight: 600;
+}
+
+/* ── Badges ─────────────────────────────────────────────────────────── */
+.badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background-color: var(--cs-sage);
+  color: var(--cs-primary);
+  border: 1px solid var(--cs-border);
+  white-space: nowrap;
+}
+.countBadge {
+  flex-shrink: 0;
+  min-width: 20px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: var(--cs-primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ── Page heading shared by Chat and Forum ──────────────────────────── */
+.pageTitle {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  color: var(--cs-primary);
+  margin: 0;
+}
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--cs-primary);
+}
+
+/* ── Empty state ────────────────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+.emptyIcon {
+  display: block;
+  margin: 0 auto 1rem;
+  opacity: 0.4;
+  color: var(--cs-muted);
+}
+.emptyTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--cs-brown);
+  margin: 0 0 0.5rem;
+}
+.emptyText {
+  font-size: 0.9rem;
+  color: var(--cs-meta);
+  margin: 0;
+}

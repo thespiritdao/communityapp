@@ -89,6 +89,34 @@
     --face-surface-1: #F0ECE6;
     --face-surface-2: #E8E4DC;
 
+    /* Community surfaces (chat, forum, member lists). Defaults are the exact
+       legacy hexes those screens hard-coded, so the default appearance is
+       unchanged; FaceProvider derives face equivalents (faceTheme.ts). One
+       radius, one border, one shadow recipe and two text sizes, so chat and
+       forum are built from the same parts. */
+    --cs-primary: #2F5D50;
+    --cs-primary-hover: #1a3d34;
+    --cs-primary-soft: #6F8F86;
+    --cs-ink: #1F453A;
+    --cs-text: #212121;
+    --cs-meta: #757575;
+    --cs-muted: #8FAAA1;
+    --cs-brown: #8B5E3C;
+    --cs-sage: #E8F1EE;
+    --cs-cream: #F5EDD7;
+    --cs-page: #F5F4ED;
+    --cs-tan: #D1C4A9;
+    --cs-card: #ffffff;
+    --cs-danger: #8B3A3A;
+    --cs-border: rgba(209, 196, 169, 0.45);
+    --cs-shadow-rest: 0 1px 3px rgba(47, 93, 80, 0.06);
+    --cs-shadow-hover: 0 4px 12px rgba(47, 93, 80, 0.12);
+    --cs-radius-card: 12px;
+    --cs-radius-bubble: 16px;
+    --cs-radius-control: 8px;
+    --cs-text-body: 0.9rem;
+    --cs-text-meta: 0.78rem;
+
     /* OnChainKit theme variables */
     --ock-font-family: 'DM Sans', sans-serif;
     --ock-border-radius: 0.5rem;

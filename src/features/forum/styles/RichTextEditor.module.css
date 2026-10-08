@@ -1,7 +1,7 @@
 /* Rich Text Editor Container */
 .richTextContainer {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 0.25rem;
+  border: 1px solid var(--cs-tan);
+  border-radius: var(--cs-radius-control);
   overflow: hidden;
   background-color: #fff;
 }
@@ -12,7 +12,7 @@
   flex-wrap: wrap;
   gap: 4px;
   padding: 8px;
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -38,9 +38,9 @@
 }
 
 .toolbar button.active {
-  background-color: #2F5D50;
+  background-color: var(--cs-primary);
   color: white;
-  border-color: #1F453A;
+  border-color: var(--cs-ink);
 }
 
 .divider {
@@ -64,7 +64,7 @@
 
 /* Placeholder */
 .editor p.is-editor-empty:first-child::before {
-  color: #8FAAA1;
+  color: var(--cs-muted);
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -105,15 +105,15 @@
 }
 
 .editor blockquote {
-  border-left: 3px solid #D1C4A9;
+  border-left: 3px solid var(--cs-tan);
   padding-left: 1em;
   margin: 1em 0;
-  color: #5F5A54;
+  color: var(--face-text-subtle);
   font-style: italic;
 }
 
 .editor code {
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
@@ -121,7 +121,7 @@
 }
 
 .editor pre {
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
   padding: 1em;
   border-radius: 6px;
   overflow-x: auto;
@@ -135,13 +135,13 @@
 }
 
 .editor a {
-  color: #2F5D50;
+  color: var(--cs-primary);
   text-decoration: underline;
   cursor: pointer;
 }
 
 .editor a:hover {
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 /* Focus state */
@@ -150,6 +150,6 @@
 }
 
 .richTextContainer:focus-within {
-  border-color: #2F5D50;
-  box-shadow: 0 0 0 2px rgba(47, 93, 80, 0.1);
+  border-color: var(--cs-primary);
+  box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.12);
 }

@@ -1,6 +1,5 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/utils/supabaseClient';
 import { getCurrentSession } from '@/features/identity';
 import styles from '../styles/Forum.module.css';
@@ -12,6 +11,7 @@ import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import { RichTextEditor } from './RichTextEditor';
 import { MentionRenderer } from './MentionRenderer';
 import { Quote } from 'lucide-react';
+import { AuthorLine } from '@/components/community';
 import type { MediaAttachment } from '../services/MediaUploadService';
 import type { UserProfile } from '@/features/identity/types';
 
@@ -68,14 +68,6 @@ const PostCard: React.FC<PostCardProps> = ({
   }, []);
 
   const isAuthor = currentUserWallet?.toLowerCase() === post.author_address?.toLowerCase();
-
-  const formatDate = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch (error) {
-      return 'Invalid date';
-    }
-  };
 
   const handleSaveEdit = async () => {
     if (!editContent.trim()) return;
@@ -134,46 +126,14 @@ const PostCard: React.FC<PostCardProps> = ({
   return (
     <div className={styles.postCard}>
       <div className={styles.postHeader}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Profile picture */}
-          {authorProfile?.profile_picture ? (
-            <img
-              src={authorProfile.profile_picture}
-              alt={getAuthorDisplay()}
-              onClick={handleProfileClick}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                cursor: 'pointer',
-              }}
-            />
-          ) : (
-            <div
-              onClick={handleProfileClick}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: '#e0e0e0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                color: '#666',
-                cursor: 'pointer',
-              }}
-            >
-              {getAuthorDisplay().charAt(0).toUpperCase()}
-            </div>
-          )}
-          {/* Name/Address */}
-          <strong onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
-            {getAuthorDisplay()}
-          </strong>
-        </div>
+        <AuthorLine
+          name={getAuthorDisplay()}
+          avatarSrc={authorProfile?.profile_picture}
+          avatarSize={36}
+          timestamp={post.created_at}
+          timeFormat="relative"
+          onAuthorClick={authorProfile ? handleProfileClick : undefined}
+        />
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {/* Author Edit Button */}
           {isAuthor && !isEditing && (
@@ -267,7 +227,7 @@ const PostCard: React.FC<PostCardProps> = ({
               style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
                 display: 'flex', alignItems: 'center', gap: 4,
-                fontSize: '0.75rem', color: '#8FAAA1',
+                fontSize: '0.75rem', color: 'var(--cs-muted)',
               }}
             >
               <Quote size={14} />
@@ -279,7 +239,6 @@ const PostCard: React.FC<PostCardProps> = ({
             targetId={post.id}
             threadId={post.thread_id}
           />
-          <span className={styles.postDate}>{formatDate(post.created_at)}</span>
         </div>
       </div>
 

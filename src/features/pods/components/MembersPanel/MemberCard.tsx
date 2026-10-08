@@ -8,7 +8,8 @@
 'use client';
 
 import React from 'react';
-import { User, UserMinus, Vote } from 'lucide-react';
+import { UserMinus, Vote } from 'lucide-react';
+import { AuthorAvatar, displayNameOf } from '@/components/community';
 import { Button } from '@/components/ui/button';
 import { displayName } from '../../../identity/utils/displayName';
 import type { UserProfile } from '../../../identity/types';
@@ -99,26 +100,12 @@ export const MemberCard = React.memo<MemberCardProps>(
       // flex-wrap lets the removal confirmation drop to its own full-width
       // row beneath the name instead of squeezing the name beside it.
       <div className={`${className ?? ''} flex-wrap`}>
-        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-gray-200">
-          {profile?.profile_picture ? (
-            <img
-              src={profile.profile_picture}
-              alt={profile?.first_name || 'Profile'}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                target.nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-          ) : null}
-          <div
-            className={`w-6 h-6 text-gray-400 ${profile?.profile_picture ? 'hidden' : ''}`}
-          >
-            <User className="w-6 h-6" />
-          </div>
-        </div>
+        <AuthorAvatar
+          name={displayNameOf(profile, address)}
+          src={profile?.profile_picture}
+          size={40}
+          onClick={handleClickName}
+        />
 
         <div className="flex-1">
           {/* Name Display - Full First and Last Name, Clickable for Modal */}

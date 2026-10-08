@@ -117,6 +117,30 @@ function varsForColors(colors: FaceColors): VarValue[] {
     raw('--face-surface-1', colors.secondary);
     raw('--face-surface-2', mixHex(colors.secondary, fg ?? '#1F453A', 0.95));
   }
+
+  // Community surfaces (chat, forum, member lists). Washes and borders are
+  // the primary/foreground mixed into the background, so a face's chat and
+  // forum read as one family with the rest of the face.
+  if (colors.primary) {
+    raw('--cs-primary', colors.primary);
+    raw('--cs-primary-hover', darkenHex(colors.primary, 0.3));
+    if (bg) {
+      raw('--cs-primary-soft', mixHex(colors.primary, bg, 0.7));
+      raw('--cs-muted', mixHex(colors.primary, bg, 0.5));
+      raw('--cs-sage', mixHex(colors.primary, bg, 0.1));
+    }
+  }
+  if (fg) {
+    raw('--cs-ink', fg);
+    raw('--cs-text', fg);
+    if (bg) {
+      raw('--cs-meta', mixHex(fg, bg, 0.6));
+      raw('--cs-tan', mixHex(fg, bg, 0.25));
+    }
+  }
+  if (bg) raw('--cs-page', bg);
+  if (colors.secondary) raw('--cs-cream', colors.secondary);
+  if (colors.destructive) raw('--cs-danger', colors.destructive);
   return out;
 }
 
@@ -133,6 +157,8 @@ const ALL_FACE_VARS = [
   '--ock-bg-alternate', '--ock-bg-primary-washed', '--ock-bg-error',
   '--ock-text-error', '--ock-icon-color-error',
   '--face-nav-inactive', '--face-text-subtle', '--face-surface-1', '--face-surface-2',
+  '--cs-primary', '--cs-primary-hover', '--cs-primary-soft', '--cs-muted', '--cs-sage',
+  '--cs-ink', '--cs-text', '--cs-meta', '--cs-tan', '--cs-page', '--cs-cream', '--cs-danger',
 ];
 
 export function applyFaceColors(colors: FaceColors): void {

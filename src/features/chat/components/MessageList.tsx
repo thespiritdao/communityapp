@@ -7,6 +7,7 @@ import { ChatModerationMenu } from './ChatModerationMenu';
 import { supabase } from '@/utils/supabaseClient';
 import { Pin, MessageSquare } from 'lucide-react';
 import { MarkdownContent } from '@/components/MarkdownContent';
+import { AuthorAvatar, AuthorLine, displayNameOf } from '@/components/community';
 
 interface MessageListProps {
   messages: Message[];
@@ -22,11 +23,12 @@ const fetchProfilePictureUrl = async (
   users: UserProfile[],
 ) => {
   const user = users.find((user) => user.wallet_address === walletAddress);
+  // Empty string = no picture; AuthorAvatar then shows the member's initial.
   return user?.profile_picture?.startsWith('http')
     ? user.profile_picture
     : user?.profile_picture
       ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile_images/${user.profile_picture}`
-      : '/images/symbolobinfin.png';
+      : '';
 };
 
 const markMessagesAsRead = async (receiver_wallet_id: string) => {
@@ -79,13 +81,13 @@ function renderDayDivider(label: string) {
   return (
     <div key={`divider-${label}`} style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
       <span style={{
-        backgroundColor: '#F5EDD7',
-        color: '#8B5E3C',
+        backgroundColor: 'var(--cs-cream)',
+        color: 'var(--cs-brown)',
         fontSize: '0.75rem',
         fontWeight: 600,
         padding: '4px 14px',
         borderRadius: '9999px',
-        border: '1px solid #D1C4A9',
+        border: '1px solid var(--cs-tan)',
       }}>
         {label}
       </span>
@@ -197,33 +199,24 @@ export default function MessageList({
     const profilePicture =
       message.sender_profile_picture ||
       profilePictures[message.sender_wallet_id] ||
-      '/images/symbolobinfin.png';
-    const adjustedTimestamp = new Date(message.created_at).toLocaleString(
-      'default',
-      {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
+      null;
+    const isOwn = message.sender_wallet_id === currentUser?.wallet_address;
+    const sender = users.find((u) => u.wallet_address === message.sender_wallet_id);
+    const senderName = isOwn ? 'You' : displayNameOf(sender, message.sender_wallet_id);
 
     return (
       <div
         key={message.id}
-        className={`message ${
-          message.sender_wallet_id === currentUser?.wallet_address
-            ? 'message-outgoing'
-            : 'message-incoming'
-        } ${message.is_pinned ? 'message-pinned' : ''}`}
+        className={`message ${isOwn ? 'message-outgoing' : 'message-incoming'} ${
+          message.is_pinned ? 'message-pinned' : ''
+        }`}
       >
-        <img
+        <AuthorAvatar
           className="message-avatar"
+          name={isOwn ? displayNameOf(currentUser, message.sender_wallet_id) : senderName}
           src={profilePicture}
-          alt="Profile"
+          size={36}
           onClick={() => handleProfileClick(message.sender_wallet_id)}
-          style={{ cursor: 'pointer' }}
         />
         <div className="message-content">
           {message.is_pinned && (
@@ -232,6 +225,15 @@ export default function MessageList({
               <span>Pinned</span>
             </div>
           )}
+          <AuthorLine
+            className="message-author"
+            name={senderName}
+            timestamp={message.created_at}
+            timeFormat="clock"
+            avatarSize={0}
+            compact
+            onAuthorClick={isOwn ? undefined : () => handleProfileClick(message.sender_wallet_id)}
+          />
           <div className="message-text">
             <MarkdownContent content={message.content} className="chat-markdown" />
           </div>
@@ -263,14 +265,13 @@ export default function MessageList({
               ))}
             </div>
           )}
-          <div className="message-timestamp-container">
-            <span className="message-timestamp">{adjustedTimestamp}</span>
-            {message.sender_wallet_id === currentUser?.wallet_address && (
-              <span className="read-receipt">
+          {isOwn && (
+            <div className="message-timestamp-container">
+              <span className="read-receipt" title={message.is_read ? 'Read' : 'Sent'}>
                 {message.is_read ? '✓✓' : '✓'}
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -304,9 +305,9 @@ export default function MessageList({
           })()
         : !pinnedMessages.length && (
             <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-              <MessageSquare size={48} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4, color: '#8FAAA1' }} />
-              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#8B5E3C', margin: '0 0 0.5rem' }}>No messages yet</p>
-              <p style={{ fontSize: '0.9rem', color: '#A0937E', margin: 0 }}>Start the conversation!</p>
+              <MessageSquare size={48} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4, color: 'var(--cs-muted)' }} />
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--cs-brown)', margin: '0 0 0.5rem' }}>No messages yet</p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--cs-meta)', margin: 0 }}>Start the conversation!</p>
             </div>
           )}
 

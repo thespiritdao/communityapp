@@ -14,12 +14,12 @@
 
 .error {
   background-color: #F5E6E6;
-  color: #8B3A3A;
+  color: var(--cs-danger);
 }
 
 .emptyState {
   background-color: rgba(47, 93, 80, 0.05);
-  color: #8FAAA1;
+  color: var(--cs-muted);
 }
 
 .sectionTitle {
@@ -41,7 +41,7 @@
 /* Category List styles */
 .categoryListContainer {
   padding: 1rem;
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
@@ -88,14 +88,14 @@
 
 .threadCount {
   font-size: 0.875rem;
-  color: #8FAAA1;
+  color: var(--cs-muted);
   background-color: rgba(47, 93, 80, 0.05);
   padding: 0.25rem 0.5rem;
   border-radius: 1rem;
 }
 
 .categoryDescription {
-  color: #8FAAA1;
+  color: var(--cs-muted);
   margin: 0;
   font-size: 0.875rem;
 }
@@ -103,7 +103,7 @@
 /* Thread List styles */
 .threadListContainer {
   padding: 1rem;
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
   margin-bottom: 5rem;
@@ -124,7 +124,7 @@
 
 .backLink {
   font-size: 0.875rem;
-  color: #8FAAA1;
+  color: var(--cs-muted);
   text-decoration: none;
 }
 
@@ -142,10 +142,10 @@
 /* NEW: Updated New Thread Button style */
 .newThreadButton {
   display: inline-block;
-  background-color: #2F5D50;
+  background-color: var(--cs-primary);
   color: #FFFFFF;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--cs-radius-control);
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   cursor: pointer;
@@ -155,17 +155,17 @@
 }
 
 .newThreadButton:hover {
-  background-color: #6F8F86;
+  background-color: var(--cs-primary-hover);
 }
 
 /* NEW: Updated New Thread Button style */
 .ForumBackButton {
   display: block;
   margin: 0 auto;
-  background-color: #8FAAA1 !important;
+  background-color: var(--cs-muted) !important;
   color: #FFFFFF;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--cs-radius-control);
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   cursor: pointer;
@@ -175,15 +175,15 @@
 }
 
 .ForumBackButton:hover {
-  background-color: #6F8F86;
+  background-color: var(--cs-primary-soft);
 }
 
 .submitButton {
   display: inline-block;
-  background-color: #2F5D50 !important;
+  background-color: var(--cs-primary) !important;
   color: #FFFFFF;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--cs-radius-control);
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   cursor: pointer;
@@ -193,7 +193,7 @@
 }
 
 .submitButton:hover {
-  background-color: #6F8F86;
+  background-color: var(--cs-primary-hover);
 }
 
 .threadList {
@@ -227,7 +227,7 @@
   font-size: 1.125rem;
   font-weight: 600;
   margin: 0 0 0.5rem 0;
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 .threadMeta {
@@ -239,7 +239,7 @@
 }
 
 .threadDescription {
-  color: #5F5A54;
+  color: var(--face-text-subtle);
   font-size: 0.875rem;
   line-height: 1.4;
   margin: 0.5rem 0;
@@ -274,12 +274,12 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #D1C4A9;
+  background-color: var(--cs-tan);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  color: #5F5A54;
+  color: var(--face-text-subtle);
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -304,13 +304,13 @@
 }
 
 .threadDate {
-  color: #8FAAA1;
+  color: var(--cs-muted);
   font-size: 0.75rem;
 }
 
 .postCountBadge {
   background-color: rgba(47, 93, 80, 0.05);
-  color: #5F5A54;
+  color: var(--face-text-subtle);
   padding: 0.25rem 0.5rem;
   border-radius: 1rem;
   font-size: 0.75rem;
@@ -334,7 +334,7 @@
 }
 
 .breadcrumbSeparator {
-  color: #8FAAA1;
+  color: var(--cs-muted);
 }
 
 .threadTitle {
@@ -359,9 +359,10 @@
 
 /* Post Card styles */
 .postCard {
-  background-color: #ffffff;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--cs-card);
+  border-radius: var(--cs-radius-card);
+  border: 1px solid var(--cs-border);
+  box-shadow: var(--cs-shadow-rest);
   overflow: hidden;
 }
 
@@ -376,7 +377,7 @@
 
 .postDate {
   font-size: 0.75rem;
-  color: #8FAAA1;
+  color: var(--cs-muted);
 }
 
 .postContent {
@@ -407,7 +408,7 @@
   margin: 1.5rem 0 1rem 0;
   font-weight: 600;
   line-height: 1.3;
-  color: #2F5D50;
+  color: var(--cs-primary);
 }
 
 .contentText h1:first-child,
@@ -480,7 +481,7 @@
 }
 
 .contentText a {
-  color: #2F5D50;
+  color: var(--cs-primary);
   text-decoration: underline;
 }
 
@@ -494,7 +495,7 @@
   border-left: 4px solid #B8D9CA;
   background-color: #F5FAF8;
   font-style: italic;
-  color: #5F5A54;
+  color: var(--face-text-subtle);
 }
 
 .contentText code {
@@ -520,7 +521,7 @@
 
 .contentText hr {
   border: none;
-  border-top: 1px solid #D1C4A9;
+  border-top: 1px solid var(--cs-tan);
   margin: 1.5rem 0;
 }
 
@@ -577,21 +578,21 @@
 }
 
 .saveButton {
-  background-color: #2F5D50;
+  background-color: var(--cs-primary);
   color: white;
 }
 
 .saveButton:hover:not(:disabled) {
-  background-color: #6F8F86;
+  background-color: var(--cs-primary-soft);
 }
 
 .cancelButton {
-  background-color: #D1C4A9;
-  color: #5F5A54;
+  background-color: var(--cs-tan);
+  color: var(--face-text-subtle);
 }
 
 .cancelButton:hover:not(:disabled) {
-  background-color: #D1C4A9;
+  background-color: var(--cs-tan);
 }
 
 .saveButton:disabled, .cancelButton:disabled {
@@ -600,7 +601,7 @@
 }
 
 .editError {
-  color: #8B3A3A;
+  color: var(--cs-danger);
   font-size: 0.875rem;
   padding: 0.5rem;
   background-color: #F5E6E6;
@@ -609,9 +610,10 @@
 
 /* Reply Form styles */
 .replyFormContainer {
-  background-color: #ffffff;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--cs-card);
+  border-radius: var(--cs-radius-card);
+  border: 1px solid var(--cs-border);
+  box-shadow: var(--cs-shadow-rest);
   padding: 1rem;
   margin-top: 1.5rem;
 }
@@ -668,7 +670,7 @@
 }
 
 .submitError {
-  color: #8B3A3A;
+  color: var(--cs-danger);
   font-size: 0.875rem;
   padding: 0.75rem;
   background-color: #F5E6E6;
@@ -713,12 +715,12 @@
 .placeholderLabel {
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 .placeholderInput {
   padding: 0.5rem;
-  border: 1px solid #D1C4A9;
+  border: 1px solid var(--cs-tan);
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s ease;
@@ -726,12 +728,12 @@
 
 .placeholderInput:focus {
   outline: none;
-  border-color: #2F5D50;
+  border-color: var(--cs-primary);
 }
 
 .placeholderTextarea {
   padding: 0.5rem;
-  border: 1px solid #D1C4A9;
+  border: 1px solid var(--cs-tan);
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s ease;
@@ -740,12 +742,12 @@
 
 .placeholderTextarea:focus {
   outline: none;
-  border-color: #2F5D50;
+  border-color: var(--cs-primary);
 }
 
 .inputFootnote {
   font-size: 0.875rem;
-  color: #5F5A54;
+  color: var(--face-text-subtle);
   margin-top: 0.25rem;
   line-height: 1.2;
 }
@@ -754,9 +756,9 @@
 .previewContainer {
   margin-top: 1.5rem;
   padding: 1rem;
-  border: 1px solid #D1C4A9;
+  border: 1px solid var(--cs-tan);
   border-radius: 4px;
-  background-color: #F5F4ED;
+  background-color: var(--cs-page);
 }
 
 .previewTitle {
@@ -768,7 +770,7 @@
 .contentPreview {
   font-size: 1rem;
   line-height: 1.5;
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 .replyTextarea {
@@ -818,7 +820,7 @@
 
 .select {
   padding: 6px 12px;
-  border: 1px solid #D1C4A9;
+  border: 1px solid var(--cs-tan);
   border-radius: 4px;
   font-size: 16px;
   margin-left: 10px; 
@@ -831,7 +833,7 @@
 
 .fieldGroup {
   margin-bottom: 2rem;
-  background-color: #F5F4ED;
+  background-color: var(--cs-page);
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(47, 93, 80, 0.05);
@@ -842,8 +844,8 @@
   font-weight: 600;
   margin-top: 0;
   margin-bottom: 1.25rem;
-  color: #1F453A;
-  border-bottom: 1px solid #D1C4A9;
+  color: var(--cs-ink);
+  border-bottom: 1px solid var(--cs-tan);
   padding-bottom: 0.75rem;
 }
 
@@ -862,7 +864,7 @@
   display: block;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 .placeholderInput,
@@ -870,7 +872,7 @@
 .templateSelect {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #D1C4A9;
+  border: 1px solid var(--cs-tan);
   border-radius: 6px;
   font-size: 1rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -881,7 +883,7 @@
 .placeholderTextarea:focus,
 .templateSelect:focus {
   outline: none;
-  border-color: #2F5D50;
+  border-color: var(--cs-primary);
   box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.1);
 }
 
@@ -901,7 +903,7 @@
 
 .inputFootnote {
   font-size: 0.875rem;
-  color: #5F5A54;
+  color: var(--face-text-subtle);
   margin-top: 0.5rem;
   line-height: 1.4;
   font-style: italic;
@@ -916,10 +918,10 @@
 }
 
 .previewButton {
-  background-color: #D1C4A9;
-  color: #1F453A;
+  background-color: var(--cs-tan);
+  color: var(--cs-ink);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--cs-radius-control);
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   cursor: pointer;
@@ -927,7 +929,7 @@
 }
 
 .previewButton:hover {
-  background-color: #D1C4A9;
+  background-color: var(--cs-tan);
 }
 
 
@@ -935,7 +937,7 @@
 .previewContainer {
   margin-top: 2rem;
   padding: 2rem;
-  border: 1px solid #D1C4A9;
+  border: 1px solid var(--cs-tan);
   border-radius: 8px;
   background-color: white;
   box-shadow: 0 1px 3px rgba(47, 93, 80, 0.05);
@@ -947,30 +949,30 @@
   margin-top: 0;
   margin-bottom: 1.5rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #D1C4A9;
+  border-bottom: 1px solid var(--cs-tan);
 }
 
 .contentPreview {
   font-size: 1rem;
   line-height: 1.6;
-  color: #1F453A;
+  color: var(--cs-ink);
   white-space: pre-line;
 }
 
 /* Template selector styles */
 .templateSelector {
   margin-bottom: 2rem;
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
   padding: 1.25rem;
   border-radius: 8px;
-  border-left: 4px solid #2F5D50;
+  border-left: 4px solid var(--cs-primary);
 }
 
 .selectLabel {
   display: block;
   margin-bottom: 0.75rem;
   font-weight: 600;
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 .templateSelect {
@@ -1047,7 +1049,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #8B5E3C;
+  color: var(--cs-brown);
   margin: 0;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid rgba(209, 196, 169, 0.5);
@@ -1081,7 +1083,7 @@
   width: 100%;
   aspect-ratio: 16 / 7;
   overflow: hidden;
-  background: #F5EDD7;
+  background: var(--cs-cream);
 }
 
 .journalCover img {
@@ -1100,7 +1102,7 @@
 
 .journalDate {
   font-size: 0.72rem;
-  color: #8B5E3C;
+  color: var(--cs-brown);
   letter-spacing: 0.02em;
 }
 
@@ -1108,7 +1110,7 @@
   font-size: 1.05rem;
   font-weight: 600;
   margin: 0;
-  color: #212121;
+  color: var(--cs-text);
   line-height: 1.3;
 }
 
@@ -1125,7 +1127,7 @@
   align-items: center;
   margin-top: 4px;
   font-size: 0.78rem;
-  color: #757575;
+  color: var(--cs-meta);
 }
 
 .journalAuthor {
@@ -1164,9 +1166,9 @@
   font-size: 0.65rem;
   padding: 1px 8px;
   border-radius: 12px;
-  background: #F5EDD7;
-  color: #8B5E3C;
-  border: 1px solid #D1C4A9;
+  background: var(--cs-cream);
+  color: var(--cs-brown);
+  border: 1px solid var(--cs-tan);
   white-space: nowrap;
 }
 

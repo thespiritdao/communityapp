@@ -16,6 +16,13 @@ import ChatInput from './ChatInput';
 import MessageList from './MessageList';
 import { DirectMessageModal } from './DirectMessageModal';
 import { MessageCircle } from 'lucide-react';
+import {
+  ListCard,
+  ListGrid,
+  listCardFooterItemClass,
+  listCardFooterStrongClass,
+  communityStyles,
+} from '@/components/community';
 const TABLE_NAME = 'chat_messages';
 
 interface ChatContainerProps {
@@ -676,21 +683,14 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
             onClose={() => setActiveDmAddress(null)}
           />
         )}
-        {/* rounded card container with white background */}
+        {/* Same page frame, heading and card grid as the forum index. */}
         <div className="chat-groups-container">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="chat-title text-3xl font-bold">Community Chats</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className={communityStyles.pageTitle}>Community Chats</h1>
             {Object.keys(modules).length === 0 && (
               <button
                 onClick={refreshModules}
-                className="px-3 py-1 text-xs rounded"
-                style={{ backgroundColor: '#8FAAA1', color: '#FFFFFF' }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = '#6F8F86')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = '#8FAAA1')
-                }
+                className="chat-refresh-button"
               >
                 Refresh Modules
               </button>
@@ -698,55 +698,41 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
           </div>
 
           {loading ? (
-            <p>Loading chat groups...</p>
+            <p className={communityStyles.emptyText}>Loading chat groups…</p>
           ) : chatGroups.length > 0 ? (
-            <ul>
-              {chatGroups.map((group) => (
-                <li
-                  key={group.id}
-                  className="chat-group-item"
-                  onClick={() => setSelectedChatGroup(group)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="chat-group-core" style={{ flex: 1, minWidth: 0 }}>
-                    <img
-                      src={group.pod_image_url || '/images/symbolobinfin.png'}
-                      alt={`${group.title} icon`}
-                      className="pod-avatar pod-avatar--sm"
-                    />
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                      <span className="chat-group-name">{group.title}</span>
-                      {group.description && (
-                        <span style={{ fontSize: '0.8rem', color: '#8B5E3C', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {group.description}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {(group as any).unread_count > 0 && (
-                    <span style={{
-                      backgroundColor: '#2F5D50',
-                      color: '#fff',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      padding: '2px 8px',
-                      marginLeft: 'auto',
-                      minWidth: '20px',
-                      textAlign: 'center',
-                      flexShrink: 0,
-                    }}>
-                      {(group as any).unread_count}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <ListGrid>
+              {chatGroups.map((group) => {
+                const unread = (group as any).unread_count ?? 0;
+                return (
+                  <ListCard
+                    key={group.id}
+                    onClick={() => setSelectedChatGroup(group)}
+                    title={group.title}
+                    description={group.description}
+                    imageSrc={group.pod_image_url}
+                    icon={<MessageCircle size={18} />}
+                    count={unread}
+                    footer={
+                      <span
+                        className={`${listCardFooterItemClass} ${
+                          unread > 0 ? listCardFooterStrongClass : ''
+                        }`}
+                      >
+                        <MessageCircle size={12} />
+                        {unread > 0
+                          ? `${unread} new ${unread === 1 ? 'message' : 'messages'}`
+                          : 'No new messages'}
+                      </span>
+                    }
+                  />
+                );
+              })}
+            </ListGrid>
           ) : (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-              <MessageCircle size={48} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4, color: '#8FAAA1' }} />
-              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#8B5E3C', margin: '0 0 0.5rem' }}>No chats available</p>
-              <p style={{ fontSize: '0.9rem', color: '#A0937E', margin: 0 }}>Join a pod to unlock community chats.</p>
+            <div className={communityStyles.empty}>
+              <MessageCircle size={48} className={communityStyles.emptyIcon} />
+              <p className={communityStyles.emptyTitle}>No chats available</p>
+              <p className={communityStyles.emptyText}>Join a pod to unlock community chats.</p>
             </div>
           )}
         </div>
@@ -770,10 +756,10 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
             <img
               src={selectedChatGroup.pod_image_url || '/images/symbolobinfin.png'}
               alt=""
-              style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+              style={{ width: 28, height: 28, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
             />
-            <h2 style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <b>{selectedChatGroup.title}</b>
+            <h2 className="chat-header-title">
+              {selectedChatGroup.title}
             </h2>
           </div>
           {/* Spacer to balance the back button */}

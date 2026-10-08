@@ -29,7 +29,7 @@ body {
 
 /* Chat container layout */
 .chat-container {
-  background-color: #f5f4ed; /* Matches your desired background color */
+  background-color: var(--cs-page); /* Matches your desired background color */
   min-height: calc(100vh - 60px); /* Fallback for browsers without dvh */
   min-height: calc(100dvh - var(--bottom-nav-height, 60px)); /* dvh shrinks with the keyboard */
   height: 100%; /* Fill available space */
@@ -124,17 +124,20 @@ body {
 /* Message content wrapper */
 .message-content {
   position: relative;
-  padding: 10px 15px;
-  border-radius: 15px;
+  padding: 8px 14px 10px;
+  border-radius: var(--cs-radius-bubble);
   max-width: 70%;
-  background-color: #E8F1EE; /* User's message background color — light sage */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--cs-sage); /* Own messages */
+  box-shadow: var(--cs-shadow-rest);
   word-wrap: break-word;
+}
+.message-author {
+  margin-bottom: 2px;
 }
 
 /* Incoming messages (other users) */
 .message-incoming .message-content {
-  background-color: #F5EDD7; /* Other users' message background color — cream */
+  background-color: var(--cs-cream); /* Other users' message background color — cream */
 }
 
 
@@ -148,13 +151,13 @@ body {
   height: 0;
   border-style: solid;
   border-width: 15px 15px 0 0; /* Creates a right-pointing triangle */
-  border-color: #E8F1EE transparent transparent transparent; /* Match bubble color */
+  border-color: var(--cs-sage) transparent transparent transparent; /* Match bubble color */
   transform: translateY(50%) rotate(180deg); /* Adjusts alignment and rotates triangle */
   
 }
 
 .message-incoming .message-content::after {
-  border-color: #F5EDD7 transparent transparent transparent; /* Match bubble color */
+  border-color: var(--cs-cream) transparent transparent transparent; /* Match bubble color */
 }
 
 
@@ -180,7 +183,7 @@ body {
 
 /* Message text */
 .message-text {
-  font-size: .9rem;
+  font-size: var(--cs-text-body);
   line-height: 1.5;
   word-wrap: break-word; /* Break long words if needed */
 }
@@ -220,13 +223,12 @@ body {
 
 /* Timestamp and read receipt container */
 .message-timestamp-container {
-  display: flex; /* Flexbox layout */
-  justify-content: flex-start; /* Align timestamp and read receipt to the left */
-  align-items: center; /* Vertically align items */
-  gap: 5px; /* Add space between the timestamp and checkmark */
-  font-size: 0.85rem; /* Adjust font size */
-  color: #8FAAA1; /* Gray color */
-  margin-top: 5px; /* Optional spacing above */
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  font-size: var(--cs-text-meta);
+  color: var(--cs-muted);
+  margin-top: 2px;
 }
 
 /* Timestamp */
@@ -235,15 +237,15 @@ body {
   justify-content: space-between; /* Space out items */
   align-items: center; /* Vertically align items */
   font-size: 0.85rem; /* Adjust font size if needed */
-  color: #8FAAA1; /* Light gray color */
+  color: var(--cs-muted); /* Light gray color */
   margin-top: 5px; /* Space above */
 }
 
 /* Style for the checkmark */
 .read-receipt {
-  margin-left: 8px; /* Optional spacing between timestamp and check */
-  color: #8FAAA1; /* Match timestamp color */
-  font-size: 0.85rem; /* Ensure size matches the timestamp */
+  color: var(--cs-muted);
+  font-size: var(--cs-text-meta);
+  letter-spacing: -2px;
 }
 
 /* Input section */
@@ -266,6 +268,12 @@ body {
   min-height: 3.5rem;
 }
 
+/* Same focus treatment as the forum editor: primary border plus a soft ring. */
+.chat-input-wrapper:focus-within {
+  border-color: var(--cs-primary);
+  box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.12);
+}
+
 /* Container wrapping the input and icons */
 .chat-input-wrapper {
   display: flex;
@@ -275,7 +283,7 @@ body {
   padding: 12px 16px; /* Increased padding for better touch targets */
   background-color: #fff;
   border-radius: 24px; /* Slightly more rounded */
-  border: 1px solid #D1C4A9;
+  border: 1px solid var(--cs-tan);
   box-shadow: 0 2px 8px rgba(47, 93, 80, 0.10);
   margin: 0 0.5rem; /* Center with small margins */
   min-height: 48px; /* Minimum height for better mobile usability */
@@ -320,7 +328,7 @@ body {
   width: 24px;
   height: 24px;
   margin: 0 2px;
-  color: #2F5D50;
+  color: var(--cs-primary);
   cursor: pointer;
 }
 
@@ -336,7 +344,7 @@ body {
 
 
 .icon:hover {
-  color: #1a3d34;
+  color: var(--cs-primary-hover);
 }
 
 .icon.mic {
@@ -352,12 +360,12 @@ body {
   border: none;
   box-shadow: none;
   padding: 0;
-  color: #2F5D50;
+  color: var(--cs-primary);
   margin-left: auto; /* Keep it right-aligned */
 }
 
 .icon.send:hover {
-  color: #1a3d34;
+  color: var(--cs-primary-hover);
 }
 
 .icon.emoji {
@@ -394,7 +402,7 @@ body {
 
 .attachment-link {
   text-decoration: none;
-  color: #2F5D50;
+  color: var(--cs-primary);
   margin-right: 5px;
 }
 
@@ -472,7 +480,7 @@ body {
 }
 
 .current-user {
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
 }
 
 .user-avatar {
@@ -497,14 +505,14 @@ body {
 .user-name {
   font-size: 1rem;
   font-weight: 500;
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 /* Empty user list */
 .user-list-empty {
   text-align: center;
   font-size: 0.9rem;
-  color: #8FAAA1;
+  color: var(--cs-muted);
   margin-top: 20px;
 }
 
@@ -552,16 +560,40 @@ body {
   margin: 0;
 }
 
-/* List view: restore white background and proper styling */
+/* List view: cards sit directly on the page, like the forum index. */
 .chat-list-view .chat-groups-container {
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: none; /* Container already has shadow */
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
   height: auto;
-  max-width: 100%; /* Prevent overflow */
-  /* Additional defensive styling */
+  max-width: 100%;
   width: 100%;
   overflow-x: hidden;
+}
+
+.chat-refresh-button {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  border: none;
+  border-radius: var(--cs-radius-control);
+  background-color: var(--cs-muted);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.chat-refresh-button:hover {
+  background-color: var(--cs-primary-soft);
+}
+
+.chat-header-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--cs-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Chat view: transparent background */
@@ -579,64 +611,7 @@ body {
 }
 
 
-/* Chat Group Item styled similar to categoryItem */
-.chat-group-item {
-  margin-bottom: 1rem;
-  border-radius: 0.5rem;
-  background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(47, 93, 80, 0.08);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #D1C4A9;
-  display: flex;
-  align-items: center; /* Center align items */
-  gap: 1rem;
-
-  /* Prevent overflow and ensure proper margins - DEFENSIVE */
-  width: 100%;
-  max-width: 100%;
-  min-width: 0; /* Allow flexbox to shrink */
-  margin-left: 0;
-  margin-right: 0;
-  box-sizing: border-box;
-  overflow: hidden; /* Prevent content overflow */
-
-  /* Ensure consistent positioning */
-  position: relative;
-}
-
-.chat-group-description {
-  font-weight: normal;
-  /* You can add additional styling as needed */
-  margin: 0.5rem 0;
-}
-
-
-/* For odd-numbered chat groups */
-.chat-group-item:nth-child(odd) {
-  background-color: #F5EDD7; /* Cream */
-}
-
-/* For even-numbered chat groups */
-.chat-group-item:nth-child(even) {
-  background-color: #E8F1EE; /* Light sage */
-}
-
-
-.chat-group-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(47, 93, 80, 0.12);
-}
-
-/* Chat Group Link styling (if using an anchor) */
-.chat-group-link {
-  display: block;
-  padding: 1rem;
-  color: inherit;
-  text-decoration: none;
-}
+/* Chat group rows are the shared ListCard (src/components/community). */
 
 /* Chat Header styling (for the selected chat view) */
 .chat-header {
@@ -644,14 +619,14 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0.5rem; /* Reduced horizontal padding to minimize edge spacing */
-  background-color: #f5f4ed;
+  background-color: var(--cs-page);
   position: sticky;
   top: 0;
   left: 0; /* Flush to left edge */
   right: 0; /* Flush to right edge */
   width: 100%;
   z-index: 50;
-  border-bottom: 1px solid #D1C4A9;
+  border-bottom: 1px solid var(--cs-tan);
   box-shadow: 0 2px 6px rgba(47, 93, 80, 0.06);
   box-sizing: border-box;
   margin: 0;
@@ -661,20 +636,13 @@ body {
   transform: translateZ(0);
 }
 
-/* Chat Title styled similar to categoryTitle */
-.chat-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin: 0;
-}
-
 /* Chat Back Button styled similar to ForumBackButton */
 .back-button {
-  background-color: #2F5D50;
+  background-color: var(--cs-primary);
   color: #FFFFFF;
   padding: 0.5rem 1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--cs-radius-control);
   margin-left: 6px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -682,7 +650,7 @@ body {
 }
 
 .back-button:hover {
-  background-color: #1a3d34;
+  background-color: var(--cs-primary-hover);
 }
 
 .back-button:active {
@@ -720,7 +688,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background-color: #E8F1EE;
+  background-color: var(--cs-sage);
   cursor: pointer;
 }
 
@@ -740,7 +708,7 @@ body {
   bottom: -20px;
   left: 0;
   font-size: 12px;
-  color: #8FAAA1;
+  color: var(--cs-muted);
 }
 
 
@@ -763,9 +731,9 @@ body {
 }
 
 .mention {
-  color: #2F5D50;
+  color: var(--cs-primary);
   font-weight: bold;
-  background: #E8F1EE;
+  background: var(--cs-sage);
   border-radius: 4px;
   padding: 0 4px;
   margin: 0 2px;
@@ -779,7 +747,7 @@ body {
   height: 100vh;
   margin: 0;
   padding: 0;
-  background: #f5f4ed; /* Match body background */
+  background: var(--cs-page); /* Match body background */
   display: flex;
   flex-direction: column;
   position: fixed; /* Changed to fixed to ensure full screen */
@@ -796,74 +764,27 @@ body {
   box-shadow: none;
 }
 
-/* Chat Shell for LIST view - restore white container */
+/* Chat Shell for LIST view: same frame as the forum index (ForumContainer:
+   max-w-6xl, px-4, py-8) so the two pages line up when switching tabs. */
 .chat-shell.chat-list-view {
   width: 100%;
-  max-width: 1200px;
+  max-width: 72rem;
   margin: 0 auto;
-  margin-bottom: calc(var(--bottom-nav-height, 60px) + 0.5rem); /* Space for bottom nav + margin */
-  padding: 0.5rem;
+  margin-bottom: calc(var(--bottom-nav-height, 60px) + 0.5rem);
+  padding: 2rem 1rem;
   height: auto;
   min-height: calc(100vh - var(--bottom-nav-height, 60px) - 1rem); /* Fallback for browsers without dvh */
   min-height: calc(100dvh - var(--bottom-nav-height, 60px) - 1rem); /* dvh shrinks with the keyboard */
 
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 
-  /* Prevent off-screen extension */
   overflow-x: hidden;
   overflow-y: auto;
   box-sizing: border-box;
   position: relative;
-}
-
-/* space under list H1 */
-.chat-title {
-  margin: 0 0 12px 0; /* or 16px if you want more */
-}
-
-/* center each chat card's content */
-.chat-group-item--centered {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center; /* ensure text is centered too */
-}
-
-/* inline row: [avatar] [name], centered as a unit */
-.chat-group-core {
-  display: inline-flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-/* small round avatar (reuse if you already have .pod-avatar) */
-.pod-avatar {
-  border-radius: 9999px;
-  object-fit: cover;
-}
-/* Avatar sizing */
-img.pod-avatar--sm {
-  width: 40px;       /* or 32px if you prefer */
-  height: 40px;
-  max-width: none;   /* cancel global max-width:100% */
-  object-fit: cover; /* keep the face centered */
-  border-radius: 9999px;
-  display: inline-block; /* avoids weird shrink in flex contexts */
-}
-
-
-/* optional: make the name a touch bolder */
-.chat-group-name {
-  font-size: clamp(1rem, 4vw, 1.5rem); /* Auto-resize to prevent wrapping */
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: calc(100% - 60px); /* Account for avatar + gap */
-  flex: 1; /* Allow flexible sizing within flex container */
 }
 
 /* === MOBILE RESPONSIVE STYLES === */
@@ -872,11 +793,10 @@ img.pod-avatar--sm {
   .chat-shell.chat-list-view {
     width: 100%;
     margin: 0;
-    padding: 0.25rem;
+    padding: 1.25rem 1rem;
     margin-bottom: calc(var(--bottom-nav-height, 60px) + 0.25rem); /* Space for bottom nav + margin */
     min-height: calc(100vh - var(--bottom-nav-height, 60px) - 0.5rem); /* Account for nav height and margins */
     box-sizing: border-box;
-    border-radius: 0; /* Remove rounded corners on mobile for flush look */
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -923,19 +843,14 @@ img.pod-avatar--sm {
     padding: 0.5rem;
     height: auto;
   }
-
-  /* Chat group items - prevent overflow on mobile */
-  .chat-group-item {
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 0.875rem;
+  .chat-list-view .chat-groups-container {
+    padding: 0;
   }
-  
+
   /* Chat header mobile adjustments */
   .chat-header {
     padding: 0.75rem 0.5rem; /* Minimal horizontal padding for flush look */
-    background-color: #f5f4ed;
+    background-color: var(--cs-page);
     left: 0;
     right: 0;
   }

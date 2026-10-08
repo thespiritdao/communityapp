@@ -11,7 +11,7 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  color: #8FAAA1;
+  color: var(--cs-muted);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -28,7 +28,7 @@
 
 .moderation-trigger:hover {
   background-color: rgba(0, 0, 0, 0.05);
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 .moderation-trigger:disabled {
@@ -86,7 +86,7 @@
   font-size: 14px;
   transition: background-color 0.15s ease;
   text-align: left;
-  color: #1F453A;
+  color: var(--cs-ink);
 }
 
 .moderation-option:hover:not(:disabled) {
@@ -100,7 +100,7 @@
 
 /* Pin option - forest green */
 .moderation-option-pin {
-  color: #2F5D50;
+  color: var(--cs-primary);
 }
 
 .moderation-option-pin:hover:not(:disabled) {
@@ -118,7 +118,7 @@
 
 /* Unmute option - muted sage */
 .moderation-option-unmute {
-  color: #8FAAA1;
+  color: var(--cs-muted);
 }
 
 .moderation-option-unmute:hover:not(:disabled) {
@@ -127,7 +127,7 @@
 
 /* Delete option - earthen red */
 .moderation-option-delete {
-  color: #8B3A3A;
+  color: var(--cs-danger);
 }
 
 .moderation-option-delete:hover:not(:disabled) {
@@ -157,7 +157,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #F5EDD7;
+  background: var(--cs-cream);
   padding: 12px;
   margin-bottom: 8px;
   border-radius: 8px;
@@ -190,7 +190,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #2F5D50;
+  color: var(--cs-primary);
   margin-bottom: 4px;
   font-weight: 600;
 }
@@ -215,11 +215,11 @@
 
 /* Accessibility: Focus states */
 .moderation-trigger:focus-visible {
-  outline: 2px solid #2F5D50;
+  outline: 2px solid var(--cs-primary);
   outline-offset: 2px;
 }
 
 .moderation-option:focus-visible {
-  outline: 2px solid #2F5D50;
+  outline: 2px solid var(--cs-primary);
   outline-offset: -2px;
 }

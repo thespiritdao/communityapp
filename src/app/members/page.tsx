@@ -6,6 +6,7 @@ import { supabase } from '@/utils/supabaseClient';
 import { User, Search } from 'lucide-react';
 import type { UserProfile } from '@/features/identity/types';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
+import { AuthorAvatar } from '@/components/community';
 
 interface MemberWithPods extends UserProfile {
   pods: { pod_id: string; name: string; membership_type: string }[];
@@ -306,13 +307,7 @@ function MemberCard({ member, isOnline, onClick }: { member: MemberWithPods; isO
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         {/* Avatar with online dot */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', background: '#E8F1EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {member.profile_picture ? (
-              <img src={member.profile_picture} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <User size={22} color="#6F9E90" />
-            )}
-          </div>
+          <AuthorAvatar name={name} src={member.profile_picture} size={48} />
           {isOnline && (
             <span style={{
               position: 'absolute',

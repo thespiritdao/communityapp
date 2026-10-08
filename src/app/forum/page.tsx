@@ -25,6 +25,7 @@ import { getCurrentSession } from '@/features/identity';
 import { Loader2, Bookmark, MessageSquare, Clock } from 'lucide-react';
 import styles from '@/features/forum/styles/Forum.module.css';
 import { useSlotLabel } from '@/context/FaceContext';
+import { communityStyles } from '@/components/community';
 
 interface Category {
   id: string;
@@ -303,11 +304,11 @@ export default function ForumPage() {
         {/* Add bottom-nav-spacing to create space at the bottom so the bottom bar doesn't overlap the content */}
         <div className="bottom-nav-spacing">
           {/* Top row: Forum title + "New Thread" button */}
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-6">
             {/* Deliberate one-heading exception to "Faces leave page headings
                 standard": a pod that renamed the Forum button (e.g. "Journal")
                 sees that name here too, so the button and the page agree. */}
-            <h1 className="text-3xl font-bold" style={{ color: '#2F5D50' }}>
+            <h1 className={communityStyles.pageTitle}>
               {forumLabel === 'Forum' ? 'SpiritDAO Forums' : forumLabel}
             </h1>
             <Button
@@ -358,10 +359,7 @@ export default function ForumPage() {
               {/* Bookmarks Section — only if user has bookmarks */}
               {bookmarkedThreads.length > 0 && (
                 <section style={{ marginBottom: 32 }}>
-                  <h2 style={{
-                    fontSize: '1.1rem', fontWeight: 600, marginBottom: 12,
-                    display: 'flex', alignItems: 'center', gap: 8, color: '#8B5E3C',
-                  }}>
+                  <h2 className={communityStyles.sectionTitle} style={{ color: 'var(--cs-brown)' }}>
                     <Bookmark size={18} /> My Bookmarks
                   </h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -369,18 +367,8 @@ export default function ForumPage() {
                       <a
                         key={bm.id}
                         href={`/forum/thread/${bm.thread_id}`}
-                        style={{
-                          display: 'block',
-                          padding: '10px 14px',
-                          borderRadius: 10,
-                          backgroundColor: '#fff',
-                          border: '1px solid rgba(209,196,169,0.4)',
-                          textDecoration: 'none',
-                          color: '#212121',
-                          fontSize: '0.9rem',
-                          fontWeight: 500,
-                          transition: 'box-shadow 0.2s',
-                        }}
+                        className={communityStyles.listCard}
+                        style={{ display: 'block', padding: '10px 14px', fontSize: '0.9rem', fontWeight: 500 }}
                       >
                         {bm.forum_threads?.title || 'Bookmarked Thread'}
                       </a>
@@ -391,10 +379,7 @@ export default function ForumPage() {
 
               {/* Categories Section */}
               <section className="mb-12">
-                <h2 style={{
-                  fontSize: '1.1rem', fontWeight: 600, marginBottom: 12,
-                  display: 'flex', alignItems: 'center', gap: 8, color: '#2F5D50',
-                }}>
+                <h2 className={communityStyles.sectionTitle}>
                   <MessageSquare size={18} /> Forum Categories
                 </h2>
                 {categories.length > 0 ? (
@@ -408,10 +393,7 @@ export default function ForumPage() {
 
               {/* Recent Threads Section */}
               <section>
-                <h2 style={{
-                  fontSize: '1.1rem', fontWeight: 600, marginBottom: 12,
-                  display: 'flex', alignItems: 'center', gap: 8, color: '#2F5D50',
-                }}>
+                <h2 className={communityStyles.sectionTitle}>
                   <Clock size={18} /> Recent Threads
                 </h2>
                 {recentThreads.length > 0 ? (
