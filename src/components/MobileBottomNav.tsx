@@ -19,10 +19,15 @@ function MobileBottomNavContent() {
 
   useEffect(() => setMounted(true), []);
 
-  // Hide the nav while a text field is focused on small screens: the soft
-  // keyboard already claims the bottom of the screen, and with the nav gone
+  // Hide the nav while the soft keyboard is up on small screens: the keyboard
+  // already claims the bottom of the screen, and with the nav gone
   // --bottom-nav-height collapses to 0 so fixed inputs (chat composer) sit
   // directly above the keyboard instead of behind the nav.
+  //
+  // "Keyboard is up" means a text field has focus AND the visual viewport has
+  // actually shrunk. Focus alone is not enough: pages that focus their input
+  // on load (Sensemaker) made the bar vanish on desktops and tablets with no
+  // keyboard, until the member clicked somewhere else.
   useEffect(() => {
     const isTextField = (el: EventTarget | null): boolean => {
       const t = el as HTMLElement | null;
@@ -33,15 +38,29 @@ function MobileBottomNavContent() {
       return !['checkbox', 'radio', 'button', 'submit', 'range', 'file', 'color'].includes(type);
     };
     const mq = window.matchMedia('(max-width: 768px)');
-    const onFocusIn = (e: FocusEvent) => {
-      if (mq.matches && isTextField(e.target)) setKeyboardOpen(true);
+    const vv = window.visualViewport;
+    let textFieldFocused = false;
+    const keyboardShowing = () => {
+      // Without the visualViewport API fall back to the old focus-only rule.
+      if (!vv) return true;
+      return window.innerHeight - vv.height > 100;
     };
-    const onFocusOut = () => setKeyboardOpen(false);
+    const update = () => setKeyboardOpen(mq.matches && textFieldFocused && keyboardShowing());
+    const onFocusIn = (e: FocusEvent) => {
+      textFieldFocused = isTextField(e.target);
+      update();
+    };
+    const onFocusOut = () => {
+      textFieldFocused = false;
+      update();
+    };
     document.addEventListener('focusin', onFocusIn);
     document.addEventListener('focusout', onFocusOut);
+    vv?.addEventListener('resize', update);
     return () => {
       document.removeEventListener('focusin', onFocusIn);
       document.removeEventListener('focusout', onFocusOut);
+      vv?.removeEventListener('resize', update);
     };
   }, []);
 

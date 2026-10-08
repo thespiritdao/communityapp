@@ -30,7 +30,7 @@ const ManageProductsButton = () => {
     <>
       <S.ManageProductsButton onClick={handleOpenModal}>
         <Settings aria-hidden="true" />
-        <S.ButtonText>Manage</S.ButtonText>
+        <S.ButtonText>Products</S.ButtonText>
       </S.ManageProductsButton>
 
       {isModalOpen && <ProductManagement onClose={handleCloseModal} />}
