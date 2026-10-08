@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useDisconnect } from 'wagmi';
+import { useSignOut } from '@coinbase/cdp-hooks';
 import { useAuth } from './useAuth';
 import { useUserProfile } from './useUserProfile';
 import { updateProfile } from '../utils/updateProfile';
@@ -10,6 +11,7 @@ export function useIdentityPage(address: string | undefined) {
   const { session, signOut } = useAuth();
   const { profile, loading, refetch } = useUserProfile(address);
   const { disconnect } = useDisconnect();
+  const { signOut: cdpSignOut } = useSignOut();
 
   const handleEditClick = useCallback(() => {
     setIsEditing(!isEditing);
@@ -75,11 +77,22 @@ export function useIdentityPage(address: string | undefined) {
     await signOut();
     console.log('✅ Supabase session cleared');
 
-    // 2. Disconnect wallet (prevents auto-reconnect)
+    // 2. End the Coinbase embedded-wallet session itself. Clearing storage
+    //    keys below is not enough: the SDK keeps its own session, and as long
+    //    as it reports a wallet address, SessionGuard sees "wallet present,
+    //    no Supabase session" and signs the member straight back in.
+    try {
+      await cdpSignOut();
+      console.log('✅ Coinbase session ended');
+    } catch (err) {
+      console.warn('⚠️ Coinbase sign-out failed; clearing local state anyway', err);
+    }
+
+    // 3. Disconnect wallet (prevents auto-reconnect)
     disconnect();
     console.log('✅ Wallet disconnected');
 
-    // 3. Clear wallet cache and CDP session so the embedded wallet re-prompts
+    // 4. Clear wallet cache and any leftover CDP keys so the embedded wallet re-prompts
     localStorage.removeItem('wagmi.store');
     localStorage.removeItem('wagmi.cache');
     localStorage.removeItem('wagmi.recentConnectorId');
@@ -96,11 +109,11 @@ export function useIdentityPage(address: string | undefined) {
     });
     console.log('✅ Wallet cache cleared');
 
-    // 4. Redirect to home after a brief delay
+    // 5. Redirect to home after a brief delay
     setTimeout(() => {
       window.location.href = '/';
     }, 500);
-  }, [signOut, disconnect]);
+  }, [signOut, cdpSignOut, disconnect]);
 
   return {
     // State
