@@ -25,6 +25,20 @@ const CONNECT_COLORS: Record<string, string> = {
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
+const fullName = (m: { first_name?: string | null; last_name?: string | null }) =>
+  `${m.first_name || ''} ${m.last_name || ''}`.trim().toLowerCase();
+
+// Members who filled in a name come before anonymous ones; within each group
+// the existing availability and alphabetical ordering applies.
+const compareByNamePresence = (
+  a: { first_name?: string | null; last_name?: string | null },
+  b: { first_name?: string | null; last_name?: string | null },
+) => {
+  const aNamed = fullName(a) ? 0 : 1;
+  const bNamed = fullName(b) ? 0 : 1;
+  return aNamed - bNamed;
+};
+
 export default function MembersPage() {
   const address = useUserWallet();
   const [members, setMembers] = useState<MemberWithPods[]>([]);
@@ -83,15 +97,15 @@ export default function MembersPage() {
         return { ...profile, pods: profilePods };
       });
 
-      // Sort: actively_collaborate first, then open_available, then rest; alphabetical within
+      // Sort: named profiles first; then actively_collaborate, open_available, rest; alphabetical within
       enriched.sort((a, b) => {
+        const named = compareByNamePresence(a, b);
+        if (named !== 0) return named;
         const order = { actively_collaborate: 0, open_available: 1, low_limited: 2 };
         const aOrder = order[a.open_to_connect as keyof typeof order] ?? 3;
         const bOrder = order[b.open_to_connect as keyof typeof order] ?? 3;
         if (aOrder !== bOrder) return aOrder - bOrder;
-        const aName = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase();
-        const bName = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase();
-        return aName.localeCompare(bName);
+        return fullName(a).localeCompare(fullName(b));
       });
 
       // Fetch presence (who was active in the last 5 minutes)
@@ -126,12 +140,12 @@ export default function MembersPage() {
         const aOnline = onlineWallets.has(a.wallet_address.toLowerCase()) ? 0 : 1;
         const bOnline = onlineWallets.has(b.wallet_address.toLowerCase()) ? 0 : 1;
         if (aOnline !== bOnline) return aOnline - bOnline;
+        const named = compareByNamePresence(a, b);
+        if (named !== 0) return named;
         const aConn = connectOrder[a.open_to_connect as keyof typeof connectOrder] ?? 3;
         const bConn = connectOrder[b.open_to_connect as keyof typeof connectOrder] ?? 3;
         if (aConn !== bConn) return aConn - bConn;
-        const aName = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase();
-        const bName = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase();
-        return aName.localeCompare(bName);
+        return fullName(a).localeCompare(fullName(b));
       });
   }, [members, onlineWallets, search, filterPod, filterConnect]);
 

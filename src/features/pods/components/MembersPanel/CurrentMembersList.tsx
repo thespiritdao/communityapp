@@ -74,11 +74,27 @@ export const CurrentMembersList = React.memo<CurrentMembersListProps>(
       [onClickName, trackMemberAction],
     );
 
+    // Members who filled in a name come first, alphabetically; anonymous
+    // wallets follow in their original (join) order. Array.sort is stable.
+    const orderedMembers = React.useMemo(() => {
+      if (isLoading) return stableMembers;
+      const nameOf = (address: string) => {
+        const p = getProfile(address);
+        return `${p?.first_name || ''} ${p?.last_name || ''}`.trim().toLowerCase();
+      };
+      return [...stableMembers].sort((a, b) => {
+        const an = nameOf(a);
+        const bn = nameOf(b);
+        if (!!an !== !!bn) return an ? -1 : 1;
+        return an && bn ? an.localeCompare(bn) : 0;
+      });
+    }, [stableMembers, isLoading, getProfile]);
+
     // Memoize the rendered member cards with enhanced handlers
     const memberCards = React.useMemo(() => {
       if (isLoading) return null;
 
-      return stableMembers.map((member) => {
+      return orderedMembers.map((member) => {
         const profile = getProfile(member);
         const memberRef = getMemberRef(member); // ✅ ISSUE #7: Get full member data
         const isLeader = leaders.some(
@@ -105,7 +121,7 @@ export const CurrentMembersList = React.memo<CurrentMembersListProps>(
         );
       });
     }, [
-      stableMembers,
+      orderedMembers,
       isLoading,
       getProfile,
       getMemberRef,
