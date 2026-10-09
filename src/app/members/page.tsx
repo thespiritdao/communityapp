@@ -6,7 +6,7 @@ import { supabase } from '@/utils/supabaseClient';
 import { User, Search } from 'lucide-react';
 import type { UserProfile } from '@/features/identity/types';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
-import { AuthorAvatar } from '@/components/community';
+import { AuthorAvatar, communityStyles } from '@/components/community';
 
 interface MemberWithPods extends UserProfile {
   pods: { pod_id: string; name: string; membership_type: string }[];
@@ -159,13 +159,13 @@ export default function MembersPage() {
   }
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 1rem' }}>
+    <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '2rem 1rem' }}>
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#1A2E28', marginBottom: '0.25rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 className={communityStyles.pageTitle} style={{ marginBottom: '0.25rem' }}>
           Members
         </h1>
-        <p style={{ color: '#5F7A74', fontSize: '0.95rem' }}>
+        <p style={{ color: 'var(--cs-meta)', fontSize: '0.95rem', margin: 0 }}>
           {loading ? 'Loading…' : `${filtered.length} member${filtered.length !== 1 ? 's' : ''}`}
         </p>
       </div>
