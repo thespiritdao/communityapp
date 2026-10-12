@@ -12,6 +12,7 @@ import { AccessToken } from 'livekit-server-sdk';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
+import { isExecutiveLeader, isPodMember } from '@/lib/serverPodAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -37,6 +38,52 @@ async function verifyAppToken(token: string): Promise<{ userId: string; walletAd
   } catch {
     return null;
   }
+}
+
+/**
+ * May this wallet join the room? Host and Executive Leaders always; a pod
+ * room needs pod membership; an event room needs a live registration, the
+ * event's creator/manager, or membership of the organizing pod. Rooms tied
+ * to neither (ad-hoc link rooms) stay open to any signed-in member.
+ */
+async function canJoinRoom(
+  room: { host_wallet: string; pod_id: string | null; event_id: string | null },
+  wallet: string,
+): Promise<boolean> {
+  if ((room.host_wallet || '').toLowerCase() === wallet) return true;
+  if (!room.pod_id && !room.event_id) return true;
+
+  if (room.pod_id && (await isPodMember(room.pod_id, wallet))) return true;
+
+  if (room.event_id) {
+    const { data: event } = await supabaseAdmin
+      .from('events')
+      .select('creator_address, manager_address, organizing_pod_id')
+      .eq('id', room.event_id)
+      .maybeSingle();
+    if (event) {
+      if (
+        (event.creator_address || '').toLowerCase() === wallet ||
+        (event.manager_address || '').toLowerCase() === wallet
+      ) {
+        return true;
+      }
+      const { data: reg } = await supabaseAdmin
+        .from('event_registrations')
+        .select('id')
+        .eq('event_id', room.event_id)
+        .ilike('user_address', wallet)
+        .neq('registration_status', 'cancelled')
+        .limit(1)
+        .maybeSingle();
+      if (reg) return true;
+      if (event.organizing_pod_id && (await isPodMember(event.organizing_pod_id, wallet))) {
+        return true;
+      }
+    }
+  }
+
+  return isExecutiveLeader(wallet);
 }
 
 export async function POST(req: NextRequest) {
@@ -87,17 +134,23 @@ export async function POST(req: NextRequest) {
       .select('first_name, last_name, email')
       .ilike('wallet_address', verifiedWallet)
       .maybeSingle();
-    console.log(`👤 token profile lookup: wallet=${verifiedWallet.slice(0, 8)} → first=${profile?.first_name} last=${profile?.last_name} email=${profile?.email}`);
 
     // ── 4. Verify the room exists in our DB ──────────────────────────────────
     const { data: room, error: roomError } = await supabaseAdmin
       .from('conference_rooms')
-      .select('id, status, host_wallet, settings')
+      .select('id, status, host_wallet, settings, pod_id, event_id')
       .eq('room_name', roomName)
       .single();
 
     if (roomError || !room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    }
+
+    if (!(await canJoinRoom(room, effectiveWallet))) {
+      return NextResponse.json(
+        { error: 'This meeting is for members of its pod or registered attendees of its event' },
+        { status: 403 },
+      );
     }
 
     if (room.status === 'ended') {

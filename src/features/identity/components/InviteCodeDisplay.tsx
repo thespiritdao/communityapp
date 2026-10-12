@@ -9,6 +9,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 
 interface InviteCodeDisplayProps {
   walletAddress: string;
@@ -29,6 +30,7 @@ export function InviteCodeDisplay({ walletAddress }: InviteCodeDisplayProps) {
       try {
         const response = await fetch(
           `/api/invite/validate?wallet=${walletAddress}`,
+          { headers: await ensureAuthHeaders() },
         );
 
         if (!response.ok) {

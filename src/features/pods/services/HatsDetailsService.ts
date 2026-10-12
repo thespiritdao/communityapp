@@ -1,5 +1,5 @@
-import { HatsDetailsClient } from '@hatsprotocol/details-sdk';
 import * as z from 'zod';
+import { pinJsonViaServer } from '@/lib/ipfsPinClient';
 
 // Hats Details SDK Schema (matches the official schema)
 const hatsDetailsSchema = z.object({
@@ -38,39 +38,6 @@ export type HatsDetailsMetadata = z.infer<typeof hatsDetailsSchema>;
  * Handles IPFS storage of structured metadata for Hats Protocol
  */
 export class HatsDetailsService {
-  private static client: any | null = null;
-
-  /**
-   * Initialize the Hats Details Client
-   */
-  private static initializeClient(): any {
-    if (!this.client) {
-      const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT;
-
-      if (!pinataJwt || pinataJwt === 'your_pinata_jwt_token_here') {
-        throw new Error(
-          'NEXT_PUBLIC_PINATA_JWT environment variable is required. Get your JWT from https://app.pinata.cloud/keys',
-        );
-      }
-
-      this.client = new HatsDetailsClient({
-        schema: hatsDetailsSchema,
-        provider: 'pinata',
-        pinata: {
-          pinningKey: pinataJwt,
-          gateway:
-            process.env.NEXT_PUBLIC_PINATA_GATEWAY ||
-            'https://gateway.pinata.cloud',
-          ...(process.env.NEXT_PUBLIC_PINATA_GATEWAY_KEY && {
-            gatewayKey: process.env.NEXT_PUBLIC_PINATA_GATEWAY_KEY,
-          }),
-        },
-      });
-    }
-
-    return this.client;
-  }
-
   /**
    * Create structured metadata for a pod/hat
    */
@@ -177,8 +144,14 @@ export class HatsDetailsService {
         authoritiesCount: metadata.data.authorities?.length || 0,
       });
 
-      const client = this.initializeClient();
-      const ipfsHash = await client.pin(metadata);
+      // Validate against the Hats details schema, then pin server-side so
+      // the Pinata key stays off the browser.
+      const valid = hatsDetailsSchema.parse(metadata);
+      const ipfsHash = await pinJsonViaServer(
+        'hat_details',
+        valid,
+        `hat-details-${valid.data.name.slice(0, 60)}`,
+      );
 
       console.log('✅ Successfully uploaded metadata to IPFS:', {
         hash: ipfsHash,
@@ -203,18 +176,17 @@ export class HatsDetailsService {
     try {
       console.log('🔍 Retrieving HAT metadata from IPFS:', ipfsHash);
 
-      const client = this.initializeClient();
-      const result = await client.get(ipfsHash);
-
-      if (result.error) {
-        console.error(
-          '❌ Error retrieving metadata from IPFS:',
-          result.error.message,
-        );
+      // Read through the server's IPFS proxy (authenticated gateway first).
+      const response = await fetch(
+        `/api/bounty/ipfs?hash=${encodeURIComponent(ipfsHash)}`,
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result?.metadata) {
+        console.error('❌ Error retrieving metadata from IPFS:', result?.error);
         return null;
       }
 
-      const metadata = result.parsedData || result.rawData;
+      const metadata = result.metadata;
 
       console.log('✅ Successfully retrieved metadata from IPFS:', {
         hash: ipfsHash,

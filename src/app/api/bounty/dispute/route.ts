@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireWallet } from '@/lib/apiPodGuard';
+import { canViewDispute } from '@/lib/disputeAccess';
+
+export const runtime = 'nodejs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +17,12 @@ const supabase = createClient(
  */
 export async function GET(request: NextRequest) {
   try {
+    // Disputes are visible to parties, mediators, the bounty's creator and
+    // pod leaders, and Executive Leaders only.
+    const walletOrDenied = await requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const wallet = walletOrDenied;
+
     const { searchParams } = new URL(request.url);
     const disputeId = searchParams.get('disputeId');
     const bountyId = searchParams.get('bountyId');
@@ -30,6 +40,10 @@ export async function GET(request: NextRequest) {
           { error: 'Dispute not found', details: error?.message },
           { status: 404 },
         );
+      }
+
+      if (!(await canViewDispute(dispute, wallet))) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
       return NextResponse.json({
@@ -53,10 +67,15 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      const visible = [];
+      for (const d of disputes || []) {
+        if (await canViewDispute(d, wallet)) visible.push(d);
+      }
+
       return NextResponse.json({
         success: true,
-        disputes: disputes || [],
-        count: disputes?.length || 0,
+        disputes: visible,
+        count: visible.length,
       });
     }
 

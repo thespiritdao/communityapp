@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyCalendarFeed } from '@/lib/calendarFeedToken';
+
+export const runtime = 'nodejs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,10 +19,12 @@ function toIcsDate(dateStr: string): string {
 }
 
 /**
- * GET /api/events/calendar.ics?wallet=0x...
+ * GET /api/events/calendar.ics?wallet=0x...&sig=...
  *
  * Returns an iCalendar (.ics) feed of the user's registered events.
  * Can be subscribed to in Google Calendar, Apple Calendar, Outlook, etc.
+ * `sig` is an HMAC of the wallet (src/lib/calendarFeedToken.ts); obtain the
+ * full signed URL from the authenticated GET /api/events/calendar-url.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -27,6 +32,12 @@ export async function GET(request: NextRequest) {
 
   if (!wallet) {
     return new NextResponse('wallet parameter required', { status: 400 });
+  }
+
+  // Privacy: without a valid signature anyone could read any member's
+  // registrations (and the events' locations) from just their wallet.
+  if (!verifyCalendarFeed(wallet, searchParams.get('sig'))) {
+    return new NextResponse('Invalid or missing calendar signature', { status: 403 });
   }
 
   // Fetch user's registrations

@@ -56,60 +56,32 @@ export class HatMetadataService {
   static initializeIPFS() {
     if (!this.ipfsClient) {
       // Option 1: Pinata (recommended for production)
-      if (process.env.NEXT_PUBLIC_PINATA_JWT) {
+      // Browser: pin through /api/ipfs/pin. Server: pin directly with the
+      // server-only PINATA_JWT. The key never ships to the client.
+      const isBrowser = typeof window !== 'undefined';
+      if (isBrowser || process.env.PINATA_JWT) {
         console.log('🎯 Initializing Pinata IPFS client');
         this.ipfsClient = {
           add: async (data: any) => {
             try {
               console.log('📤 Uploading to Pinata IPFS...');
 
-              // Debug token availability
-              const token = process.env.NEXT_PUBLIC_PINATA_JWT;
-              console.log('🔑 Token available:', !!token);
-              console.log(
-                '🔑 Token prefix:',
-                token ? token.substring(0, 10) + '...' : 'undefined',
-              );
-
-              const response = await fetch(
-                'https://api.pinata.cloud/pinning/pinJSONToIPFS',
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    pinataContent: data,
-                    pinataMetadata: {
-                      name: `hat-metadata-${Date.now()}`,
-                      keyvalues: {
-                        type: 'hat-metadata',
-                        version: data.version || '1.0.0',
-                        podId: data.podContext?.podId,
-                        roleName: data.podContext?.roleName,
-                      },
-                    },
-                    pinataOptions: {
-                      cidVersion: 1,
-                    },
-                  }),
-                },
-              );
-
-              if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(
-                  `Pinata API error: ${response.status} - ${errorText}`,
-                );
+              const name = `hat-metadata-${Date.now()}`;
+              let cid: string;
+              if (isBrowser) {
+                const { pinJsonViaServer } = await import('@/lib/ipfsPinClient');
+                cid = await pinJsonViaServer('hat_metadata', data, name);
+              } else {
+                const { pinJson } = await import('@/lib/pinataServer');
+                cid = await pinJson({
+                  content: data,
+                  name,
+                  keyvalues: { type: 'hat_metadata' },
+                });
               }
 
-              const result = await response.json();
-              console.log(
-                '✅ Successfully uploaded to Pinata, IPFS hash:',
-                result.IpfsHash,
-              );
-              return { cid: { toString: () => result.IpfsHash } };
+              console.log('✅ Successfully uploaded to Pinata, IPFS hash:', cid);
+              return { cid: { toString: () => cid } };
             } catch (error) {
               console.error('❌ Pinata upload failed:', error);
               throw error;

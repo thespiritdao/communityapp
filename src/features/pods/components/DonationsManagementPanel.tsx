@@ -7,6 +7,7 @@ import { encodeFunctionData, parseUnits, getAddress } from 'viem';
 import { CheckCircle, Clock, RefreshCw, Coins, ExternalLink } from 'lucide-react';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 
 const SYSTEM_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 
@@ -98,7 +99,9 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
   const fetchDonations = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/donations/list?all=true');
+      const res = await fetch('/api/donations/list?all=true', {
+        headers: await ensureAuthHeaders(),
+      });
       if (res.ok) setAllDonations(await res.json());
     } finally {
       setLoading(false);

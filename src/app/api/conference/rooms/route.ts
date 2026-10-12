@@ -7,6 +7,7 @@ import { RoomServiceClient } from 'livekit-server-sdk';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
+import { requireWallet } from '@/lib/apiPodGuard';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -38,6 +39,9 @@ function getRoomServiceClient() {
 // ── GET /api/conference/rooms?roomName=... or ?eventId=... ────────────────────
 export async function GET(req: NextRequest) {
   try {
+    const walletOrDenied = await requireWallet(req);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+
     const { searchParams } = new URL(req.url);
     const roomName = searchParams.get('roomName');
     const eventId  = searchParams.get('eventId');

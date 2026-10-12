@@ -3,6 +3,8 @@
  * Uploads agreement text to IPFS via Pinata for on-chain eligibility criteria
  */
 
+import { pinJsonViaServer } from '@/lib/ipfsPinClient';
+
 interface AgreementMetadata {
   agreement_text: string;
   agreement_id: string;
@@ -12,14 +14,7 @@ interface AgreementMetadata {
   version: string;
 }
 
-interface PinataResponse {
-  IpfsHash: string;
-  PinSize: number;
-  Timestamp: string;
-}
-
 export class AgreementIPFSService {
-  private static readonly PINATA_API_URL = 'https://api.pinata.cloud';
   private static readonly PINATA_GATEWAY = 'https://gateway.pinata.cloud/ipfs';
 
   /**
@@ -32,14 +27,6 @@ export class AgreementIPFSService {
     podId?: string,
     roleType?: 'leader' | 'member',
   ): Promise<string> {
-    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
-
-    if (!jwt) {
-      throw new Error(
-        'Pinata JWT not configured - add NEXT_PUBLIC_PINATA_JWT to environment variables',
-      );
-    }
-
     if (!agreementText || agreementText.trim().length === 0) {
       throw new Error('Agreement text cannot be empty');
     }
@@ -61,45 +48,20 @@ export class AgreementIPFSService {
         version: '1.0',
       };
 
-      const response = await fetch(
-        `${this.PINATA_API_URL}/pinning/pinJSONToIPFS`,
+      // Pinned server-side: the Pinata key stays off the browser.
+      const cid = await pinJsonViaServer(
+        'pod_agreement',
+        metadata,
+        `agreement-${agreementId}-${Date.now()}`,
         {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            pinataContent: metadata,
-            pinataMetadata: {
-              name: `agreement-${agreementId}-${Date.now()}`,
-              keyvalues: {
-                type: 'pod_agreement',
-                agreement_id: agreementId,
-                pod_id: podId || 'unknown',
-                role_type: roleType || 'member',
-                created: new Date().toISOString(),
-              },
-            },
-            pinataOptions: {
-              cidVersion: 1, // Use CIDv1 for better compatibility
-            },
-          }),
+          agreement_id: agreementId,
+          pod_id: podId || 'unknown',
+          role_type: roleType || 'member',
         },
       );
+      console.log('✅ Agreement uploaded to IPFS:', cid);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Pinata upload failed:', errorText);
-        throw new Error(
-          `Pinata API error: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const data: PinataResponse = await response.json();
-      console.log('✅ Agreement uploaded to IPFS:', data.IpfsHash);
-
-      return data.IpfsHash;
+      return cid;
     } catch (error: any) {
       console.error('Error uploading agreement to IPFS:', error);
       throw new Error(
@@ -140,10 +102,11 @@ export class AgreementIPFSService {
   }
 
   /**
-   * Check if IPFS/Pinata is configured
+   * Pinning goes through /api/ipfs/pin; the server reports if Pinata is
+   * missing, so the client always offers the upload.
    */
   static isConfigured(): boolean {
-    return !!process.env.NEXT_PUBLIC_PINATA_JWT;
+    return true;
   }
 
   /**

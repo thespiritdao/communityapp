@@ -461,7 +461,7 @@ export const EligibilityCriteriaBuilder: React.FC<
       toast({
         title: 'IPFS Not Configured',
         description:
-          'Please add NEXT_PUBLIC_PINATA_JWT to your environment variables',
+          'IPFS pinning is not available right now',
         variant: 'destructive',
       });
       return null;
@@ -1233,9 +1233,8 @@ export const EligibilityCriteriaBuilder: React.FC<
                         {!AgreementIPFSService.isConfigured() && (
                           <div className="bg-amber-50 border border-amber-200 p-3 rounded">
                             <p className="text-xs text-amber-800">
-                              <strong>⚠️ IPFS not configured:</strong> Add
-                              NEXT_PUBLIC_PINATA_JWT to .env to enable on-chain
-                              agreement storage
+                              <strong>⚠️ IPFS not configured:</strong> on-chain
+                              agreement storage is unavailable
                             </p>
                           </div>
                         )}

@@ -4,11 +4,63 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { requireWallet } from '@/lib/apiPodGuard';
+import { isExecutiveLeader, isPodMember } from '@/lib/serverPodAuth';
 
 export const runtime = 'nodejs';
 
+/**
+ * Category ids the caller may read — server mirror of
+ * forums_accessible_by_identity / useUnifiedForumAccess:
+ *  - non-pod categories with no required token: any signed-in member
+ *  - pod categories: active pod members, and only while the pod's forum
+ *    module is enabled
+ *  - non-pod token/hat-gated categories: Executive Leaders only (the
+ *    on-chain token check lives client-side; fail closed here)
+ * Executive Leaders can read everything.
+ */
+async function readableCategoryIds(wallet: string): Promise<Set<string>> {
+  const { data: cats } = await supabaseAdmin
+    .from('forum_categories')
+    .select('id, pod_id, required_token');
+  const all = (cats ?? []) as { id: string; pod_id: string | null; required_token: string | null }[];
+
+  if (await isExecutiveLeader(wallet)) return new Set(all.map((c) => c.id));
+
+  const podIds = [...new Set(all.map((c) => c.pod_id).filter(Boolean) as string[])];
+  const enabled = new Map<string, boolean>();
+  if (podIds.length > 0) {
+    const { data: modules } = await supabaseAdmin
+      .from('pod_modules')
+      .select('pod_id, forum_enabled')
+      .in('pod_id', podIds);
+    (modules ?? []).forEach((m: any) => enabled.set(m.pod_id, m.forum_enabled !== false));
+  }
+  const memberOf = new Set<string>();
+  await Promise.all(
+    podIds.map(async (podId) => {
+      if (enabled.get(podId) === false) return;
+      if (await isPodMember(podId, wallet)) memberOf.add(podId);
+    }),
+  );
+
+  const allowed = new Set<string>();
+  for (const c of all) {
+    if (c.pod_id) {
+      if (memberOf.has(c.pod_id)) allowed.add(c.id);
+    } else if (!c.required_token) {
+      allowed.add(c.id);
+    }
+  }
+  return allowed;
+}
+
 export async function GET(req: NextRequest) {
   try {
+    const walletOrDenied = await requireWallet(req);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const wallet = walletOrDenied;
+
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q')?.trim();
     const categoryId = searchParams.get('category_id') || null;
@@ -18,6 +70,12 @@ export async function GET(req: NextRequest) {
     if (!q || q.length < 2) {
       return NextResponse.json({ error: 'Query must be at least 2 characters' }, { status: 400 });
     }
+
+    const allowed = await readableCategoryIds(wallet);
+    if (categoryId && !allowed.has(categoryId)) {
+      return NextResponse.json({ error: 'You do not have access to this forum' }, { status: 403 });
+    }
+    const canRead = (t: any) => !t.category_id || allowed.has(t.category_id);
 
     // Try FTS RPC first
     let data: any[] | null = null;
@@ -48,9 +106,10 @@ export async function GET(req: NextRequest) {
         console.error('Forum search fallback error:', fallbackError);
         return NextResponse.json({ error: 'Search failed' }, { status: 500 });
       }
-      data = fallbackData;
+      data = (fallbackData ?? []).filter(canRead);
     } else {
-      data = rpcData;
+      // NB: filtered after paging, so a page can come back short.
+      data = (rpcData ?? []).filter(canRead);
     }
 
     // Fetch author profiles for results

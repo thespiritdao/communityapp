@@ -12,6 +12,8 @@
 // burned to cover the price). 1 $SELF = 1 hour = 1e18 wei; price_self of N means
 // N hours → requiredHours = N × 1e18.
 
+import { getAuthHeaders } from '@/lib/authHeaders';
+
 const selfPaymentABI = require('src/abis/SelfPaymentV2.json');
 
 const BPS = 10_000n;
@@ -178,6 +180,7 @@ export async function buildSelfPaymentCall(args: {
   const res = await fetch(
     `/api/self/holdings?wallet=${args.walletAddress}` +
       `&community=${args.listingCommunity.toString()}&detail=1`,
+    { headers: await getAuthHeaders() },
   );
   if (!res.ok) {
     console.error('[selfPayment] holdings fetch failed:', res.status);

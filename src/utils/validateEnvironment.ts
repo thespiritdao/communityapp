@@ -93,7 +93,7 @@ const OPTIONAL_ENV_VARS = {
   ],
 
   // IPFS/Pinata
-  ipfs: ['NEXT_PUBLIC_PINATA_JWT', 'NEXT_PUBLIC_PINATA_GATEWAY'],
+  ipfs: ['NEXT_PUBLIC_PINATA_GATEWAY'],
 
   // Wallet Connect
   walletconnect: ['NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID'],

@@ -16,6 +16,7 @@
 // Schedule: every 30 minutes (see vercel.json). Idempotent: once a proposal
 // leaves 'proposed'/'active' it is never reprocessed.
 
+import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { sendServerNotificationBatch } from '@/lib/serverNotifications';
@@ -147,6 +148,23 @@ export async function GET(req: NextRequest) {
         }
 
         const closedAt = new Date().toISOString();
+        // The public IPFS manifest carries a SHA-256 commitment to the vote
+        // list, not the list itself: per-voter wallets and choices pinned
+        // publicly tied members to their votes forever (privacy review
+        // 2026-10). The full list stays in governance_votes; anyone with it
+        // can recompute votesSha256 over this exact canonical form.
+        const canonicalVotes = (votes || [])
+          .map((v) => ({
+            voter: String(v.voter_address || '').toLowerCase(),
+            vote: v.vote,
+            signature: v.signature || '',
+            timestamp: v.timestamp,
+            hat_id: v.hat_id ?? null,
+          }))
+          .sort((a, b) => a.voter.localeCompare(b.voter));
+        const votesSha256 = createHash('sha256')
+          .update(JSON.stringify(canonicalVotes))
+          .digest('hex');
         const manifest = {
           proposalId: proposal.id,
           podId: proposal.pod_id,
@@ -155,13 +173,8 @@ export async function GET(req: NextRequest) {
           description: proposal.description,
           createdAt: proposal.created_at,
           closedAt,
-          votes: (votes || []).map((v) => ({
-            voter: v.voter_address,
-            vote: v.vote,
-            signature: v.signature || '',
-            timestamp: v.timestamp,
-            hat_id: v.hat_id,
-          })),
+          voteCount: canonicalVotes.length,
+          votesSha256,
           tally,
           result,
           thresholds: thresholdsBlock,

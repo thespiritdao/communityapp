@@ -27,6 +27,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http, getAddress } from 'viem';
 import { base } from 'viem/chains';
+import { getWalletFromRequest } from '@/lib/serverPodAuth';
 
 export const runtime = 'nodejs';
 
@@ -128,6 +129,11 @@ export async function GET(req: NextRequest) {
     }
     const wallets = [...linked];
 
+    // Privacy: `holder` in detail mode reveals the user's OTHER linked wallets.
+    // Only include it when the caller is signed in as one of those wallets.
+    const viewer = (await getWalletFromRequest(req))?.toLowerCase();
+    const viewerOwnsWallets = !!viewer && linked.has(viewer);
+
     // Distinct (wallet, community_id, epoch) the user was minted into.
     // ::text preserves full NUMERIC(78,0) precision (community_id is uint224).
     const { data: minted, error: mErr } = await supabase
@@ -210,7 +216,7 @@ export async function GET(req: NextRequest) {
     let raw = 0n;
     const holdings: {
       id: string;
-      holder: string;
+      holder?: string;
       community: string;
       epoch: number;
       rawWei: string;
@@ -234,7 +240,7 @@ export async function GET(req: NextRequest) {
         if (rawWei > 0n && decayBps > 0) {
           holdings.push({
             id: reads[i].id.toString(),
-            holder: reads[i].holder,
+            ...(viewerOwnsWallets ? { holder: reads[i].holder } : {}),
             community: reads[i].community.toString(),
             epoch: reads[i].epoch,
             rawWei: rawWei.toString(),

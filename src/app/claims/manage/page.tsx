@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { getClientHatId } from '@/lib/hatRegistryClient';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 
 type ClaimStatus = 'awaiting_executive_approval' | 'approved' | 'rejected' | 'pending_burn';
 
@@ -99,7 +100,7 @@ export default function ClaimsManagePage() {
     setLoading(true);
     try {
       const url = filter === 'all' ? '/api/claims/list?all=true' : '/api/claims/list';
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: await ensureAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setClaims(data);
@@ -119,7 +120,7 @@ export default function ClaimsManagePage() {
     try {
       const res = await fetch('/api/claims/action', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await ensureAuthHeaders()) },
         body: JSON.stringify({
           claimId,
           action,

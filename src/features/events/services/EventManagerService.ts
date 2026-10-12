@@ -239,8 +239,8 @@ export class EventManagerService {
    */
   static generateCertificateMetadata(
     event: any,
-    recipientAddress: string,
-    userName?: string,
+    _recipientAddress: string,
+    _userName?: string,
   ): any {
     const completionDate = new Date(event.event_end_date || event.event_date);
     const eventDate = new Date(event.event_date);
@@ -264,14 +264,9 @@ export class EventManagerService {
           trait_type: 'Completion Date',
           value: completionDate.toISOString().split('T')[0],
         },
-        {
-          trait_type: 'Event Location',
-          value: event.location || 'Virtual',
-        },
-        {
-          trait_type: 'Recipient',
-          value: userName || recipientAddress.slice(0, 8) + '...',
-        },
+        // No recipient name or event location: this metadata is written
+        // on-chain as a data URI, permanently and publicly. The holder's
+        // wallet already identifies the recipient. (Privacy review 2026-10.)
         {
           trait_type: 'Organization',
           value: 'Community DAO',
