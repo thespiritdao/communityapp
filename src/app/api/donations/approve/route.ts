@@ -318,10 +318,16 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/donations/approve?donationId=xxx
  *
- * Check approval status of a donation
+ * Check approval status of a donation. Requires a session: the donor or an
+ * Executive Leader only.
  */
 export async function GET(request: NextRequest) {
   try {
+    const callerAddress = (await getWalletFromRequest(request))?.toLowerCase();
+    if (!callerAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const donationId = searchParams.get('donationId');
 
@@ -344,6 +350,11 @@ export async function GET(request: NextRequest) {
         { error: 'Donation not found' },
         { status: 404 }
       );
+    }
+
+    const isDonor = String(donation.user_wallet || '').toLowerCase() === callerAddress;
+    if (!isDonor && !(await verifyExecutiveRole(callerAddress))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Get approvals

@@ -55,7 +55,9 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
       setError('');
 
       console.log(`🔍 Loading work submissions for pod: ${podId}`);
-      const response = await fetch(`/api/bounty/work/submit?podId=${podId}`);
+      const response = await fetch(`/api/bounty/work/submit?podId=${podId}`, {
+        headers: await getAuthHeaders(),
+      });
       const data = await response.json();
 
       if (!response.ok) {

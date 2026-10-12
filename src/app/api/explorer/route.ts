@@ -11,6 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseAbi, formatUnits } from 'viem';
 import { createConfiguredPublicClient } from '@/utils/rpcClient';
+import { getWalletFromRequest } from '@/lib/serverPodAuth';
+
+export const runtime = 'nodejs';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,6 +38,26 @@ export interface ExplorerEvent {
 
 const LIMIT = 40;
 
+// Privacy: metadata keys that identify a person beyond their wallet. Stripped
+// for unauthenticated callers (the public ledger stays wallet + type + time).
+const PERSONAL_METADATA_KEY =
+  /(^|_)(e?mail|payout_?email|first_?name|last_?name|full_?name|display_?name|displayname|profile_?picture|profilepicture|avatar(_url)?|phone|invite_?code|location|lat|lng|latitude|longitude)$/i;
+
+function redactMetadata(meta: Record<string, any> | null | undefined) {
+  if (!meta || typeof meta !== 'object') return meta ?? undefined;
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (PERSONAL_METADATA_KEY.test(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+function redactTitle(type: string, title: string): string {
+  if (type === 'member_introduced') return 'A member joined SpiritDAO';
+  return title;
+}
+
 // Frontend filter tab → DB category column.
 // 'all' returns everything.
 const TAB_TO_CATEGORY: Record<string, string> = {
@@ -56,6 +79,11 @@ export async function GET(req: NextRequest) {
   const typeFilter = searchParams.get('type');
   const podFilter = searchParams.get('pod_id');
   const offsetParam = parseInt(searchParams.get('offset') ?? '0', 10);
+
+  // Public feed: unauthenticated callers get wallets + event types only, no
+  // names, pictures or emails. Signed-in members keep the full view.
+  const viewer = await getWalletFromRequest(req);
+  const isPublic = !viewer;
 
   try {
     // ── Page of events ────────────────────────────────────────────────────────
@@ -103,7 +131,7 @@ export async function GET(req: NextRequest) {
     ].map((w) => w.toLowerCase());
 
     let nameMap: Record<string, string> = {};
-    if (wallets.length > 0) {
+    if (!isPublic && wallets.length > 0) {
       const { data: profiles } = await supabaseAdmin
         .from('user_profiles')
         .select('wallet_address, first_name, last_name')
@@ -134,10 +162,10 @@ export async function GET(req: NextRequest) {
         actor: actorLower ? nameMap[actorLower] : undefined,
         actor_address: r.actor ?? undefined,
         recipient_address: r.recipient_address ?? undefined,
-        title: r.title,
+        title: isPublic ? redactTitle(r.type, r.title) : r.title,
         amount,
         url: r.url ?? undefined,
-        metadata: r.metadata ?? undefined,
+        metadata: isPublic ? redactMetadata(r.metadata) : r.metadata ?? undefined,
       };
     });
 

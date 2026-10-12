@@ -1,7 +1,9 @@
 /**
  * IPFS Service for Bounty Metadata Storage
- * Uses existing Pinata JWT for authentication
+ * Uploads go through the server (/api/ipfs/pin); reads use the public gateway.
  */
+
+import { pinJsonViaServer } from '@/lib/ipfsPinClient';
 
 interface BountyMetadata {
   title: string;
@@ -24,72 +26,31 @@ interface BountyMetadata {
   version?: string;
 }
 
-interface PinataResponse {
-  IpfsHash: string;
-  PinSize: number;
-  Timestamp: string;
-}
-
 export class BountyIPFSService {
-  private static readonly PINATA_API_URL = 'https://api.pinata.cloud';
   private static readonly PINATA_GATEWAY = 'https://gateway.pinata.cloud/ipfs';
 
   /**
-   * Upload bounty metadata to IPFS via Pinata
+   * Upload bounty metadata to IPFS. Pinned server-side via /api/ipfs/pin so
+   * the Pinata key stays off the browser.
    */
   static async uploadMetadata(metadata: BountyMetadata): Promise<string> {
-    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
-
-    if (!jwt) {
-      throw new Error('Pinata JWT not configured');
-    }
-
     try {
-      // Add version and timestamp to metadata
       const enrichedMetadata = {
         ...metadata,
         version: '1.0',
         created_at: new Date().toISOString(),
       };
 
-      const response = await fetch(
-        `${this.PINATA_API_URL}/pinning/pinJSONToIPFS`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            pinataContent: enrichedMetadata,
-            pinataMetadata: {
-              name: `bounty-${metadata.title}-${Date.now()}`,
-              keyvalues: {
-                type: 'bounty_metadata',
-                category: metadata.category,
-                has_token_gating:
-                  !!metadata.token_gating?.required_tokens?.length,
-                creator: metadata.creator_address || 'unknown',
-              },
-            },
-            pinataOptions: {
-              cidVersion: 1,
-            },
-          }),
-        },
+      const cid = await pinJsonViaServer(
+        'bounty_metadata',
+        enrichedMetadata,
+        `bounty-${metadata.title.slice(0, 60)}-${Date.now()}`,
+        { category: metadata.category || 'uncategorized' },
       );
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Pinata upload failed: ${error}`);
-      }
-
-      const data: PinataResponse = await response.json();
-      console.log('✅ Metadata uploaded to IPFS:', data.IpfsHash);
-
-      return data.IpfsHash;
+      console.log('✅ Metadata uploaded to IPFS:', cid);
+      return cid;
     } catch (error) {
-      console.error('Error uploading to Pinata:', error);
+      console.error('Error uploading to IPFS:', error);
       throw new Error(`Failed to upload metadata to IPFS: ${error}`);
     }
   }
@@ -150,110 +111,6 @@ export class BountyIPFSService {
     } catch (error) {
       console.error('Batch upload failed:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Pin existing IPFS hash (useful for ensuring persistence)
-   */
-  static async pinExistingHash(
-    ipfsHash: string,
-    name?: string,
-  ): Promise<boolean> {
-    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
-
-    if (!jwt) {
-      throw new Error('Pinata JWT not configured');
-    }
-
-    try {
-      const response = await fetch(`${this.PINATA_API_URL}/pinning/pinByHash`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          hashToPin: ipfsHash,
-          pinataMetadata: {
-            name: name || `bounty-pinned-${Date.now()}`,
-          },
-        }),
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('Error pinning hash:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Unpin IPFS hash (cleanup)
-   */
-  static async unpinHash(ipfsHash: string): Promise<boolean> {
-    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
-
-    if (!jwt) {
-      throw new Error('Pinata JWT not configured');
-    }
-
-    try {
-      const response = await fetch(
-        `${this.PINATA_API_URL}/pinning/unpin/${ipfsHash}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-        },
-      );
-
-      return response.ok;
-    } catch (error) {
-      console.error('Error unpinning hash:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get pinned content list (useful for management)
-   */
-  static async listPinnedBounties(limit: number = 10): Promise<any[]> {
-    const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
-
-    if (!jwt) {
-      throw new Error('Pinata JWT not configured');
-    }
-
-    try {
-      const queryParams = new URLSearchParams({
-        status: 'pinned',
-        pageLimit: limit.toString(),
-        'metadata[keyvalues]': JSON.stringify({
-          type: { value: 'bounty_metadata', op: 'eq' },
-        }),
-      });
-
-      const response = await fetch(
-        `${this.PINATA_API_URL}/data/pinList?${queryParams}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to list pinned content');
-      }
-
-      const data = await response.json();
-      return data.rows || [];
-    } catch (error) {
-      console.error('Error listing pinned bounties:', error);
-      return [];
     }
   }
 

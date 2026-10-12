@@ -4,6 +4,7 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { Resend } from 'resend';
 import { sendServerNotification } from '@/lib/serverNotifications';
+import { requireWallet } from '@/lib/apiPodGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,17 +67,22 @@ async function verifyExecLeader(callerAddress: string): Promise<boolean> {
  * Body:
  * - claimId: UUID of the claim
  * - action: 'approve' | 'reject'
- * - reviewerAddress: EP member's wallet (for auth + audit)
  * - note: optional reviewer note
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { claimId, action, reviewerAddress, note } = body;
+    const { claimId, action, note } = body;
 
-    if (!claimId || !action || !reviewerAddress) {
+    // The reviewer is the session wallet. A body-supplied reviewerAddress was
+    // trusted until 2026-10, so passing any Exec hat wearer's address worked.
+    const walletOrDenied = await requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const reviewerAddress = walletOrDenied;
+
+    if (!claimId || !action) {
       return NextResponse.json(
-        { error: 'claimId, action, and reviewerAddress required' },
+        { error: 'claimId and action required' },
         { status: 400 },
       );
     }

@@ -54,7 +54,9 @@ export const WorkSubmissionForm: React.FC<WorkSubmissionFormProps> = ({
       }
 
       try {
-        const response = await fetch(`/api/bounty/work/submit?bidId=${bid.id}`);
+        const response = await fetch(`/api/bounty/work/submit?bidId=${bid.id}`, {
+          headers: await getAuthHeaders(),
+        });
         const data = await response.json();
 
         if (response.ok && data.submissions && data.submissions.length > 0) {

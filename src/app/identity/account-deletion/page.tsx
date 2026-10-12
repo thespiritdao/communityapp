@@ -72,10 +72,12 @@ export default function AccountDeletionPage() {
           </h2>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
             <li>
-              <strong>Blockchain records</strong> — wallet addresses,
-              transaction history, token holdings, and voting records are part
-              of a permanent public ledger that no one, including us, can alter
-              or erase.
+              <strong>Blockchain records</strong> — membership tokens, pod
+              roles, token activity, and on-chain votes are part of a permanent
+              public ledger that no one, including us, can alter or erase. They
+              are recorded under your wallet address only. Once we delete your
+              profile and the account record linking it to that address, we no
+              longer hold anything that connects those records to you.
             </li>
             <li>
               <strong>Community content</strong> — forum posts and proposals

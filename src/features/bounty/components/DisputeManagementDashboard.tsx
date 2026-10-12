@@ -81,10 +81,11 @@ export const DisputeManagementDashboard: React.FC<
       setLoading(true);
 
       // Load dispute, evidence, and resolutions in parallel
+      const headers = await getAuthHeaders();
       const [disputeRes, evidenceRes, resolutionsRes] = await Promise.all([
-        fetch(`/api/bounty/dispute?disputeId=${disputeId}`),
-        fetch(`/api/bounty/dispute/evidence?disputeId=${disputeId}`),
-        fetch(`/api/bounty/dispute/resolve?disputeId=${disputeId}`),
+        fetch(`/api/bounty/dispute?disputeId=${disputeId}`, { headers }),
+        fetch(`/api/bounty/dispute/evidence?disputeId=${disputeId}`, { headers }),
+        fetch(`/api/bounty/dispute/resolve?disputeId=${disputeId}`, { headers }),
       ]);
 
       if (disputeRes.ok) {

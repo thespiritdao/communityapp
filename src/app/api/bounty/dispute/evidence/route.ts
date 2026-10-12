@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
-import { requireWalletMatch } from '@/lib/apiPodGuard';
+import { requireWallet, requireWalletMatch } from '@/lib/apiPodGuard';
+import { canViewDispute } from '@/lib/disputeAccess';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -394,6 +395,20 @@ export async function GET(request: NextRequest) {
         { error: 'Missing disputeId parameter' },
         { status: 400 },
       );
+    }
+
+    const walletOrDenied = await requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const { data: disputeRow } = await supabase
+      .from('bounty_disputes')
+      .select('id, bounty_id, filed_by, filed_against')
+      .eq('id', disputeId)
+      .maybeSingle();
+    if (!disputeRow) {
+      return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
+    }
+    if (!(await canViewDispute(disputeRow, walletOrDenied))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Get all evidence for this dispute

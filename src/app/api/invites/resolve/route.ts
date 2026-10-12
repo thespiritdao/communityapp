@@ -49,19 +49,15 @@ export async function GET(req: NextRequest) {
   if (/^[A-Z0-9]{6}$/i.test(code)) {
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('first_name, last_name')
+      .select('wallet_address')
       .eq('referral_key', code.toUpperCase())
       .maybeSingle();
 
     if (!profile) return NextResponse.json({ valid: false });
 
-    return NextResponse.json({
-      valid: true,
-      type: 'referral',
-      inviterName:
-        [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
-        'a SpiritDAO member',
-    });
+    // Privacy: no inviter identity here — this route is public and the
+    // landing page only needs to know the code is valid.
+    return NextResponse.json({ valid: true, type: 'referral' });
   }
 
   return NextResponse.json({ valid: false });

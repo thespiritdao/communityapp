@@ -11,21 +11,16 @@ export const runtime = 'nodejs';
  * API Route for IPFS operations
  * Handles bounty metadata upload/fetch via Pinata.
  *
- * POST (upload / pin / unpin / fetch) requires a signed-in member — this
- * spends the shared Pinata quota. GET ?hash= stays public (read-only proxy).
+ * POST (upload / fetch) requires a signed-in member — this spends the shared
+ * Pinata quota. GET ?hash= stays public (read-only proxy). Pin-by-hash and
+ * unpin were removed 2026-10: nothing called them, and any member could have
+ * unpinned any file.
  */
 
 export async function POST(request: NextRequest) {
   try {
     const walletOrDenied = await requireWallet(request);
     if (walletOrDenied instanceof Response) return walletOrDenied;
-
-    console.log('🔍 IPFS Route Debug:');
-    console.log('  PINATA_JWT exists:', !!PINATA_JWT);
-    console.log(
-      '  PINATA_JWT preview:',
-      PINATA_JWT ? PINATA_JWT.substring(0, 20) + '...' : 'MISSING',
-    );
 
     if (!PINATA_JWT) {
       console.error('❌ PINATA_JWT is not defined in environment');
@@ -44,12 +39,6 @@ export async function POST(request: NextRequest) {
 
       case 'fetch':
         return await fetchMetadata(ipfsHash);
-
-      case 'pin':
-        return await pinHash(ipfsHash);
-
-      case 'unpin':
-        return await unpinHash(ipfsHash);
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -130,7 +119,6 @@ async function uploadMetadata(metadata: any) {
       console.error('❌ Pinata upload error:');
       console.error('  Status:', response.status);
       console.error('  Error:', errorText);
-      console.error('  JWT used:', PINATA_JWT?.substring(0, 20) + '...');
 
       return NextResponse.json(
         {
@@ -191,98 +179,6 @@ async function fetchMetadata(ipfsHash: string) {
     console.error('Fetch error:', error);
     return NextResponse.json(
       { error: 'Fetch failed', details: error },
-      { status: 500 },
-    );
-  }
-}
-
-async function pinHash(ipfsHash: string) {
-  try {
-    if (!ipfsHash) {
-      return NextResponse.json(
-        { error: 'IPFS hash is required' },
-        { status: 400 },
-      );
-    }
-
-    const response = await fetch(`${PINATA_API_URL}/pinning/pinByHash`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${PINATA_JWT}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        hashToPin: ipfsHash,
-        pinataMetadata: {
-          name: `bounty-pinned-${Date.now()}`,
-          keyvalues: {
-            type: 'bounty_metadata',
-            action: 'manual_pin',
-          },
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      return NextResponse.json(
-        { error: 'Failed to pin hash', details: error },
-        { status: 500 },
-      );
-    }
-
-    const data = await response.json();
-
-    return NextResponse.json({
-      success: true,
-      pinned: true,
-      ipfsHash: data.IpfsHash,
-    });
-  } catch (error) {
-    console.error('Pin error:', error);
-    return NextResponse.json(
-      { error: 'Pin failed', details: error },
-      { status: 500 },
-    );
-  }
-}
-
-async function unpinHash(ipfsHash: string) {
-  try {
-    if (!ipfsHash) {
-      return NextResponse.json(
-        { error: 'IPFS hash is required' },
-        { status: 400 },
-      );
-    }
-
-    const response = await fetch(
-      `${PINATA_API_URL}/pinning/unpin/${ipfsHash}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${PINATA_JWT}`,
-        },
-      },
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      return NextResponse.json(
-        { error: 'Failed to unpin hash', details: error },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      unpinned: true,
-      ipfsHash,
-    });
-  } catch (error) {
-    console.error('Unpin error:', error);
-    return NextResponse.json(
-      { error: 'Unpin failed', details: error },
       { status: 500 },
     );
   }

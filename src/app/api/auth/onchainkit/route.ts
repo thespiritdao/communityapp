@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     console.log('🔐 Auth API: Received embedded wallet auth request');
 
     const body = await req.json();
-    const { address, email, isEmbedded } = body || {};
+    const { address, isEmbedded } = body || {};
 
     // Validate the address
     if (!address) {
@@ -74,6 +74,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: verified.error }, { status: verified.status });
     }
     console.log(`✅ Auth API: CDP user ${verified.userId} proved control of ${normalizedAddress}`);
+
+    // Only trust an email Coinbase verified for THIS CDP session. A body
+    // email used to be taken at face value, which let any caller probe
+    // whether an address belonged to a member (and learn their user id) or
+    // attach someone else's email to a new account.
+    const claimedEmail =
+      typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const email: string | null =
+      claimedEmail && verified.emails.includes(claimedEmail) ? claimedEmail : null;
+    if (claimedEmail && !email) {
+      console.warn('⚠️ Auth API: ignoring body email not verified by Coinbase for this session');
+    }
 
     // ── Resolution step 1: known CDP wallet → known user ──────────
     // The fastest, most reliable path: if the incoming CDP wallet is
@@ -122,11 +134,12 @@ export async function POST(req: NextRequest) {
         console.warn(
           `🔗 Auth API: Existing user (${data.user_id}) signing in from unrecognized CDP wallet (${normalizedAddress}). Returning requiresLinking.`,
         );
+        // Email is the caller's own verified address; never echo the
+        // account's internal user id.
         return NextResponse.json(
           {
             requiresLinking: true,
-            userId: data.user_id,
-            existingEmail: data.email,
+            existingEmail: email,
             unrecognizedWallet: normalizedAddress,
             message:
               'This device hasn\'t been linked to your account yet. Enter a one-time code from a device you\'re already signed in on, or create a new account.',
@@ -288,7 +301,7 @@ export async function POST(req: NextRequest) {
         const { notifyExecPodOfNewAccount } = await import('@/features/pods/services/PodMembershipNotificationService');
         await notifyExecPodOfNewAccount({
           newUserAddress: normalizedAddress,
-          newUserEmail: email,
+          newUserEmail: email ?? undefined,
         });
         console.log(`✅ Auth API: Sent new account notifications to exec pod`);
       } catch (notificationError) {

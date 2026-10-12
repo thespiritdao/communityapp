@@ -24,6 +24,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { rateLimiters, getClientIp } from '@/lib/ratelimit';
 import { LEAF_FORMULA } from '@/lib/ledgerMerkle';
+import { getWalletFromRequest } from '@/lib/serverPodAuth';
 
 export const runtime = 'nodejs';
 
@@ -117,6 +118,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Export query failed' }, { status: 500 });
   }
 
+  // Privacy: titles of member_introduced events embed the member's chosen
+  // name. Redact for unauthenticated callers. `title` is not a leaf field
+  // (see LEAF_FORMULA), so Merkle verification is unaffected.
+  const viewer = await getWalletFromRequest(req);
+  const out = viewer
+    ? events ?? []
+    : (events ?? []).map((e: any) =>
+        e.type === 'member_introduced' ? { ...e, title: 'A member joined SpiritDAO' } : e,
+      );
+
   const last = events?.[events.length - 1];
   return NextResponse.json({
     version: EXPORT_VERSION,
@@ -124,6 +135,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     anchorContract: LEDGER_ANCHOR,
     count: events?.length ?? 0,
     nextCursor: last && events!.length === limit ? encodeCursor(last.created_at, last.id) : null,
-    events: events ?? [],
+    events: out,
   });
 }

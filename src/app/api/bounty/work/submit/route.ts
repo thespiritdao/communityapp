@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
-import { requireWalletMatch } from '@/lib/apiPodGuard';
+import { requireWallet, requireWalletMatch } from '@/lib/apiPodGuard';
+import { isExecutiveLeader, isPodLeader } from '@/lib/serverPodAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -225,8 +226,48 @@ export async function POST(request: NextRequest) {
 }
 
 // GET: Fetch work submissions for a bounty or bid
+/**
+ * Privacy: a submission is visible to its submitter, the bounty's creator,
+ * leaders of the bounty's pod, and Executive Leaders. Rows the caller may
+ * not see are dropped (whatever filter was used).
+ */
+async function visibleSubmissions(rows: any[], wallet: string): Promise<any[]> {
+  if (rows.length === 0) return rows;
+  if (await isExecutiveLeader(wallet)) return rows;
+
+  const bountyIds = [...new Set(rows.map((r) => r.bounty_id).filter(Boolean))];
+  const { data: bounties } = await supabase
+    .from('bounties')
+    .select('id, creator_address, pod_id')
+    .in('id', bountyIds);
+  const byId = new Map((bounties ?? []).map((b: any) => [b.id, b]));
+
+  const leaderCache = new Map<string, boolean>();
+  const leads = async (podId: string) => {
+    if (!leaderCache.has(podId)) leaderCache.set(podId, await isPodLeader(podId, wallet));
+    return leaderCache.get(podId)!;
+  };
+
+  const out: any[] = [];
+  for (const r of rows) {
+    const b: any = byId.get(r.bounty_id);
+    if (
+      String(r.submitter_address || '').toLowerCase() === wallet ||
+      String(b?.creator_address || '').toLowerCase() === wallet ||
+      (b?.pod_id && (await leads(b.pod_id)))
+    ) {
+      out.push(r);
+    }
+  }
+  return out;
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const walletOrDenied = await requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const wallet = walletOrDenied;
+
     const { searchParams } = new URL(request.url);
     const bountyId = searchParams.get('bountyId');
     const podId = searchParams.get('podId');
@@ -282,11 +323,12 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      console.log(`✅ Found ${data.length} work submissions for pod ${podId}`);
+      const visible = await visibleSubmissions(data ?? [], wallet);
+      console.log(`✅ Found ${visible.length} visible work submissions for pod ${podId}`);
 
       return NextResponse.json({
         success: true,
-        submissions: data,
+        submissions: visible,
       });
     }
 
@@ -320,7 +362,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      submissions: data,
+      submissions: await visibleSubmissions(data ?? [], wallet),
     });
   } catch (error) {
     console.error('❌ Error in work submission GET:', error);

@@ -122,6 +122,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Privacy: only the wallet owner may list its claims.
+    const walletOrDenied = await requireWalletMatch(request, wallet);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+
     const { data: claims, error } = await supabase
       .from('token_claims')
       .select('id, system_tokens_to_burn, estimated_payout_usd, status, created_at, burn_tx_hash, approved_at')

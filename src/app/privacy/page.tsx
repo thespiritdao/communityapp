@@ -9,7 +9,7 @@ export default function PrivacyPolicyPage() {
           Privacy Policy
         </h1>
         <p className="text-sm text-gray-600 mb-8">
-          Last Updated: November 25, 2025
+          Last Updated: October 12, 2026
         </p>
 
         {/* Introduction */}
@@ -47,18 +47,32 @@ export default function PrivacyPolicyPage() {
             2.1 Blockchain Data
           </h3>
           <p className="text-gray-700 mb-4">
-            As a decentralized platform built on blockchain technology, certain
-            information is inherently public and recorded on the blockchain,
-            including:
+            Some of what you do on the Platform is recorded on the Base
+            blockchain. These records are stored under your{' '}
+            <strong>wallet address</strong>, not under your name, email, or
+            profile. They include:
           </p>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
-            <li>Wallet addresses you connect to the Platform</li>
-            <li>Transaction history and smart contract interactions</li>
-            <li>Token holdings ($SYSTEM and $SELF tokens)</li>
-            <li>Voting records and governance participation</li>
-            <li>Pod memberships and community affiliations</li>
-            <li>NFT ownership and event attendance records</li>
+            <li>
+              Your membership token (Proof of Curiosity) and any Advocate token,
+              which is issued after a donation
+            </li>
+            <li>
+              Pod membership and role badges (&ldquo;hats&rdquo;), which name
+              the community they belong to (for example, &ldquo;Temporal
+              Naturalism &ndash; Member&rdquo;)
+            </li>
+            <li>
+              $SYSTEM and $SELF token activity, including $SELF hours earned in
+              each community and your overall tenure tier
+            </li>
+            <li>Votes on proposals that are recorded on-chain</li>
+            <li>Bounty bids, purchases, payouts, and signed pod agreements</li>
           </ul>
+          <p className="text-gray-700 mb-4">
+            We do not write your name, email address, photo, or other profile
+            details to the blockchain.
+          </p>
 
           <h3 className="text-xl font-semibold text-gray-800 mb-3">
             2.2 Profile Information
@@ -130,8 +144,9 @@ export default function PrivacyPolicyPage() {
               improve the Platform's functionality
             </li>
             <li>
-              <strong>Identity Verification:</strong> To verify your identity
-              through wallet connections and Basename
+              <strong>Account Security:</strong> To confirm that you control
+              your wallet when you sign in (through your Coinbase-managed email
+              or social login, or by signing a message with a wallet you link)
             </li>
             <li>
               <strong>Governance:</strong> To enable voting, proposal creation,
@@ -174,23 +189,47 @@ export default function PrivacyPolicyPage() {
             4. Blockchain and Decentralization
           </h2>
           <p className="text-gray-700 mb-4">
-            <strong>Important:</strong> Blockchain data is public, permanent,
-            and immutable. Once information is recorded on the blockchain, it
-            cannot be deleted or modified, even if you delete your account or
-            request data removal.
+            <strong>Important:</strong> Blockchain records are public and
+            permanent. Anyone can read them, and no one, including us, can
+            change or delete them. This includes everything listed in section
+            2.1. Removing a token or role later adds a new record; it does not
+            erase the earlier one.
           </p>
-          <p className="text-gray-700 mb-4">This includes:</p>
+          <p className="text-gray-700 mb-4">
+            <strong>What this means for your privacy:</strong> on-chain records
+            are associated with a wallet address only. The connection between
+            that address and you (your name, email, photo, and profile) lives
+            in our off-chain database, which we can and will delete when you
+            delete your account (see section 8.2). After deletion, your
+            on-chain history remains, but we no longer hold anything that ties
+            it to you.
+          </p>
+          <p className="text-gray-700 mb-4">Please keep in mind:</p>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
-            <li>All transactions involving $SYSTEM and $SELF tokens</li>
-            <li>Governance votes and proposal participation</li>
-            <li>NFT minting and transfers (event attendance, memberships)</li>
-            <li>Smart contract interactions</li>
-            <li>Pod memberships and role assignments</li>
+            <li>
+              Because SpiritDAO is a religious organization, a membership token
+              or community role on your wallet indicates involvement with a
+              religious or spiritual community. By joining, you consent to that
+              record being public under your wallet address.
+            </li>
+            <li>
+              Anyone who already knows your wallet address (for example,
+              because you shared it, or because it appears elsewhere linked to
+              your identity) can see this history.
+            </li>
+            <li>
+              If you link an external wallet that carries a public name (such
+              as an ENS name or Basename), that name is public on the
+              blockchain independently of SpiritDAO. We do not create or
+              assign such names.
+            </li>
+            <li>
+              Some content is published to IPFS, a public file network: bounty
+              descriptions and bids, signed pod agreement texts, and summaries
+              of proposal votes. IPFS content is public, and copies may persist
+              even after we stop hosting it.
+            </li>
           </ul>
-          <p className="text-gray-700">
-            We have no ability to modify or delete blockchain records. This is
-            an inherent characteristic of blockchain technology.
-          </p>
         </section>
 
         {/* Token Privacy */}
@@ -285,8 +324,10 @@ export default function PrivacyPolicyPage() {
             The following information is public by default:
           </p>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
-            <li>All blockchain transactions and smart contract interactions</li>
-            <li>Profile information (unless you choose private settings)</li>
+            <li>
+              Blockchain records under your wallet address (see sections 2.1
+              and 4)
+            </li>
             <li>Forum posts and governance proposals</li>
             <li>Voting records and participation</li>
             <li>Pod memberships and community affiliations</li>
@@ -306,8 +347,18 @@ export default function PrivacyPolicyPage() {
               hosting
             </li>
             <li>
-              <strong>Blockchain Infrastructure:</strong> Coinbase, Infura, Base
-              network
+              <strong>Wallets and Blockchain Infrastructure:</strong> Coinbase
+              (embedded wallets and sign-in, which links your email or social
+              login to your wallet), Base network
+            </li>
+            <li>
+              <strong>Content Storage:</strong> Pinata (IPFS publishing)
+            </li>
+            <li>
+              <strong>Video Calls:</strong> LiveKit, hosted on our own servers
+            </li>
+            <li>
+              <strong>Donations:</strong> Stripe (payment card processing)
             </li>
             <li>
               <strong>Analytics:</strong> Usage analytics and performance
@@ -347,11 +398,15 @@ export default function PrivacyPolicyPage() {
             6.4 Community Members
           </h3>
           <p className="text-gray-700 mb-4">
-            Within pods and communities, certain information is shared with
-            other members:
+            Other signed-in members can see your profile (name, photo, bio, and
+            any links you add). Within pods and communities, certain
+            information is shared with other members:
           </p>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
-            <li>Chat messages within pod channels</li>
+            <li>
+              Chat messages within pod channels (direct messages are visible
+              only to you and the person you are messaging)
+            </li>
             <li>Bounty submissions and bids</li>
             <li>Event attendance records</li>
             <li>Treasury and financial activities (for pod members)</li>
@@ -417,7 +472,15 @@ export default function PrivacyPolicyPage() {
             for the full process. Please note:
           </p>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
-            <li>Blockchain data cannot be deleted (permanent public record)</li>
+            <li>
+              We delete the off-chain information that connects your wallet
+              address to you: name, email, photo, bio, links, and the account
+              record linking them to your wallet
+            </li>
+            <li>
+              Blockchain records cannot be deleted; they remain under your
+              wallet address only (see section 4)
+            </li>
             <li>Some data may be retained for legal/compliance requirements</li>
             <li>Deletion may limit or prevent Platform access</li>
             <li>

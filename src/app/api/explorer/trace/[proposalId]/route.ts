@@ -10,17 +10,22 @@
 //        → votes (each one human — verifiable)
 //        → resource movement (treasury/subscription tx where applicable)
 //
-// Public and unauthenticated: the ledger is a commons.
+// Requires a session: the trace resolves wallets to member names. The
+// wallet-level ledger stays public via /api/explorer/export.
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { requireWallet } from '@/lib/apiPodGuard';
 
 export const runtime = 'nodejs';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ proposalId: string }> },
 ): Promise<NextResponse> {
+  const walletOrDenied = await requireWallet(req);
+  if (walletOrDenied instanceof Response) return walletOrDenied;
+
   const { proposalId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(proposalId)) {
     return NextResponse.json({ error: 'Invalid proposal id' }, { status: 400 });

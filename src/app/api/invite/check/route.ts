@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     console.log(`🔍 Checking if invite code exists: ${normalizedCode}`);
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profiles')
-      .select('wallet_address, referral_key')
+      .select('referral_key')
       .eq('referral_key', normalizedCode)
       .maybeSingle();
 
@@ -77,11 +77,11 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Invite code exists: ${normalizedCode}`);
 
     // Return success - code is valid
-    // NOTE: We don't record usage yet - that happens after wallet is created
+    // NOTE: We don't record usage yet - that happens after wallet is created.
+    // Privacy: never return the referrer's wallet to an unauthenticated caller.
     return NextResponse.json({
       success: true,
       message: 'Invite code is valid',
-      referrerWallet: profile.wallet_address,
     });
   } catch (error) {
     console.error('Error checking invite code:', error);

@@ -5,6 +5,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { ExternalLink, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabaseClient';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 
 type ClaimStatus = 'awaiting_executive_approval' | 'approved' | 'rejected' | 'pending_burn';
 
@@ -108,7 +109,9 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
     setLoading(true);
     try {
       // Always fetch all claims so stats are always accurate
-      const res = await fetch('/api/claims/list?all=true');
+      const res = await fetch('/api/claims/list?all=true', {
+        headers: await ensureAuthHeaders(),
+      });
       if (res.ok) {
         const data: TokenClaim[] = await res.json();
         setAllClaims(data);
@@ -142,7 +145,7 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
     try {
       const res = await fetch('/api/claims/action', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await ensureAuthHeaders()) },
         body: JSON.stringify({ claimId, action, reviewerAddress: address, note: reviewNote.trim() || undefined }),
       });
       const data = await res.json();

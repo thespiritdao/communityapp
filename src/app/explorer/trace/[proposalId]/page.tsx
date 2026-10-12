@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { Loader2, MessageSquare, FileText, Vote, Coins, Bot, User, Cog, ExternalLink } from 'lucide-react';
 
 function ActorBadge({ actorType }: { actorType: string }) {
@@ -52,8 +53,15 @@ export default function TracePage() {
 
   useEffect(() => {
     if (!proposalId) return;
-    fetch(`/api/explorer/trace/${proposalId}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+    ensureAuthHeaders()
+      .then((headers) => fetch(`/api/explorer/trace/${proposalId}`, { headers }))
+      .then((res) =>
+        res.ok
+          ? res.json()
+          : Promise.reject(
+              new Error(res.status === 401 ? 'Sign in to view decision traces.' : `HTTP ${res.status}`),
+            ),
+      )
       .then(setData)
       .catch((err) => setError(err.message));
   }, [proposalId]);

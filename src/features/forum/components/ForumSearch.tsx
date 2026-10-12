@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Search, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { getCurrentSession } from '@/features/identity';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 interface SearchResult {
   id: string;
@@ -46,7 +47,9 @@ export function ForumSearch({ categoryId, placeholder = 'Search forum threads...
       const params = new URLSearchParams({ q });
       if (categoryId) params.set('category_id', categoryId);
 
-      const res = await fetch(`/api/forum/search?${params}`);
+      const res = await fetch(`/api/forum/search?${params}`, {
+        headers: await getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setResults(data.threads || []);

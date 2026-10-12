@@ -9,6 +9,7 @@ import type { ExplorerEvent } from '@/app/api/explorer/route';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { PodProfileDisplay } from '@/components/PodProfileDisplay';
 import { Bot } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -434,7 +435,10 @@ export default function ExplorerPage() {
       if (tab !== 'all') params.set('type', tab);
 
       try {
-        const res = await fetch(`/api/explorer?${params.toString()}`);
+        // Signed-in members see names; anonymous visitors get the redacted feed.
+        const res = await fetch(`/api/explorer?${params.toString()}`, {
+          headers: await getAuthHeaders(),
+        });
         if (!res.ok) throw new Error('Failed to fetch');
         const data: ExplorerResponse = await res.json();
 

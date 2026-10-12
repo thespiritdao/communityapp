@@ -17,6 +17,7 @@ import {
 } from '@/services/inviteCodeService';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
+import { requireWalletMatch } from '@/lib/apiPodGuard';
 
 // nodejs (not edge): @coinbase/cdp-sdk needs the Node crypto runtime.
 export const runtime = 'nodejs';
@@ -147,7 +148,6 @@ export async function POST(request: NextRequest) {
         console.log('✅ Returning user re-entering own code after deploy — allowing through');
         return NextResponse.json({
           success: true,
-          referrerWallet: normalizedWallet,
           message: 'Welcome back!',
           isReturningUser: true,
         });
@@ -176,7 +176,6 @@ export async function POST(request: NextRequest) {
       // They might be completing an incomplete onboarding
       return NextResponse.json({
         success: true,
-        referrerWallet: existingProfile.invited_by,
         message: 'Welcome back! Continuing your onboarding.',
         isReturningUser: true,
       });
@@ -235,7 +234,6 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Invite code validation successful for ${normalizedWallet}`);
     return NextResponse.json({
       success: true,
-      referrerWallet: profile.wallet_address,
       message: 'Invite code validated successfully',
     });
   } catch (error) {
@@ -269,11 +267,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Privacy: a referral code is personal — only its owner may read it.
+    const walletOrDenied = await requireWalletMatch(request, walletAddress);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+
     // Use admin client to bypass RLS — the regular client has no session in API routes
     const { data, error } = await supabaseAdmin
       .from('user_profiles')
       .select('referral_key')
-      .eq('wallet_address', walletAddress.toLowerCase())
+      .eq('wallet_address', walletOrDenied)
       .single();
 
     if (error || !data?.referral_key) {

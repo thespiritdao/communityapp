@@ -13,7 +13,8 @@ import { requestSupabaseSession } from '@/features/identity/lib/cdpSession';
  * one-time code from a known device. See docs/spec-platform-identity-multi-wallet.md.
  */
 export interface LinkingRequired {
-  userId: string;
+  /** No longer returned by the server (privacy); kept for type compatibility. */
+  userId: string | null;
   existingEmail: string | null;
   unrecognizedWallet: string;
   message: string;
@@ -227,7 +228,7 @@ export function useAuth(): UseAuthReturn {
             error: null,
             isAuthenticated: false,
             linkingRequired: {
-              userId: body.userId,
+              userId: body.userId ?? null,
               existingEmail: body.existingEmail ?? null,
               unrecognizedWallet: body.unrecognizedWallet,
               message:

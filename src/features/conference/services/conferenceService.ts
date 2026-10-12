@@ -39,7 +39,8 @@ async function apiPost<T>(path: string, body: object): Promise<T> {
 }
 
 async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(path);
+  const token = await getAuthToken();
+  const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
   return data as T;
