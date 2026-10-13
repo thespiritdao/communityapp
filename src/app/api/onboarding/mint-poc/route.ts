@@ -5,7 +5,7 @@
  * Uses the CDP smart wallet + Coinbase paymaster — gasless.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createPublicClient, http, encodeFunctionData, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
@@ -51,6 +51,7 @@ async function mintTNMemberHat(
   });
   if (alreadyHas) {
     console.log('ℹ️ User already has TN Member HAT');
+    await syncTNMembership(walletAddress);
     return;
   }
 
@@ -83,22 +84,54 @@ async function mintTNMemberHat(
 
   console.log('✅ TN Member HAT minted (gasless):', result.userOpHash);
 
-  // Sync to pod_members
+  await syncTNMembership(walletAddress);
+}
+
+/**
+ * Record TN pod membership for a hat wearer. Runs whether the hat was just
+ * minted or already worn — skipping it on the second path, and losing it to
+ * a frozen fire-and-forget on the first, left 27 hat wearers with no
+ * pod_members row (found and backfilled 2026-10-13). Throws on failure so
+ * the caller's log shows it.
+ */
+async function syncTNMembership(walletAddress: string): Promise<void> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (supabaseUrl && supabaseKey) {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    await supabase.from('pod_members').upsert({
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase service credentials missing; TN membership not recorded');
+  }
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const wallet = walletAddress.toLowerCase();
+  const now = new Date().toISOString();
+
+  const { data: existing, error: readError } = await supabase
+    .from('pod_members')
+    .select('id, is_active')
+    .eq('pod_id', TN_POD_ID)
+    .eq('wallet', wallet)
+    .maybeSingle();
+  if (readError) throw new Error(`TN pod_members read failed: ${readError.message}`);
+
+  if (!existing) {
+    const { error } = await supabase.from('pod_members').insert({
       pod_id: TN_POD_ID,
-      wallet: walletAddress.toLowerCase(),
+      wallet,
       membership_type: 'member',
       role: 'member',
       hat_id: TN_MEMBER_HAT_ID,
       is_active: true,
-      joined_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'pod_id,wallet' });
+      joined_at: now,
+      created_at: now,
+      updated_at: now,
+    });
+    if (error) throw new Error(`TN pod_members insert failed: ${error.message}`);
+  } else if (!existing.is_active) {
+    // Wears the hat again: reactivate, keeping the original join date.
+    const { error } = await supabase
+      .from('pod_members')
+      .update({ is_active: true, removed_at: null, updated_at: now })
+      .eq('id', existing.id);
+    if (error) throw new Error(`TN pod_members reactivate failed: ${error.message}`);
   }
 }
 
@@ -215,9 +248,14 @@ export async function POST(request: NextRequest) {
       dedupe_key: `member_joined:${walletAddress.toLowerCase()}`,
     }).catch((err) => console.warn('[mint-poc] explorer event failed:', err));
 
-    // Also mint TN Member HAT (non-blocking — failure doesn't fail onboarding)
-    mintTNMemberHat(walletAddress, privateKey, cdpApiKey, cdpPrivateKey, paymasterUrl).catch((err) =>
-      console.error('⚠️ TN Member HAT mint failed (non-critical):', err)
+    // Also mint TN Member HAT + record membership. after() keeps the
+    // function alive past the response; a bare fire-and-forget was frozen by
+    // Vercel mid-way, minting the hat but dropping the pod_members row.
+    // Failure doesn't fail onboarding.
+    after(() =>
+      mintTNMemberHat(walletAddress, privateKey, cdpApiKey, cdpPrivateKey, paymasterUrl).catch((err) =>
+        console.error('⚠️ TN Member HAT mint/sync failed (non-critical):', err)
+      ),
     );
 
     return NextResponse.json({

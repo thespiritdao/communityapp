@@ -4,7 +4,8 @@
 // Security model:
 // - Verifies the caller's Supabase session token (verifySessionToken)
 // - Verifies the requested walletAddress matches the wallet embedded in the JWT
-// - Role (host/co_host/speaker/attendee) determines publish permissions
+// - Role (host/co_host/speaker/attendee) is decided server-side (grantedRoleFor)
+//   and determines publish permissions; the requested role can only lower it
 // - LiveKit API secret never leaves the server
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -12,7 +13,7 @@ import { AccessToken } from 'livekit-server-sdk';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
-import { isExecutiveLeader, isPodMember } from '@/lib/serverPodAuth';
+import { isExecutiveLeader, isPodLeader, isPodMember } from '@/lib/serverPodAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -84,6 +85,60 @@ async function canJoinRoom(
   }
 
   return isExecutiveLeader(wallet);
+}
+
+type ConferenceRole = 'host' | 'co_host' | 'speaker' | 'attendee';
+const ROLE_RANK: Record<ConferenceRole, number> = { attendee: 0, speaker: 1, co_host: 2, host: 3 };
+
+/**
+ * The highest role this wallet is entitled to in the room:
+ *   host     — the room's host
+ *   co_host  — leaders of the room's pod, the event's creator/manager,
+ *              leaders of the event's organizing pod, Executive Leaders
+ *   speaker  — promoted by a host earlier in this room (host-action)
+ *   attendee — everyone else
+ */
+async function grantedRoleFor(
+  room: { id: string; host_wallet: string; pod_id: string | null; event_id: string | null },
+  wallet: string,
+): Promise<ConferenceRole> {
+  if ((room.host_wallet || '').toLowerCase() === wallet) return 'host';
+
+  if (room.pod_id && (await isPodLeader(room.pod_id, wallet))) return 'co_host';
+
+  if (room.event_id) {
+    const { data: event } = await supabaseAdmin
+      .from('events')
+      .select('creator_address, manager_address, organizing_pod_id')
+      .eq('id', room.event_id)
+      .maybeSingle();
+    if (event) {
+      if (
+        (event.creator_address || '').toLowerCase() === wallet ||
+        (event.manager_address || '').toLowerCase() === wallet
+      ) {
+        return 'co_host';
+      }
+      if (event.organizing_pod_id && (await isPodLeader(event.organizing_pod_id, wallet))) {
+        return 'co_host';
+      }
+    }
+  }
+
+  if (await isExecutiveLeader(wallet)) return 'co_host';
+
+  // Keep a promotion across reconnects within the same room.
+  const { data: prior } = await supabaseAdmin
+    .from('conference_participants')
+    .select('role')
+    .eq('room_id', room.id)
+    .eq('wallet_address', wallet)
+    .eq('role', 'speaker')
+    .limit(1)
+    .maybeSingle();
+  if (prior) return 'speaker';
+
+  return 'attendee';
 }
 
 export async function POST(req: NextRequest) {
@@ -158,8 +213,14 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5. Determine effective role ──────────────────────────────────────────
-    const isHost = room.host_wallet.toLowerCase() === effectiveWallet;
-    const effectiveRole = isHost ? 'host' : role;
+    // Decided here, never taken from the request: a client asking for
+    // speaker/co_host used to get publish rights (and co_host moderation via
+    // host-action). The requested role can only lower what the caller gets.
+    const grantedRole = await grantedRoleFor(room, effectiveWallet);
+    const effectiveRole =
+      ROLE_RANK[role as ConferenceRole] < ROLE_RANK[grantedRole]
+        ? (role as ConferenceRole)
+        : grantedRole;
     const canPublish = PUBLISH_ROLES.has(effectiveRole);
 
     // ── 6. Mint LiveKit token ────────────────────────────────────────────────

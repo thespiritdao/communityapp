@@ -39,6 +39,7 @@ import ActiveSurveysBanner from '@/features/surveys/components/ActiveSurveysBann
 import { PodConferenceSection } from '@/features/conference/components/PodConferenceSection';
 import { PodPlacesSection } from '@/features/places/components/PodPlacesSection';
 import { LeaderInviteBanner, LeaderInvitesPanel } from '@/features/pods/components/LeaderInvites';
+import { LeavePodButton } from '@/features/pods/components/LeavePodButton';
 import '../../../features/home/styles/HomePage.css';
 
 // Lazy load the agreement signing modal (fixes SSR issues)
@@ -703,6 +704,17 @@ export default function PodDetailPage() {
                 <UserPlus className="w-5 h-5 mr-2" />
                 Apply to Join
               </Button>
+            </div>
+          )}
+
+          {/* Leave (members only; renders nothing for leaders or non-members) */}
+          {id && address && pod && (
+            <div className="flex justify-center">
+              <LeavePodButton
+                podId={id}
+                podName={pod.name}
+                onLeft={() => loadMembers(id, pod)}
+              />
             </div>
           )}
         </CardContent>
