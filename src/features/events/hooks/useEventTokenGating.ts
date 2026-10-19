@@ -255,22 +255,68 @@ export function useTokenGatedEvents(userAddress?: string) {
   const [visibleEvents, setVisibleEvents] = useState<EventWithStats[]>([]);
   const [registrableEvents, setRegistrableEvents] = useState<EventWithStats[]>([]);
   const [registeredEvents, setRegisteredEvents] = useState<EventWithStats[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Start true: consumers render "no events" when loading is false and the
+  // lists are empty, so a false initial value flashed an empty My Events tab
+  // before the first fetch had even begun.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const checkEventAccess = useCallback(async () => {
-    if (!effectiveAddress || hatPermissionsLoading) {
+    if (!effectiveAddress) {
       setVisibleEvents([]);
       setRegistrableEvents([]);
       setRegisteredEvents([]);
+      setLoading(false);
+      return;
+    }
+    if (hatPermissionsLoading) {
+      // Permissions still resolving; keep loading=true and wait for the re-run.
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      // NEW: Use normalized access control system with RPC
+    // The two halves of this hook have different failure modes and are
+    // fetched independently so one cannot blank the other:
+    //
+    //   "mine"       — registrations + events the member created. Plain table
+    //                  reads under RLS. Feeds My Events.
+    //   "accessible" — the events_accessible_by_identity RPC. Feeds the
+    //                  Calendar and the registrable list.
+    //
+    // From 2026-09-20 to 2026-10-19 the RPC lacked an EXECUTE grant and the
+    // old single try/catch cleared all three lists on that one error, so My
+    // Events showed 0 for everyone even though their registrations loaded.
+
+    const loadMine = async () => {
+      const userRegistrations =
+        await EventService.getUserRegistrations(effectiveAddress);
+      const registeredEventIds = new Set(
+        userRegistrations.map((reg) => reg.event_id),
+      );
+
+      // Full details for registered events, bypassing token gating, so
+      // My Events shows everything the member signed up for.
+      const [registeredFromDb, createdEvents] = await Promise.all([
+        registeredEventIds.size > 0
+          ? EventService.getEventsByIds(Array.from(registeredEventIds))
+          : Promise.resolve([] as EventWithStats[]),
+        EventService.getEvents({ creator_address: effectiveAddress }),
+      ]);
+
+      const mine: EventWithStats[] = [...registeredFromDb];
+      const seen = new Set(mine.map((e) => e.id));
+      for (const event of createdEvents) {
+        if (!seen.has(event.id)) {
+          mine.push(event);
+          seen.add(event.id);
+        }
+      }
+      return { mine, registeredEventIds };
+    };
+
+    const loadAccessible = async () => {
       const effectiveTokenBalances =
         contextTokenBalances && address === effectiveAddress
           ? contextTokenBalances
@@ -283,54 +329,44 @@ export function useTokenGatedEvents(userAddress?: string) {
       );
       logUserIdentity(identity, 'Token Gated Events Check');
 
-      // Get accessible events using the new RPC function
       const accessibleEvents = await getAccessibleEvents(identity);
       console.log(
         `🎪 User has access to ${accessibleEvents.length} events via RPC`,
       );
+      return { accessibleEvents, identity };
+    };
 
-      // Get user's registrations
-      const userRegistrations =
-        await EventService.getUserRegistrations(effectiveAddress);
-      const registeredEventIds = new Set(
-        userRegistrations.map((reg) => reg.event_id),
+    const [mineResult, accessibleResult] = await Promise.allSettled([
+      loadMine(),
+      loadAccessible(),
+    ]);
+
+    const errors: string[] = [];
+
+    let registeredEventIds = new Set<string>();
+    if (mineResult.status === 'fulfilled') {
+      registeredEventIds = mineResult.value.registeredEventIds;
+      setRegisteredEvents(mineResult.value.mine);
+    } else {
+      console.error('Error loading registered events:', mineResult.reason);
+      errors.push(
+        mineResult.reason instanceof Error
+          ? mineResult.reason.message
+          : 'Failed to load your events',
       );
+      setRegisteredEvents([]);
+    }
 
-      // Fetch full details for registered events (bypassing token gating)
-      // This ensures "My Events" shows all registered events regardless of current token access
-      const registeredEventsData: EventWithStats[] = [];
-      if (registeredEventIds.size > 0) {
-        const registeredEventsFromDb = await EventService.getEventsByIds(
-          Array.from(registeredEventIds),
-        );
-        registeredEventsData.push(...registeredEventsFromDb);
-      }
-
-      // Also fetch events created by user
-      const createdEvents = await EventService.getEvents({
-        creator_address: effectiveAddress,
-      });
-
-      // Merge created events into registered events (avoid duplicates)
-      const registeredEventIdsSet = new Set(registeredEventsData.map(e => e.id));
-      for (const event of createdEvents) {
-        if (!registeredEventIdsSet.has(event.id)) {
-          registeredEventsData.push(event);
-          registeredEventIdsSet.add(event.id);
-        }
-      }
-
-      // Process accessible events
+    if (accessibleResult.status === 'fulfilled') {
+      const { accessibleEvents, identity } = accessibleResult.value;
       const visible: EventWithStats[] = [];
       const registrable: EventWithStats[] = [];
+      const now = new Date();
+      const canRegister = canRegisterForEvents(identity);
 
-      // All events returned from RPC are accessible, so we just need to categorize them
       for (const event of accessibleEvents) {
-        // All events from RPC are visible
         visible.push(event);
 
-        // Check if user can register for this event
-        const now = new Date();
         const eventEndDate = event.event_end_date
           ? new Date(event.event_end_date)
           : new Date(new Date(event.event_date).getTime() + 8 * 60 * 60 * 1000);
@@ -340,7 +376,6 @@ export function useTokenGatedEvents(userAddress?: string) {
         const hasCapacity =
           !event.max_attendees ||
           (event.registration_count || 0) < event.max_attendees;
-        const canRegister = canRegisterForEvents(identity);
 
         if (
           hasNotEnded &&
@@ -355,18 +390,19 @@ export function useTokenGatedEvents(userAddress?: string) {
 
       setVisibleEvents(visible);
       setRegistrableEvents(registrable);
-      setRegisteredEvents(registeredEventsData);
-    } catch (err) {
-      console.error('Error in token gated events check:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to check event access',
+    } else {
+      console.error('Error in token gated events check:', accessibleResult.reason);
+      errors.push(
+        accessibleResult.reason instanceof Error
+          ? accessibleResult.reason.message
+          : 'Failed to check event access',
       );
       setVisibleEvents([]);
       setRegistrableEvents([]);
-      setRegisteredEvents([]);
-    } finally {
-      setLoading(false);
     }
+
+    setError(errors.length > 0 ? errors.join('; ') : null);
+    setLoading(false);
   }, [
     effectiveAddress,
     contextTokenBalances,
