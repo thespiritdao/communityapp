@@ -32,6 +32,7 @@ type ProfileData = {
   youtube?: string | null;
   twitch?: string | null;
   website?: string | null;
+  onboarding_intent?: 'join' | 'found' | 'explore' | null;
 };
 
 export function useUserProfile(walletAddress: string | undefined) {

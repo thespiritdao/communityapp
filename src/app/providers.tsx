@@ -21,6 +21,7 @@ import { TourManager } from '@/components/tour/TourManager';
 import { initHatRegistry } from '@/lib/hatRegistryClient';
 import { PresenceTracker } from '@/components/PresenceTracker';
 import { PushSubscriptionManager } from '@/components/PushSubscriptionManager';
+import { VisitRecorder } from '@/features/onboarding/VisitRecorder';
 
 /**
  * Fetches hat IDs from /api/hat-registry on app startup and populates
@@ -92,6 +93,8 @@ export function Providers({ children }: ProvidersProps) {
                   <PushSubscriptionManager />
                   {/* Global incoming call listener */}
                   <IncomingCallBanner />
+                  {/* Onboarding checklist: records first visits to tracked routes */}
+                  <VisitRecorder />
                   <TourManager>
                     <main id="page-root" className="min-h-screen">
                       {children}

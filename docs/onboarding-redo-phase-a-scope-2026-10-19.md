@@ -1,7 +1,7 @@
 # Onboarding Redo — Phase A Scope
 
 **Date:** 2026-10-19
-**Status:** Scoped, not started
+**Status:** Built 2026-10-19 (same day). Migration applied to prod. See "As built" at the end for the deviations from this scope.
 **Owner:** Ron (decisions), Claude (build)
 
 ## Goal
@@ -164,6 +164,44 @@ reused by "Show me":
 Two working days: half a day for migration, types, and tracks; one day for
 the two cards and the home/identity wiring; half a day for the visit hook
 across seven pages, tour copy, and a prod smoke test.
+
+## As built (2026-10-19)
+
+Files: `src/features/onboarding/{tracks.ts, useOnboardingProgress.ts,
+VisitRecorder.tsx, components/IntentCard.tsx, components/ProgressCard.tsx}`,
+migration `20261019000002_onboarding_intent.sql`, plus edits to
+`src/app/home/page.tsx`, `src/app/identity/page.tsx`,
+`src/app/providers.tsx`, `src/context/TourContext.tsx`,
+`ProfileEditForm.tsx`, `updateProfile.ts`, `useUserProfile.ts`.
+
+Deviations from the scope above:
+
+- **Visits are recorded by one component, not seven hooks.** `VisitRecorder`
+  is mounted in providers, watches the pathname, and writes the route key
+  the first time a signed-in member opens it. No page was edited for this.
+  Route keys: identity, members, chat, forum, knowledge, explorer, pods,
+  pods-manage, sensemaker (`tracks.ts: visitKeyForPath`).
+- **Explore item 1 is a visit check**, not a conversation-row check:
+  `sensemaker_conversations` does not exist in prod (the API route's insert
+  into it fails silently).
+- **Found item 5 is a visit check** on any `/pods/<id>/manage` page:
+  `pod_invite_links` has no SELECT policy for members, so there is no cheap
+  client-side "has created a link" signal.
+- **Join item 4 counts membership only**, not pending applications.
+- **Pod invite arrival** sets intent to `join` silently from the home page
+  (read synchronously before the redeemer clears the key).
+- **"Ask me later"** is per browser session (sessionStorage), as scoped.
+  While deferred and with no name set, the old "Complete your profile" box
+  still shows.
+- **Change path** lives on the progress card as well as in the profile
+  edit form ("Your path" select, stored as null when "Not chosen").
+- **Single-step tour**: `startTourAt(stepId)` in `TourContext` runs one
+  step and never touches `tour_completed_at`. The tooltip shows "1 / 1".
+- Tour copy refreshed: Identity, Artifacts, Pods, Members, final step.
+
+Not verified in a browser yet: the cards were type-checked and the
+migration verified in prod, but no member session was driven through the
+flow. First prod smoke test should follow the acceptance list above.
 
 ## Decisions needed from Ron
 

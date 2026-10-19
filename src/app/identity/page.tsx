@@ -13,6 +13,8 @@ import { AppearanceSection } from '@/features/identity/components/AppearanceSect
 import { LocationSection } from '@/features/identity/components/LocationSection';
 import { InviteFriendsSection } from '@/features/identity/components/InviteFriendsSection';
 import { DeleteAccountSection } from '@/features/identity/components/DeleteAccountSection';
+import { useOnboardingProgress } from '@/features/onboarding/useOnboardingProgress';
+import { ProgressCard } from '@/features/onboarding/components/ProgressCard';
 import '@/features/identity/styles/identityStyles.css';
 import '@/features/identity/styles/TokenGallery.css';
 import '@/features/identity/styles/ProfileModal.css';
@@ -93,6 +95,9 @@ function IdentityPageContent() {
     handleLogout,
   } = useIdentityPage(address ?? undefined);
 
+  // Onboarding checklist, compact: the profile items flip here as they save.
+  const progress = useOnboardingProgress(address);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -145,6 +150,10 @@ function IdentityPageContent() {
         onCancel={handleCancel}
         saveError={saveError}
       />
+
+      {progress.intent && !progress.dismissed && !progress.complete && (
+        <ProgressCard progress={progress} compact />
+      )}
 
       {/* Tenure / Credentials / Accreditations */}
       <div style={{ marginTop: '20px', marginBottom: '8px' }}>

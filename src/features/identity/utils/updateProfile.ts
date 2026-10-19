@@ -33,6 +33,7 @@ type ProfileData = {
   notification_preferences?: string | null;
   badges?: string | null;
   reputation?: number | null;
+  onboarding_intent?: 'join' | 'found' | 'explore' | null;
 };
 
 export async function updateProfile(

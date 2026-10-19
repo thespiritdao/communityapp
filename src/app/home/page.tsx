@@ -11,6 +11,9 @@ import { supabase } from '@/utils/supabaseClient';
 import { HOME_USER_MODULES, HOME_COMMUNITY_MODULES } from '@/config/moduleRegistry';
 import { HomeModuleIcon, LogoSlot } from '@/components/SlotIcon';
 import { useFace } from '@/context/FaceContext';
+import { useOnboardingProgress } from '@/features/onboarding/useOnboardingProgress';
+import { IntentCard, intentDeferredThisSession } from '@/features/onboarding/components/IntentCard';
+import { ProgressCard } from '@/features/onboarding/components/ProgressCard';
 import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
@@ -19,6 +22,27 @@ export default function HomePage() {
   const { currentUser } = useCurrentUser();
   const { profile, loading } = useUserProfile(address || undefined);
   const [showTos, setShowTos] = useState(false);
+  const [tosChecked, setTosChecked] = useState(false);
+
+  // Onboarding (Phase A): intent question once after TOS, then a checklist.
+  const progress = useOnboardingProgress(address);
+  const [intentLater, setIntentLater] = useState(false);
+  // Read synchronously during the first render: PodInviteRedeemer (a child)
+  // clears this key in its own effect, which runs before any effect here.
+  const [arrivedViaPodInvite] = useState(
+    () => typeof window !== 'undefined' && !!sessionStorage.getItem('pod_invite_code'),
+  );
+
+  useEffect(() => {
+    setIntentLater(intentDeferredThisSession());
+  }, []);
+
+  // A pod invite link answers the question for them: they came to join.
+  useEffect(() => {
+    if (progress.loading || progress.intent || !arrivedViaPodInvite) return;
+    progress.setIntent('join');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress.loading, progress.intent, arrivedViaPodInvite]);
 
   useEffect(() => {
     if (!address || loading) return;
@@ -29,9 +53,16 @@ export default function HomePage() {
         .eq('wallet_address', address.toLowerCase())
         .maybeSingle();
       if (!data?.tos_signed_at) setShowTos(true);
+      setTosChecked(true);
     };
     checkTos();
   }, [address, loading]);
+
+  const showIntentCard =
+    tosChecked && !showTos && !progress.loading && !progress.intent && !intentLater && !arrivedViaPodInvite;
+  const showProgressCard = Boolean(progress.intent) && !progress.dismissed && !progress.complete;
+  // Legacy nudge only for members who deferred the question and still have no name.
+  const showProfileNudge = !profile?.first_name && !progress.intent && intentLater;
 
   if (!address) {
     return (
@@ -76,8 +107,14 @@ export default function HomePage() {
         </h1>
       </div>
 
-      {/* Profile Completion Reminder for First-Time Users */}
-      {!profile?.first_name && (
+      {/* Onboarding: ask once, then show the track */}
+      {showIntentCard && (
+        <IntentCard onChoose={progress.setIntent} onLater={() => setIntentLater(true)} />
+      )}
+      {showProgressCard && <ProgressCard progress={progress} />}
+
+      {/* Profile Completion Reminder (only when the intent question was deferred) */}
+      {showProfileNudge && (
         <div style={{
           margin: '16px',
           padding: '16px',

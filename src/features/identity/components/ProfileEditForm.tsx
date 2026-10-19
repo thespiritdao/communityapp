@@ -3,6 +3,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { supabase } from '../utils/supabaseClient';
+import { INTENT_OPTIONS, type OnboardingIntent } from '@/features/onboarding/tracks';
 
 type ProfileData = {
   wallet_address?: string | null;
@@ -37,6 +38,7 @@ type ProfileData = {
   // identity_verification, notification_preferences, badges, reputation removed
   open_to_connect?: string | null; // single select
   desired_involvement?: string | null; // comma-separated
+  onboarding_intent?: OnboardingIntent | '' | null; // join | found | explore
 };
 
 export const interestsOptions = [
@@ -317,6 +319,8 @@ export function ProfileEditForm({
     data.seeking = selectedSeeking.join(',');
     data.desired_involvement = selectedInvolvement.join(',');
     data.open_to_connect = selectedOpenness;
+    // The column has a check constraint; "" (the "Not chosen" option) must be null.
+    if (!data.onboarding_intent) data.onboarding_intent = null;
 
     await onSave(data);
   };
@@ -631,6 +635,33 @@ export function ProfileEditForm({
                     </label>
                   ))}
                 </div>
+              </div>
+
+              {/* Onboarding path */}
+              <div className="form-group">
+                <label style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                  Your path
+                </label>
+                <p
+                  style={{
+                    fontSize: '0.8rem',
+                    color: '#6b7280',
+                    marginTop: 0,
+                    marginBottom: '0.5rem',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Sets the getting-started checklist on your Home screen. Change
+                  it whenever your plans change.
+                </p>
+                <select className="input" {...register('onboarding_intent')}>
+                  <option value="">Not chosen</option>
+                  {INTENT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.title}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Openness */}

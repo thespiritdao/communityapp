@@ -33,14 +33,14 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     id: 'identity',
     title: 'Your Identity',
     description:
-      'Your community profile. Set your name, profile picture, and interests — and track your tokens and credentials.',
+      "Your community profile. Add your name, photo, and what you're seeking — and track your tokens and credentials.",
     placement: 'bottom',
   },
   {
     id: 'artifacts',
     title: 'Artifacts',
     description:
-      'Community marketplaces where we use $SELF or $SYSTEM to acquire unique artifacts exclusive to your communities.',
+      'Community marketplaces. Browse and acquire things made by and for your communities.',
     placement: 'bottom',
   },
   {
@@ -68,7 +68,7 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     id: 'pods',
     title: 'Pods',
     description:
-      'Working groups inside SpiritDAO. Each Pod has its own team, treasury, and governance.',
+      'Working groups inside SpiritDAO. Each Pod has its own team, treasury, and governance, plus add-ons like a shared map and journal.',
     placement: 'bottom',
   },
   {
@@ -82,7 +82,7 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     id: 'members',
     title: 'Members',
     description:
-      'Browse everyone in the community — see who\'s online, what pods they\'re in, and who\'s open to collaborate.',
+      "Browse everyone in the community. Completed profiles list first; see who's online, what pods they're in, and who's open to collaborate.",
     placement: 'bottom',
   },
   {
@@ -115,9 +115,9 @@ export const HOME_TOUR_STEPS: TourStep[] = [
   },
   {
     id: 'bottom-nav',
-    title: 'You\'re all set',
+    title: "You're all set",
     description:
-      'Use the bottom nav to jump to Governance, Tokens, and Alerts from anywhere. Start exploring!',
+      'Use the bottom nav to jump to Claims, Governance, and Alerts from anywhere. Your checklist at the top of Home shows what to do next.',
     placement: 'top',
   },
 ];
@@ -138,6 +138,11 @@ interface TourContextValue {
 
   // Actions
   startTour: () => void;
+  /**
+   * Spotlight one home step on its own (onboarding "Show me"). Finishing or
+   * skipping a single step never marks the full tour complete.
+   */
+  startTourAt: (stepId: string) => void;
   nextStep: () => void;
   prevStep: () => void;
   skipTour: () => void;
@@ -164,6 +169,10 @@ export function TourProvider({ children, walletAddress }: TourProviderProps) {
   const [isActive, setIsActive] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
+  // 'full' walks HOME_TOUR_STEPS and records completion; 'single' spotlights
+  // one step for the onboarding checklist and records nothing.
+  const [steps, setSteps] = useState<TourStep[]>(HOME_TOUR_STEPS);
+  const [mode, setMode] = useState<'full' | 'single'>('full');
   const hasChecked = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -209,6 +218,8 @@ export function TourProvider({ children, walletAddress }: TourProviderProps) {
 
   const startTour = useCallback(() => {
     setShowPrompt(false);
+    setSteps(HOME_TOUR_STEPS);
+    setMode('full');
     setCurrentStepIndex(0);
     setIsActive(true);
     if (pathname !== '/home') {
@@ -216,12 +227,28 @@ export function TourProvider({ children, walletAddress }: TourProviderProps) {
     }
   }, [pathname, router]);
 
+  const startTourAt = useCallback(
+    (stepId: string) => {
+      const step = HOME_TOUR_STEPS.find((s) => s.id === stepId);
+      if (!step) return;
+      setShowPrompt(false);
+      setSteps([step]);
+      setMode('single');
+      setCurrentStepIndex(0);
+      setIsActive(true);
+      if (pathname !== '/home') {
+        router.push('/home');
+      }
+    },
+    [pathname, router],
+  );
+
   const nextStep = useCallback(() => {
     setCurrentStepIndex((i) => {
-      if (i < HOME_TOUR_STEPS.length - 1) return i + 1;
+      if (i < steps.length - 1) return i + 1;
       return i;
     });
-  }, []);
+  }, [steps.length]);
 
   const prevStep = useCallback(() => {
     setCurrentStepIndex((i) => Math.max(0, i - 1));
@@ -230,33 +257,34 @@ export function TourProvider({ children, walletAddress }: TourProviderProps) {
   const skipTour = useCallback(() => {
     setIsActive(false);
     setShowPrompt(false);
-    markTourComplete(true);
-  }, [markTourComplete]);
+    if (mode === 'full') markTourComplete(true);
+  }, [markTourComplete, mode]);
 
   const completeTour = useCallback(() => {
     setIsActive(false);
-    markTourComplete(false);
-  }, [markTourComplete]);
+    if (mode === 'full') markTourComplete(false);
+  }, [markTourComplete, mode]);
 
   const dismissPrompt = useCallback(() => {
     setShowPrompt(false);
     markTourComplete(true);
   }, [markTourComplete]);
 
-  const currentStep = isActive ? HOME_TOUR_STEPS[currentStepIndex] : null;
-  const isLastStep = currentStepIndex === HOME_TOUR_STEPS.length - 1;
+  const currentStep = isActive ? steps[currentStepIndex] ?? null : null;
+  const isLastStep = currentStepIndex === steps.length - 1;
 
   return (
     <TourContext.Provider
       value={{
         isActive,
         currentStepIndex,
-        steps: HOME_TOUR_STEPS,
+        steps,
         showPrompt,
         currentStep,
         isLastStep,
-        totalSteps: HOME_TOUR_STEPS.length,
+        totalSteps: steps.length,
         startTour,
+        startTourAt,
         nextStep,
         prevStep,
         skipTour,
