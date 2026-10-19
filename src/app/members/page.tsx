@@ -7,6 +7,11 @@ import { User, Search } from 'lucide-react';
 import type { UserProfile } from '@/features/identity/types';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import { AuthorAvatar, communityStyles } from '@/components/community';
+import {
+  profileFullName,
+  profileScore,
+  type CompletenessFields,
+} from '@/features/identity/utils/profileCompleteness';
 
 interface MemberWithPods extends UserProfile {
   pods: { pod_id: string; name: string; membership_type: string }[];
@@ -27,18 +32,12 @@ const CONNECT_COLORS: Record<string, string> = {
 const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 const fullName = (m: { first_name?: string | null; last_name?: string | null }) =>
-  `${m.first_name || ''} ${m.last_name || ''}`.trim().toLowerCase();
+  profileFullName(m).toLowerCase();
 
-// Members who filled in a name come before anonymous ones; within each group
-// the existing availability and alphabetical ordering applies.
-const compareByNamePresence = (
-  a: { first_name?: string | null; last_name?: string | null },
-  b: { first_name?: string | null; last_name?: string | null },
-) => {
-  const aNamed = fullName(a) ? 0 : 1;
-  const bNamed = fullName(b) ? 0 : 1;
-  return aNamed - bNamed;
-};
+// More complete profiles (name, photo, bio) come before less complete ones;
+// within each tier the existing availability and alphabetical ordering applies.
+const compareByNamePresence = (a: CompletenessFields, b: CompletenessFields) =>
+  profileScore(b) - profileScore(a);
 
 export default function MembersPage() {
   const address = useUserWallet();

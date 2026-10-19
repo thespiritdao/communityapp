@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
+import { sortAddressesByCompleteness } from '@/features/identity/utils/profileCompleteness';
 import { MemberCard } from './MemberCard';
 import { AdaptiveMemberListSkeleton } from './LoadingSkeletons';
 import { EmptyMembersList } from './EmptyStates';
@@ -74,20 +75,11 @@ export const CurrentMembersList = React.memo<CurrentMembersListProps>(
       [onClickName, trackMemberAction],
     );
 
-    // Members who filled in a name come first, alphabetically; anonymous
-    // wallets follow in their original (join) order. Array.sort is stable.
+    // Completed profiles (name, photo, bio) come first, alphabetically;
+    // anonymous wallets follow in their original (join) order.
     const orderedMembers = React.useMemo(() => {
       if (isLoading) return stableMembers;
-      const nameOf = (address: string) => {
-        const p = getProfile(address);
-        return `${p?.first_name || ''} ${p?.last_name || ''}`.trim().toLowerCase();
-      };
-      return [...stableMembers].sort((a, b) => {
-        const an = nameOf(a);
-        const bn = nameOf(b);
-        if (!!an !== !!bn) return an ? -1 : 1;
-        return an && bn ? an.localeCompare(bn) : 0;
-      });
+      return sortAddressesByCompleteness(stableMembers, getProfile);
     }, [stableMembers, isLoading, getProfile]);
 
     // Memoize the rendered member cards with enhanced handlers

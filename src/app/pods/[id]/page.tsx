@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { PodCoreService } from '@/features/pods/services/PodCoreService';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
+import { sortAddressesByCompleteness } from '@/features/identity/utils/profileCompleteness';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
 import { ProfileModal } from '@/features/identity';
 import {
@@ -108,7 +109,14 @@ export default function PodDetailPage() {
 
   // Get all unique member addresses (leaders + members)
   const allMemberAddresses = allMembers;
-  const { getProfile } = useProfiles(allMemberAddresses);
+  const { getProfile, isLoading: memberProfilesLoading } = useProfiles(allMemberAddresses);
+
+  // Completed profiles (name, photo, bio) list first; anonymous wallets keep
+  // their leaders-then-members order at the bottom. Same rule as /members.
+  const orderedMembers = useMemo(
+    () => (memberProfilesLoading ? allMembers : sortAddressesByCompleteness(allMembers, getProfile)),
+    [allMembers, memberProfilesLoading, getProfile],
+  );
 
   // Get signer addresses for profiles
   const allSignerAddresses = signatures.map((sig) => sig.signer_address);
@@ -619,7 +627,7 @@ export default function PodDetailPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="space-y-3">
-                    {allMembers.map((memberAddress, index) => {
+                    {orderedMembers.map((memberAddress, index) => {
                       const profile = getProfile(memberAddress);
                       const displayName = getUserDisplayName(memberAddress);
                       const hasSigned =
