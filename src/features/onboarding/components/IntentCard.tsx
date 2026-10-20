@@ -18,9 +18,15 @@ interface IntentCardProps {
   hideExplore?: boolean;
   /** Smaller heading when shown as a re-ask inside the progress card. */
   compact?: boolean;
+  /**
+   * Render as a centered modal over a backdrop instead of inline. Used on
+   * /home for the first ask. Sits above the tour prompt (z 99997-99998) so
+   * a brand-new member answers this first, then sees the tour offer.
+   */
+  modal?: boolean;
 }
 
-export function IntentCard({ onChoose, onLater, hideExplore = false, compact = false }: IntentCardProps) {
+export function IntentCard({ onChoose, onLater, hideExplore = false, compact = false, modal = false }: IntentCardProps) {
   const [busy, setBusy] = useState<OnboardingIntent | null>(null);
 
   const options = hideExplore ? INTENT_OPTIONS.filter((o) => o.value !== 'explore') : INTENT_OPTIONS;
@@ -43,16 +49,24 @@ export function IntentCard({ onChoose, onLater, hideExplore = false, compact = f
     onLater?.();
   };
 
-  return (
+  const card = (
     <div
       data-tour="onboarding-card"
+      role={modal ? 'dialog' : undefined}
+      aria-modal={modal ? true : undefined}
+      aria-label={modal ? 'What brings you here?' : undefined}
       style={{
-        margin: compact ? 0 : '16px',
-        padding: compact ? '16px' : '20px',
-        background: 'hsl(var(--card))',
-        borderRadius: '12px',
-        border: '1px solid hsl(var(--primary) / 0.3)',
-        boxShadow: compact ? 'none' : '0 2px 8px hsl(var(--primary) / 0.08)',
+        margin: compact || modal ? 0 : '16px',
+        padding: compact ? '16px' : modal ? '28px 24px 24px' : '20px',
+        background: modal ? '#FFFFFF' : 'hsl(var(--card))',
+        borderRadius: modal ? '20px' : '12px',
+        border: modal ? 'none' : '1px solid hsl(var(--primary) / 0.3)',
+        boxShadow: modal
+          ? '0 12px 48px rgba(0, 0, 0, 0.2)'
+          : compact
+            ? 'none'
+            : '0 2px 8px hsl(var(--primary) / 0.08)',
+        ...(modal ? { width: 'calc(100% - 48px)', maxWidth: '400px' } : {}),
       }}
     >
       <p
@@ -131,6 +145,40 @@ export function IntentCard({ onChoose, onLater, hideExplore = false, compact = f
         </button>
       )}
     </div>
+  );
+
+  if (!modal) return card;
+
+  return (
+    <>
+      {/* Backdrop: tapping it defers the question, same as "Ask me later". */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 100000,
+        }}
+        onClick={onLater ? later : undefined}
+        aria-hidden="true"
+      />
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px 24px 96px', // keep clear of the bottom nav
+          zIndex: 100001,
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{ pointerEvents: 'auto', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          {card}
+        </div>
+      </div>
+    </>
   );
 }
 

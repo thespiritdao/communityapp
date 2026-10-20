@@ -107,9 +107,9 @@ export default function HomePage() {
         </h1>
       </div>
 
-      {/* Onboarding: ask once, then show the track */}
+      {/* Onboarding: ask once (as a modal), then show the track inline */}
       {showIntentCard && (
-        <IntentCard onChoose={progress.setIntent} onLater={() => setIntentLater(true)} />
+        <IntentCard modal onChoose={progress.setIntent} onLater={() => setIntentLater(true)} />
       )}
       {showProgressCard && <ProgressCard progress={progress} />}
 
