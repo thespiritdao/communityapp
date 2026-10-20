@@ -4,7 +4,12 @@
 
 import { ensureAuthHeaders } from '@/lib/authHeaders';
 
-export type PinKind = 'pod_agreement' | 'hat_details' | 'hat_metadata' | 'bounty_metadata';
+export type PinKind =
+  | 'pod_agreement'
+  | 'hat_details'
+  | 'hat_metadata'
+  | 'bounty_metadata'
+  | 'bid_metadata';
 
 export async function pinJsonViaServer(
   kind: PinKind,

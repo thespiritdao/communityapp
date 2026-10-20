@@ -27,7 +27,9 @@ import { useBountyV2 } from '../hooks/useBountyV2';
 import { useBountyPermissions } from '@/features/bounty/hooks/useBountyPermissions'; // NEW: Database permission check
 import { useBountyManagementAccess } from '../hooks/useBountyManagementAccess';
 import { RegisterPodButton } from '@/features/pods/components/RegisterPodButton';
-import { getAuthHeaders } from '@/lib/authHeaders';
+import { pinJsonViaServer } from '@/lib/ipfsPinClient';
+import { useCredentialOptions } from '../hooks/useBountyEligibility';
+import { describeGate, type CredentialGate } from '../lib/eligibility';
 
 export interface BountyFormV2Data {
   title: string;
@@ -46,7 +48,12 @@ export interface BountyFormV2Data {
   work_requirements: string[];
   funding_source: 'wallet' | 'pod_treasury';
   podId: string;
-  eligibility: 'pod_only' | 'dao_wide';
+  /**
+   * Who can apply. pod_only = members of the sponsoring pod; dao_wide = any
+   * member; credentials = holders of any one of credential_gates.
+   */
+  eligibility: 'pod_only' | 'dao_wide' | 'credentials';
+  credential_gates: CredentialGate[];
   // Bid acceptance configuration
   bid_acceptance_mode?: 'single' | 'multiple' | 'unlimited' | 'date_limited';
   max_bids_accepted?: number;
@@ -93,10 +100,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     funding_source: 'wallet',
     podId: preselectedPodId || '',
     eligibility: 'pod_only',
+    credential_gates: [],
     bid_acceptance_mode: 'single',
     max_bids_accepted: 1,
     bids_accepted_count: 0,
   });
+
+  const { options: credentialOptions, loading: credentialsLoading } = useCredentialOptions();
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [ipfsHash, setIpfsHash] = useState<string>('');
@@ -146,11 +156,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   // Sync podId from parent when it changes
   useEffect(() => {
     if (preselectedPodId) {
-      setFormData((prev) => ({
-        ...prev,
-        podId: preselectedPodId,
-        eligibility: preselectedPodId === EXEC_POD_ID ? prev.eligibility : 'pod_only',
-      }));
+      setFormData((prev) => ({ ...prev, podId: preselectedPodId }));
     }
   }, [preselectedPodId]);
 
@@ -183,6 +189,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           work_requirements: [''],
           funding_source: 'wallet',
           podId: managablePods[0]?.id || '',
+          eligibility: 'pod_only',
+          credential_gates: [],
           bid_acceptance_mode: 'single',
           max_bids_accepted: 1,
           bids_accepted_count: 0,
@@ -190,6 +198,30 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       }
     }
   }, [managablePods, formData.podId]);
+
+  // What the create route stores for the chosen eligibility.
+  const gatePayload = (data: BountyFormV2Data) => ({
+    restriction_level:
+      data.eligibility === 'dao_wide'
+        ? 'public'
+        : data.eligibility === 'credentials'
+          ? 'token_holders'
+          : 'pod_members',
+    required_pod_id: data.eligibility === 'pod_only' ? data.podId : null,
+    credential_gates: data.eligibility === 'credentials' ? data.credential_gates : [],
+  });
+
+  const toggleCredential = (gate: CredentialGate) => {
+    setFormData((prev) => {
+      const has = prev.credential_gates.some((g) => g.kind === gate.kind && g.id === gate.id);
+      return {
+        ...prev,
+        credential_gates: has
+          ? prev.credential_gates.filter((g) => !(g.kind === gate.kind && g.id === gate.id))
+          : [...prev.credential_gates, gate],
+      };
+    });
+  };
 
   // Upload metadata to IPFS before transaction
   const handleCreateBounty = async () => {
@@ -212,17 +244,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       };
 
       console.log('📤 Uploading metadata to IPFS...');
-      const response = await fetch('/api/bounty/ipfs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
-        body: JSON.stringify({ action: 'upload', metadata }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload metadata to IPFS');
-      }
-
-      const { ipfsHash: hash } = await response.json();
+      // Same server pin path as bids, hat details and agreements.
+      const hash = await pinJsonViaServer(
+        'bounty_metadata',
+        { ...metadata, category: formData.category, version: '1.0' },
+        `bounty-${formData.title.slice(0, 60)}-${Date.now()}`,
+        { category: formData.category || 'uncategorized' },
+      );
       setIpfsHash(hash);
       // Save IPFS hash to sessionStorage
       if (typeof window !== 'undefined') {
@@ -231,7 +259,10 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       console.log('✅ Metadata uploaded to IPFS:', hash);
     } catch (error) {
       console.error('Error uploading to IPFS:', error);
-      setErrors({ ipfs: 'Failed to upload metadata. Please try again.' });
+      const detail = error instanceof Error ? error.message : '';
+      setErrors({
+        ipfs: `Could not save the bounty description to IPFS${detail ? ` (${detail})` : ''}. Please try again; if it keeps failing, tell an admin.`,
+      });
     }
   };
 
@@ -264,18 +295,21 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         "You do not have permission to use this pod's treasury";
     }
 
-    // Check if selected pod has a treasury deployed (required for V4 contract)
-    const selectedPod = managablePods.find((p) => p.id === formData.podId);
-    console.log('🏦 Treasury validation:', {
-      selectedPodId: formData.podId,
-      foundPod: !!selectedPod,
-      podName: selectedPod?.name,
-      treasuryAddress: selectedPod?.treasury_contract_address,
-    });
+    if (formData.eligibility === 'credentials' && formData.credential_gates.length === 0) {
+      newErrors.eligibility = 'Pick at least one credential, or choose a different "Who can apply" option.';
+    }
 
-    if (selectedPod && !selectedPod.treasury_contract_address) {
+    // A treasury is only needed when the bounty is funded from it. Wallet-
+    // funded bounties escrow from the creator's wallet (BountyManagerV5
+    // _escrowFunds) and never touch pod registration.
+    const selectedPod = managablePods.find((p) => p.id === formData.podId);
+    if (
+      formData.funding_source === 'pod_treasury' &&
+      selectedPod &&
+      !selectedPod.treasury_contract_address
+    ) {
       newErrors.treasury =
-        `${selectedPod.name} does not have a treasury deployed. Please deploy a treasury before creating bounties.`;
+        `${selectedPod.name} does not have a treasury deployed. Deploy one, or fund this bounty from your wallet.`;
     }
 
     console.log('✅ Validation result:', {
@@ -347,10 +381,14 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       const leaderHatId = selectedPod.management_hat_id || undefined;
       const treasuryAddress = selectedPod.treasury_contract_address || undefined;
 
-      // CRITICAL: V4 contract REQUIRES treasury address (cannot use zero address)
-      if (!treasuryAddress || treasuryAddress === '0x0000000000000000000000000000000000000000') {
+      // Treasury funding pulls from the pod's registered treasury; wallet
+      // funding escrows from the caller and needs no treasury at all.
+      if (
+        formData.funding_source === 'pod_treasury' &&
+        (!treasuryAddress || treasuryAddress === '0x0000000000000000000000000000000000000000')
+      ) {
         console.error('❌ Treasury address not found for pod:', selectedPod.name);
-        throw new Error(`${selectedPod.name} does not have a treasury deployed. Please deploy a treasury first.`);
+        throw new Error(`${selectedPod.name} does not have a treasury deployed. Deploy one, or fund this bounty from your wallet.`);
       }
 
       console.log('🔧 V3/V4 Parameters:', {
@@ -624,7 +662,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               estimatedHours: currentFormData.estimatedHours,
               token: tokenAddress,
               podId: currentFormData.podId,
-              required_pod_id: currentFormData.eligibility === 'dao_wide' ? null : currentFormData.podId,
+              ...gatePayload(currentFormData),
               ipfsHash,
               title: currentFormData.title,
               description: currentFormData.description,
@@ -698,6 +736,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             estimatedHours: currentFormData.estimatedHours,
             token: tokenAddress,
             podId: currentFormData.podId,
+            ...gatePayload(currentFormData),
             ipfsHash,
             title: currentFormData.title,
             description: currentFormData.description,
@@ -887,31 +926,100 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           )}
         </div>
 
-        {/* Eligibility — only shown when EP is the sponsor pod */}
-        {formData.podId === EXEC_POD_ID && (
-          <div className="space-y-2">
-            <Label htmlFor="eligibility">Who Can Apply</Label>
-            <Select
-              value={formData.eligibility}
-              onValueChange={(value: 'pod_only' | 'dao_wide') =>
-                setFormData((prev) => ({ ...prev, eligibility: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pod_only">Executive Pod Members Only</SelectItem>
-                <SelectItem value="dao_wide">DAO-Wide — Open to All PoC Holders</SelectItem>
-              </SelectContent>
-            </Select>
-            {formData.eligibility === 'dao_wide' && (
-              <p className="text-sm" style={{ color: '#2F5D50' }}>
-                This bounty will be visible and open to all members holding a Proof of Curiosity token.
+        {/* Who can apply — every pod, three modes */}
+        <div className="space-y-2">
+          <Label htmlFor="eligibility">Who Can Apply</Label>
+          <Select
+            value={formData.eligibility}
+            onValueChange={(value: 'pod_only' | 'dao_wide' | 'credentials') =>
+              setFormData((prev) => ({ ...prev, eligibility: value }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pod_only">
+                Members of {managablePods.find((p) => p.id === formData.podId)?.name || 'this pod'}
+              </SelectItem>
+              <SelectItem value="dao_wide">Any SpiritDAO member</SelectItem>
+              <SelectItem value="credentials">Holders of specific credentials</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {formData.eligibility === 'credentials' && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+              <p className="text-xs text-gray-600">
+                Anyone holding <strong>any one</strong> of the credentials you tick can bid.
               </p>
+              {credentialsLoading ? (
+                <p className="text-sm text-gray-500">Loading credentials…</p>
+              ) : (
+                (['Pods', 'Tokens'] as const).map((group) => {
+                  const items = credentialOptions.filter((o) => o.group === group);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={group}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                        {group === 'Pods' ? 'Pod membership' : 'Tokens and accreditations'}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {items.map((opt) => {
+                          const checked = formData.credential_gates.some(
+                            (g) => g.kind === opt.kind && g.id === opt.id,
+                          );
+                          return (
+                            <label
+                              key={`${opt.kind}:${opt.id}`}
+                              className="flex items-center gap-2 rounded-md border bg-white px-2 py-1 text-sm cursor-pointer"
+                              style={{ borderColor: checked ? '#2F5D50' : '#D8D2C8' }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  toggleCredential({
+                                    kind: opt.kind,
+                                    id: opt.id,
+                                    name: opt.name,
+                                    minBalance: opt.minBalance,
+                                  })
+                                }
+                              />
+                              <span>{group === 'Pods' ? `Member of ${opt.name}` : opt.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          <p className="text-sm" style={{ color: '#2F5D50' }}>
+            {describeGate(
+              {
+                mode:
+                  formData.eligibility === 'dao_wide'
+                    ? 'public'
+                    : formData.eligibility === 'credentials'
+                      ? 'token_holders'
+                      : 'pod_members',
+                podId: formData.podId || null,
+                credentials: formData.credential_gates,
+              },
+              managablePods.find((p) => p.id === formData.podId)?.name,
             )}
-          </div>
-        )}
+            {formData.eligibility === 'credentials' && formData.credential_gates.length === 0 && ' (pick at least one)'}
+          </p>
+          {errors.eligibility && (
+            <p className="text-sm" style={{ color: '#8B3A3A' }}>
+              {errors.eligibility}
+            </p>
+          )}
+        </div>
 
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -10,7 +10,6 @@ import type { BountyFormV2Data } from '../components/BountyFormV2';
 // Import the contract ABI
 import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import PodBountyServiceABI from '@/abis/PodBountyService.json';
-import { getAuthHeaders } from '@/lib/authHeaders';
 
 const BountyManagerV5ABI = BountyManagerV5Artifact.abi;
 
@@ -72,10 +71,9 @@ export interface UseBountyV2Return {
   releasePaymentCall: (bountyId: string, amount: string) => any;
   cancelBountyCall: (bountyId: string) => any;
 
-  // Data fetching
-  getBounty: (bountyId: string) => Promise<BountyV2 | null>;
-  getBounties: (podId?: string) => Promise<BountyV2[]>;
-  getBountyDetails: (bountyId: string) => Promise<BountyV2 | null>;
+  // Data fetching. Bounty lists come from useBountySupabase (direct reads
+  // under RLS); the old /api/bounty/list and /get routes used the anon key,
+  // which lost its grants in 2026-09, and were removed 2026-10-20.
   getAssignment: (bountyId: string) => Promise<Assignment | null>;
   getBids: (bountyId: string) => Promise<Bid[]>;
 
@@ -92,22 +90,6 @@ export const useBountyV2 = (): UseBountyV2Return => {
   const { evmAddress: address } = useEvmAddress();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Helper to upload metadata to IPFS
-  const uploadToIPFS = async (metadata: any): Promise<string> => {
-    const response = await fetch('/api/bounty/ipfs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
-      body: JSON.stringify({ action: 'upload', metadata }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to upload to IPFS');
-    }
-
-    const { ipfsHash } = await response.json();
-    return ipfsHash;
-  };
 
   /**
    * V5: Generate the one-time registerPodMetadata call. Must run (once per pod)
@@ -278,75 +260,6 @@ export const useBountyV2 = (): UseBountyV2Return => {
   }, []);
 
   /**
-   * Fetch bounty data from contract
-   */
-  const getBounty = useCallback(
-    async (bountyId: string): Promise<BountyV2 | null> => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await fetch(`/api/bounty/get?id=${bountyId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch bounty');
-        }
-
-        const bountyData = await response.json();
-        return bountyData;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
-
-  /**
-   * Fetch all bounties for a pod (or all if no podId)
-   */
-  const getBounties = useCallback(
-    async (podId?: string): Promise<BountyV2[]> => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const url = podId
-          ? `/api/bounty/list?podId=${podId}`
-          : '/api/bounty/list';
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('Failed to fetch bounties');
-        }
-
-        const bountiesData = await response.json();
-        return bountiesData;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
-        return [];
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [],
-  );
-
-  /**
-   * Fetch detailed bounty data (alias for getBounty)
-   */
-  const getBountyDetails = useCallback(
-    async (bountyId: string): Promise<BountyV2 | null> => {
-      return getBounty(bountyId);
-    },
-    [getBounty],
-  );
-
-  /**
    * Fetch assignment data from contract
    */
   const getAssignment = useCallback(
@@ -452,9 +365,6 @@ export const useBountyV2 = (): UseBountyV2Return => {
     cancelBountyCall,
 
     // Data fetching
-    getBounty,
-    getBounties,
-    getBountyDetails,
     getAssignment,
     getBids,
 

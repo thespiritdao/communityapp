@@ -112,18 +112,20 @@ Bounties are task-based rewards in SpiritDAO. They allow:
 ## Applying for Bounties
 
 ### Check Eligibility
-**Requirements May Include:**
-- Specific pod membership
-- Token balance
-- Skill verification
-- Reputation score
-- Previous work examples
+
+Every bounty says who can apply. There are three kinds:
+
+- **Any SpiritDAO member.** Anyone who has finished onboarding (holds Proof of Curiosity or Advocate).
+- **Members of a pod.** Only members and leaders of the sponsoring pod. Apply to join that pod first.
+- **Holders of specific credentials.** The creator picked one or more credentials, and holding *any one* of them is enough: membership of a named pod, or a token such as Advocate, Proof of Curiosity, $SYSTEM, $SELF or $TGN.
 
 **How to Check:**
-1. View bounty details
-2. See "Eligibility Requirements" section
-3. Green checkmark = you qualify
-4. Red X = you don't meet requirements
+1. Open the bounty details
+2. Read the **Who can apply** line
+3. If you qualify, the **Bid** button is active
+4. If not, the line underneath says exactly what you're missing
+
+Eligibility is enforced when you bid, not only in the display, so a bid you are not eligible for is refused.
 
 ### Submit Application
 

@@ -49,6 +49,11 @@ export async function POST(request: NextRequest) {
       questions,
       status, // Accept status from request body
       estimatedHours, // $SELF: poster's estimate of hours this bounty represents
+      // Eligibility (migration 20261020000001). restriction_level is the
+      // authority; required_pod_id null means not pod-restricted.
+      restriction_level,
+      required_pod_id,
+      credential_gates,
     } = body;
 
     // Verify the caller matches the claimed creator
@@ -101,13 +106,43 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
+    // Who can apply. Three modes; anything unrecognised falls back to the
+    // safest reading, members of the sponsoring pod.
+    const level: 'public' | 'pod_members' | 'token_holders' =
+      restriction_level === 'public' || restriction_level === 'token_holders'
+        ? restriction_level
+        : 'pod_members';
+    const gates: Array<{ kind: string; id: string; name: string; minBalance?: number }> =
+      level === 'token_holders' && Array.isArray(credential_gates)
+        ? credential_gates
+            .filter(
+              (g: any) =>
+                g &&
+                ['pod', 'erc20', 'erc721', 'hat'].includes(g.kind) &&
+                typeof g.id === 'string' &&
+                g.id.trim() &&
+                typeof g.name === 'string',
+            )
+            .slice(0, 20)
+        : [];
+    if (level === 'token_holders' && gates.length === 0) {
+      return NextResponse.json(
+        { error: 'Credential-gated bounties need at least one credential' },
+        { status: 400 },
+      );
+    }
+
     // Add blockchain fields if they exist (after migration)
     if (hasBlockchainFields) {
       insertData.blockchain_id = bountyId;
       insertData.onchain_id = bountyId; // Add onchain_id field
       insertData.transaction_hash = transactionHash;
       insertData.pod_id = podId;
-      insertData.required_pod_id = podId; // Add required_pod_id (bounty restricted to this pod)
+      insertData.restriction_level = level;
+      insertData.required_pod_id =
+        level === 'pod_members'
+          ? (typeof required_pod_id === 'string' && required_pod_id) || podId
+          : null;
       insertData.ipfs_hash = ipfsHash;
       insertData.funding_source = funding_source || 'wallet';
       insertData.payment_type = 'completion';
@@ -137,9 +172,30 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Bounty saved to database:', data);
 
+    // Credential gates: written here with the service role (the browser has
+    // no write policy on bounty_token_gates). A failure here must not lose
+    // the bounty, which already exists on-chain; it is reported instead.
+    let gateError: string | null = null;
+    if (gates.length > 0) {
+      const rows = gates.map((g) => ({
+        bounty_id: data.id,
+        token_type: g.kind,
+        hat_id: g.kind === 'hat' ? Number(g.id) : null,
+        hat_name: g.name.slice(0, 120),
+        contract_address: g.kind === 'hat' ? null : g.id.trim().toLowerCase(),
+        min_balance: Math.max(1, Number(g.minBalance) || 1),
+      }));
+      const { error: gErr } = await supabase.from('bounty_token_gates').insert(rows);
+      if (gErr) {
+        console.error('❌ Failed to save bounty credential gates:', gErr);
+        gateError = gErr.message;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       bounty: data,
+      ...(gateError ? { warning: `Bounty saved but its credential gates were not: ${gateError}` } : {}),
     });
   } catch (error) {
     console.error('❌ Error in bounty creation API:', error);

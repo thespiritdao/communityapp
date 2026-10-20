@@ -97,9 +97,10 @@ export const bountyApi = {
     console.log(
       '📥 bountyApi.getAllBounties: Fetching all bounties from database...',
     );
+    // Gates ride along so eligibility can be decided without a second query.
     const { data, error } = await supabase
       .from('bounties')
-      .select('*')
+      .select('*, bounty_token_gates(*)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -691,6 +692,11 @@ export const convertBountyFromDb = (bounty: Bounty): any => {
     funding_source: bounty.funding_source, // Include funding_source
     ipfs_hash: bounty.ipfs_hash,
     onchain_id: bounty.onchain_id, // Map on-chain bounty ID
+    // Eligibility (see lib/eligibility.ts): passed through untouched so the
+    // consumer can build the gate.
+    required_pod_id: (bounty as any).required_pod_id ?? null,
+    restriction_level: (bounty as any).restriction_level ?? null,
+    bounty_token_gates: (bounty as any).bounty_token_gates ?? [],
   };
 };
 

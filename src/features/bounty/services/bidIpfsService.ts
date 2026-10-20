@@ -6,6 +6,7 @@
  */
 
 import { getAuthHeaders } from '@/lib/authHeaders';
+import { pinJsonViaServer } from '@/lib/ipfsPinClient';
 
 export interface BidMetadata {
   experience: string;
@@ -41,29 +42,14 @@ export async function uploadBidToIPFS(bidData: BidMetadata): Promise<string> {
       timestamp: bidData.timestamp,
     });
 
-    const response = await fetch('/api/bounty/ipfs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
-      body: JSON.stringify({
-        action: 'upload',
-        metadata: bidData,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ error: 'Unknown error' }));
-      throw new Error(
-        `Failed to upload bid to IPFS: ${errorData.error || response.statusText}`,
-      );
-    }
-
-    const { ipfsHash } = await response.json();
-
-    if (!ipfsHash) {
-      throw new Error('No IPFS hash returned from upload');
-    }
+    // Same server pin path as bounty metadata, hat details and agreements
+    // (POST /api/ipfs/pin): one Pinata code path to keep working.
+    const ipfsHash = await pinJsonViaServer(
+      'bid_metadata',
+      bidData,
+      `bid-${bidData.bounty_id}-${bidData.bidder_address.slice(0, 8)}-${bidData.timestamp}`,
+      { bounty_id: String(bidData.bounty_id), bidder: bidData.bidder_address },
+    );
 
     console.log('✅ Bid uploaded to IPFS:', ipfsHash);
     return ipfsHash;

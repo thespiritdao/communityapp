@@ -52,6 +52,8 @@ import { DisputeManagementDashboard } from './DisputeManagementDashboard';
 import { useBountyV2 } from '../hooks/useBountyV2';
 import { useBountySupabase } from '../hooks/useBountySupabase';
 import type { BountyV2 } from '../hooks/useBountyV2';
+import { useBountyEligibility } from '../hooks/useBountyEligibility';
+import { describeGate, gateFromRow, type BountyGate } from '../lib/eligibility';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { usePods } from '@/features/pods/hooks/usePods';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
@@ -92,52 +94,11 @@ const getPodName = (podId: string, pods: any[]): string => {
   return pod?.name || 'Unknown Pod';
 };
 
-// Helper function to check if user can bid on a bounty
-const canUserBid = (
-  bounty: any,
-  userAddress: string | undefined,
-  tokenBalances: any,
-  pods: any[],
-): boolean => {
-  if (!userAddress) return false;
-
-  // Can't bid on your own bounty (except in dev mode for testing)
-  const isCreator =
-    bounty.creator === userAddress.toLowerCase() ||
-    bounty.creator_address === userAddress.toLowerCase();
-  if (isCreator && process.env.NODE_ENV !== 'development') return false;
-
-  // If bounty is not open, can't bid
-  if (bounty.status !== 0 && bounty.status !== 'open' && bounty.status !== 'draft') {
-    return false;
-  }
-
-  // DAO-wide bounty (required_pod_id is null/undefined) — requires PoC token
-  const isDAOWide = bounty.required_pod_id === null || bounty.required_pod_id === undefined || bounty.required_pod_id === '';
-  if (isDAOWide) {
-    return tokenBalances?.hasPoC || tokenBalances?.hasAdvocate || false;
-  }
-
-  // Pod-restricted bounty — requires pod membership
-  const pod = pods.find((p) => p.id === bounty.required_pod_id || p.id === bounty.podId);
-  if (pod) {
-    const isMember = pod.pod_members?.some(
-      (m: string) => m.toLowerCase() === userAddress.toLowerCase(),
-    );
-    const isLeader = pod.pod_leads?.some(
-      (l: string) => l.toLowerCase() === userAddress.toLowerCase(),
-    );
-    const isPodCreator =
-      pod.created_by_address?.toLowerCase() === userAddress.toLowerCase();
-
-    if (!isMember && !isLeader && !isPodCreator) {
-      return tokenBalances?.hasAdvocate || false;
-    }
-    return true;
-  }
-
-  return true;
-};
+// Eligibility ("who can bid") lives in ../lib/eligibility.ts and is read here
+// through useBountyEligibility. The old inline check read a pods.pod_members
+// array that does not exist and let Advocate holders bypass pod restrictions.
+const isOpenForBids = (bounty: { status: number | string }) =>
+  bounty.status === 0 || bounty.status === 'open' || bounty.status === 'draft';
 
 export const BountyManagement: React.FC<BountyManagementProps> = ({
   podId,
@@ -180,8 +141,6 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
   // Use bounty V2 hooks
   const {
-    getBounties,
-    getBountyDetails,
     getBids,
     assignBountyCall,
     releasePaymentCall,
@@ -205,9 +164,18 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   const { balances: tokenBalances } = useTokenBalances();
 
   // State for bounty data
-  const [bounties, setBounties] = useState<BountyV2[]>([]);
+  const [bounties, setBounties] = useState<(BountyV2 & { gate: BountyGate; required_pod_id?: string | null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Who can bid on what, decided once for the whole list.
+  const gatedBounties = useMemo(
+    () => bounties.map((b) => ({ id: b.id, gate: b.gate, creator: b.creator })),
+    [bounties],
+  );
+  const eligibility = useBountyEligibility(gatedBounties);
+  const canBidOn = (bounty: { id: string; status: number | string }) =>
+    isOpenForBids(bounty) && eligibility.get(bounty.id).eligible;
 
   // Initial load of bounties and when pod changes
   useEffect(() => {
@@ -326,6 +294,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
           status: convertedStatus,
           podId: rawBounty.pod_id || rawBounty.podId || '',
           required_pod_id: rawBounty.required_pod_id ?? null,
+          gate: gateFromRow(rawBounty),
           category: rawBounty.category || '',
           ipfsHash: rawBounty.ipfs_hash || rawBounty.ipfsHash || 'temp',
           createdAt:
@@ -898,14 +867,29 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                   return null;
                                 })()}
 
+                                {/* Who can apply */}
+                                {(() => {
+                                  const elig = eligibility.get(bounty.id);
+                                  const gatePodName =
+                                    bounty.gate.mode === 'pod_members' && bounty.gate.podId
+                                      ? getPodName(bounty.gate.podId, pods)
+                                      : null;
+                                  return (
+                                    <div className="text-sm">
+                                      <span className="font-medium">Who can apply: </span>
+                                      <span className="text-gray-700">{describeGate(bounty.gate, gatePodName)}</span>
+                                      {!elig.eligible && elig.reason && isOpenForBids(bounty) && (
+                                        <p className="text-xs mt-1" style={{ color: '#8F6B2F' }}>
+                                          {elig.reason}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+
                                 {/* Bid Action for eligible users */}
                                 {(() => {
-                                  const canBid = canUserBid(
-                                    bounty,
-                                    address || undefined,
-                                    tokenBalances,
-                                    pods,
-                                  );
+                                  const canBid = canBidOn(bounty);
                                   const existingBid = getUserBidForBounty(
                                     bounty.id,
                                   );
@@ -1128,12 +1112,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                             Cancel Bounty
                                           </Button>
                                           {/* Manager can also place a bid */}
-                                          {canUserBid(
-                                            bounty,
-                                            address || undefined,
-                                            tokenBalances,
-                                            pods,
-                                          ) && (
+                                          {canBidOn(bounty) && (
                                             <Button
                                               variant="outline"
                                               size="sm"

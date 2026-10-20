@@ -17,6 +17,7 @@ const ALLOWED_KINDS = new Set([
   'hat_details',
   'hat_metadata',
   'bounty_metadata',
+  'bid_metadata',
 ]);
 
 const MAX_CONTENT_BYTES = 64 * 1024;
