@@ -2,7 +2,34 @@
 
 ## New to SpiritDAO? Start Here.
 
-SpiritDAO has a built-in guided tour that walks you through every section of the app in approximately 2 minutes. It is the fastest way to understand the full platform at a glance.
+Your first visit to the home screen asks one question, then gives you a short checklist for the path you chose. There is also a built-in guided tour that walks you through every section of the app in approximately 2 minutes.
+
+---
+
+## Your First Visit: Pick a Path
+
+After you accept the Terms of Service, the home screen asks **What brings you here?**
+
+- **Join a community**: find a pod and the people in it
+- **Found a community**: start a pod and invite others
+- **Just explore**: look around first, decide later
+
+Pick one. If you arrived through a pod invite link, the question is skipped and you are set to *Join*. **Ask me later** hides the question until your next visit.
+
+![The first-visit question on the home screen.](https://app.spiritdao.org/images/docs/walkthrough/03-what-brings-you-here.png)
+
+### Your checklist
+
+Your answer becomes a five-step checklist at the top of **Home**, and in a compact form on your **Identity** page. Steps tick themselves off as you go: adding your name and photo, visiting a section for the first time, joining or creating a pod.
+
+- The **next step** is the green button at the bottom of the card.
+- **Show me** on any step spotlights the matching icon on the home screen.
+- **Change path** switches your checklist to a different path. You can also change it under **Your path** in Edit Profile.
+- **Hide** removes the card. Choosing a path again brings it back.
+
+The *Join* and *Found* checklists disappear on their own when every step is done. *Just explore* ends with **Ready to join or found a community?**, which stays until you pick a path.
+
+![The checklist for the Just explore path, with one step done.](https://app.spiritdao.org/images/docs/walkthrough/04-your-checklist.png)
 
 ---
 
@@ -63,10 +90,11 @@ Browse these videos in the Knowledge Base by selecting the relevant category.
 ## Tips for New Members
 
 ### First 24 Hours
-1. ✅ Complete your **Identity profile** (first name, bio, and interests)
-2. ✅ Browse the **Pods** page and find one that matches your interests
-3. ✅ Watch the **Getting Started** video in the Knowledge Base
-4. ✅ Attend a **Weekly Governance Call** (check Events calendar)
+1. ✅ Answer **What brings you here?** on the home screen and follow the checklist it gives you
+2. ✅ Complete your **Identity profile** (first name, photo, bio, and what you're seeking)
+3. ✅ Browse the **Pods** page and find one that matches your interests
+4. ✅ Watch the **Getting Started** video in the Knowledge Base
+5. ✅ Attend a **Weekly Governance Call** (check Events calendar)
 
 ### First Week
 1. ✅ Apply for pod membership and get approved

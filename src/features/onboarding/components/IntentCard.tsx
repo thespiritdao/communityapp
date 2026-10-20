@@ -66,7 +66,15 @@ export function IntentCard({ onChoose, onLater, hideExplore = false, compact = f
           : compact
             ? 'none'
             : '0 2px 8px hsl(var(--primary) / 0.08)',
-        ...(modal ? { width: 'calc(100% - 48px)', maxWidth: '400px' } : {}),
+        ...(modal
+          ? {
+              width: 'calc(100% - 48px)',
+              maxWidth: '400px',
+              // Short screens: scroll inside the card rather than clip the buttons.
+              maxHeight: 'calc(100vh - var(--bottom-nav-height, 64px) - 48px)',
+              overflowY: 'auto' as const,
+            }
+          : {}),
       }}
     >
       <p
@@ -169,7 +177,8 @@ export function IntentCard({ onChoose, onLater, hideExplore = false, compact = f
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '24px 24px 96px', // keep clear of the bottom nav
+          // Keep clear of the bottom nav at its real height.
+          padding: '24px 24px calc(var(--bottom-nav-height, 64px) + 24px)',
           zIndex: 100001,
           pointerEvents: 'none',
         }}

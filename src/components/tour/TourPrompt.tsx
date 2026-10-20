@@ -28,7 +28,11 @@ export function TourPrompt() {
         aria-label="Start guided tour"
         style={{
           position: 'fixed',
-          bottom: '80px', // above bottom nav
+          // Above the bottom nav, whatever height it reports (safe-area
+          // insets included). Falls back to 64px before the nav mounts.
+          bottom: 'calc(var(--bottom-nav-height, 64px) + 16px)',
+          maxHeight: 'calc(100vh - var(--bottom-nav-height, 64px) - 32px)',
+          overflowY: 'auto',
           left: '50%',
           transform: 'translateX(-50%)',
           width: 'calc(100% - 48px)',

@@ -917,6 +917,34 @@
       }
     },
     {
+      "slug": "walkthrough",
+      "file": "03-what-brings-you-here.png",
+      "heading": "## Your First Visit: Pick a Path",
+      "placement": "after-body",
+      "priority": 1,
+      "caption": "The first-visit question on the home screen.",
+      "capture": {
+        "url": "/home",
+        "actor": "member",
+        "state": "The 'What brings you here?' modal with its three options and 'Ask me later'. Reset the member's onboarding_intent first so the modal shows.",
+        "crop": "Tight crop on the modal."
+      }
+    },
+    {
+      "slug": "walkthrough",
+      "file": "04-your-checklist.png",
+      "heading": "### Your checklist",
+      "placement": "after-body",
+      "priority": 1,
+      "caption": "The checklist for the Just explore path, with one step done.",
+      "capture": {
+        "url": "/home",
+        "actor": "member",
+        "state": "Progress card for the Explore path with at least one step checked, showing Show me, the next-step button, Change path, and Hide.",
+        "crop": "Tight crop on the card."
+      }
+    },
+    {
       "slug": "linking-wallets",
       "file": "01-linked-wallets.png",
       "heading": "## How to link a wallet, step by step",

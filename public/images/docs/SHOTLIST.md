@@ -529,6 +529,22 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** src/guides/maps/kbapp.PNG (check)
 
+### ✅ `03-what-brings-you-here.png` — P1 — must have
+
+- **Where in the doc:** after-body of `## Your First Visit: Pick a Path`
+- **Caption:** The first-visit question on the home screen.
+- **Screen:** `/home` as *member*
+- **What to show:** The "What brings you here?" modal with its three options and "Ask me later". Reset `onboarding_intent` on the member first so the modal shows.
+- **Crop:** Tight crop on the modal.
+
+### ✅ `04-your-checklist.png` — P1 — must have
+
+- **Where in the doc:** after-body of `### Your checklist`
+- **Caption:** The checklist for the Just explore path, with one step done.
+- **Screen:** `/home` as *member*
+- **What to show:** Progress card for the Explore path with at least one step checked: Show me, the next-step button, Change path, Hide.
+- **Crop:** Tight crop on the card.
+
 ---
 
 ## Linking External Wallets  `10-linking-external-wallets.md` → folder `linking-wallets/`

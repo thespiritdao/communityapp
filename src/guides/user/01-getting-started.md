@@ -285,6 +285,8 @@ SpiritDAO uses role-based permissions:
 
 ## Next Steps
 
+On your first visit, the home screen asks **What brings you here?** (join a community, found one, or just explore) and gives you a short checklist for that path. See [App Walkthrough](09-app-walkthrough.md) for how it works. The general order is:
+
 1. ✅ Set up your identity profile
 2. ✅ Join your first pod
 3. ✅ Participate in forum discussion
