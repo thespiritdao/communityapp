@@ -395,6 +395,16 @@ Create 3 tutorial videos for SpiritDAO:
 - Upload to YouTube
 ```
 
+### Who Can Apply
+
+Every bounty carries one of three eligibility settings. Pick it in the **Who Can Apply** box on the form; the line under it previews exactly who qualifies.
+
+- **Members of this pod.** Only members and leaders of the sponsoring pod. The default.
+- **Any SpiritDAO member.** Anyone who has finished onboarding.
+- **Holders of specific credentials.** Tick one or more credentials from two groups: membership of any pod, or a token or accreditation (Advocate, Proof of Curiosity, $SYSTEM, $SELF, $TGN). Holding *any one* ticked credential is enough. Pick at least one.
+
+What applicants see: the bounty details show a **Who can apply** line, and anyone who doesn't qualify gets one sentence saying what they're missing instead of a Bid button. The rule is enforced when a bid is submitted, not only in the display.
+
 **Reward Amount:**
 - How much you'll pay
 - In $SYSTEM or $SELF
@@ -412,17 +422,6 @@ Create 3 tutorial videos for SpiritDAO:
 - Factor in review time
 - Can be extended later
 
-**Pod Restriction (Optional):**
-- Limit to specific pod members
-- Or open to all DAO
-- Affects who can apply
-
-**Eligibility Criteria (Optional):**
-- Token holdings
-- NFT ownership
-- Pod membership
-- Skill verification
-
 **Milestones (Optional):**
 - Break into phases
 - Set payment per phase
@@ -437,7 +436,8 @@ if the bounty is cancelled. There is no pay-on-completion option.
 
 **Choose the funding source:**
 - **Your wallet** — the amount comes from your own $SYSTEM or $SELF. The
-  app approves and escrows in one gasless transaction.
+  app approves and escrows in one gasless transaction. The pod does not
+  need a treasury for this.
 - **Pod treasury** — the amount comes from the pod's treasury. You must be
   a pod leader (or hold a role authorised for treasury funding), and the
   treasury must already hold at least the bounty amount in that token. Top

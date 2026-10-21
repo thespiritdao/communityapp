@@ -563,6 +563,34 @@
       }
     },
     {
+      "slug": "bounties",
+      "file": "10-who-can-apply.png",
+      "heading": "### Who Can Apply",
+      "placement": "after-body",
+      "priority": 1,
+      "caption": "Who can apply: the three settings, with the credential picker open.",
+      "capture": {
+        "url": "/bounty",
+        "actor": "bounty creator",
+        "state": "Create tab. 'Who Can Apply' set to 'Holders of specific credentials' with the picker open, one pod and one token ticked, and the preview sentence underneath visible.",
+        "crop": "Tight crop on the Who Can Apply box and the preview line."
+      }
+    },
+    {
+      "slug": "bounties",
+      "file": "11-who-can-apply-detail.png",
+      "heading": "### Who Can Apply",
+      "placement": "after-body",
+      "priority": 1,
+      "caption": "A bounty's details with the \"Who can apply\" line and the reason shown to a member who doesn't qualify.",
+      "capture": {
+        "url": "/bounty",
+        "actor": "member who does not qualify",
+        "state": "A bounty's detail dialog on the Public tab: the 'Who can apply' line and the amber reason line under it, no Bid button. Use a credential-gated or pod-restricted bounty and a second account that is not in that pod.",
+        "crop": "Tight crop on the Who can apply block."
+      }
+    },
+    {
       "slug": "events",
       "file": "01-events-list.png",
       "heading": "### Event List View",

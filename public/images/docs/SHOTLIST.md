@@ -305,6 +305,22 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Manage tab with one bounty showing applications.
 - **Crop:** Viewport.
 
+### ⬜ `10-who-can-apply.png` — P1 — must have
+
+- **Where in the doc:** after-body of `### Who Can Apply`
+- **Caption:** Who can apply: the three settings, with the credential picker open.
+- **Screen:** `/bounty` as *bounty creator*
+- **What to show:** Create tab. "Who Can Apply" set to "Holders of specific credentials" with the picker open, one pod and one token ticked, and the preview sentence underneath visible.
+- **Crop:** Tight crop on the Who Can Apply box and the preview line.
+
+### ⬜ `11-who-can-apply-detail.png` — P1 — must have
+
+- **Where in the doc:** after-body of `### Who Can Apply`
+- **Caption:** A bounty's details with the "Who can apply" line and the reason shown to a member who doesn't qualify.
+- **Screen:** `/bounty` as *member who does not qualify*
+- **What to show:** A bounty's detail dialog on the Public tab: the "Who can apply" line and the amber reason line under it, no Bid button. Use a credential-gated or pod-restricted bounty and a second account that is not in that pod.
+- **Crop:** Tight crop on the Who can apply block.
+
 ---
 
 ## Events & Calendar  `05-events-calendar.md` → folder `events/`
