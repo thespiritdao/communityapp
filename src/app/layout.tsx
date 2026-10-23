@@ -1,9 +1,11 @@
 // src/app/layout.tsx
-import type { ReactNode } from 'react';
-import type { Metadata, Viewport } from 'next';
-import { Providers } from './providers';
 import { ModuleErrorBoundary } from '@/components/ModuleErrorBoundary';
 import { PWAManager } from '@/components/PWAManager';
+import { GA_MEASUREMENT_ID } from '@/lib/analytics';
+import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
+import type { ReactNode } from 'react';
+import { Providers } from './providers';
 import './globals.css';
 import '@/styles/index.css';
 import 'react-day-picker/dist/style.css';
@@ -22,7 +24,8 @@ import 'react-datepicker/dist/react-datepicker.css';
 // PWA Metadata
 export const metadata: Metadata = {
   title: 'SpiritDAO Community',
-  description: 'Decentralized community platform for coordination and governance',
+  description:
+    'Decentralized community platform for coordination and governance',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -52,10 +55,29 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-content',
 };
 
+// GA4 is loaded only in production builds so local dev and previews never
+// pollute the property. See src/lib/analytics.ts for scope.
+const ANALYTICS_ENABLED =
+  process.env.NODE_ENV === 'production' && Boolean(GA_MEASUREMENT_ID);
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="h-full">
       <body className="min-h-screen bg-background text-foreground antialiased">
+        {ANALYTICS_ENABLED && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}');`}
+            </Script>
+          </>
+        )}
         <PWAManager />
         <ModuleErrorBoundary>
           <Providers>{children}</Providers>

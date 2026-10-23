@@ -164,8 +164,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://keys.coinbase.com https://js.stripe.com;
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://keys.coinbase.com https://js.stripe.com https://www.googletagmanager.com;
               connect-src 'self'
+                https://www.googletagmanager.com
+                https://www.google-analytics.com
+                https://*.google-analytics.com
+                https://analytics.google.com
                 https://*.coinbase.com
                 https://*.wallet.coinbase.com
                 wss://*.wallet.coinbase.com

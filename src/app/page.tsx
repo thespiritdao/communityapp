@@ -13,6 +13,7 @@ import {
 import { useIsInitialized, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 import { EmbeddedWalletAuth } from '@/wallet/components/EmbeddedWalletAuth';
 import { cdpFetch } from '@/features/identity/lib/cdpSession';
+import { trackEvent } from '@/lib/analytics';
 
 export default function Page() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -543,6 +544,8 @@ function PageContent() {
 
       if (completeResult.success) {
         console.log('✅ Onboarding completed successfully! Setting flag...');
+        // GA4 → Google Ads: the one conversion the grant campaigns optimise for.
+        trackEvent('sign_up', { method: 'proof_of_curiosity' });
         setOnboardingComplete(true);
         console.log('🎉 User should now authenticate and redirect to /home');
       } else {
