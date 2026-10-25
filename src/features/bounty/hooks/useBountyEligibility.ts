@@ -5,8 +5,8 @@
  * once per wallet from the shared context (pod memberships + on-chain
  * balances for any credential gates present).
  *
- * useCredentialOptions — what a creator can gate on: the token catalogue
- * plus membership of any active pod.
+ * useCredentialOptions — what a creator can gate on: membership, roles and
+ * tokens of the communities the creator manages (see the function doc).
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -14,9 +14,11 @@ import { useUserWallet } from '@/hooks/useUserWallet';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { supabase } from '@/utils/supabaseClient';
 import {
+  EXECUTIVE_POD_ID,
   collectCredentials,
   isEligible,
   loadEligibilityContext,
+  normalizeHatId,
   type BountyGate,
   type CredentialGate,
   type EligibilityContext,
@@ -80,28 +82,97 @@ export function useBountyEligibility(bounties: GatedBounty[]) {
 }
 
 export interface CredentialOption extends CredentialGate {
-  group: 'Pods' | 'Tokens';
+  group: 'Pods' | 'Roles' | 'Tokens';
 }
 
-export function useCredentialOptions() {
+export interface ManagedPodRef {
+  id: string;
+  name: string;
+}
+
+/**
+ * What a creator may gate a bounty on. Scoped to the communities the creator
+ * can manage (bounties module on + a role with bounty management):
+ *
+ *   Pods    membership of each managed pod
+ *   Roles   every role those pods have defined, whether or not the creator
+ *           holds it (a pod's roles are credentials it issues)
+ *   Tokens  tokens owned by those pods; DAO-level tokens (no owning pod)
+ *           only for Executive Pod managers
+ *
+ * The create route re-derives the same scope server-side and rejects gates
+ * outside it, so this list is the experience, not the enforcement.
+ */
+export function useCredentialOptions(managedPods: ManagedPodRef[], podsLoading: boolean) {
   const [options, setOptions] = useState<CredentialOption[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const podKey = managedPods
+    .map((p) => p.id)
+    .sort()
+    .join('|');
+
   useEffect(() => {
+    if (podsLoading) {
+      setLoading(true);
+      return;
+    }
+    if (managedPods.length === 0) {
+      setOptions([]);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
+    setLoading(true);
     (async () => {
-      const [podsRes, tokensRes] = await Promise.all([
-        supabase.from('pods').select('id, name').eq('status', 'active').order('name'),
+      const ids = managedPods.map((p) => p.id);
+      const allowDaoLevel = ids.includes(EXECUTIVE_POD_ID);
+      const nameOf = new Map(managedPods.map((p) => [p.id, p.name]));
+
+      let tokensQuery = supabase
+        .from('tokens')
+        .select('id, name, contract_address, token_type, category, owner_pod_id')
+        .eq('is_active', true)
+        .order('name');
+      tokensQuery = allowDaoLevel
+        ? tokensQuery.or(`owner_pod_id.in.(${ids.join(',')}),owner_pod_id.is.null`)
+        : tokensQuery.in('owner_pod_id', ids);
+
+      const [rolesRes, tokensRes] = await Promise.all([
         supabase
-          .from('tokens')
-          .select('id, name, contract_address, token_type, category')
-          .eq('is_active', true)
-          .order('name'),
+          .from('pod_role_permissions')
+          .select('pod_id, token_address, role_name, is_active')
+          .in('pod_id', ids)
+          .order('role_name'),
+        tokensQuery,
       ]);
       if (cancelled) return;
-      const pods: CredentialOption[] = (podsRes.data ?? [])
-        .filter((p) => p.name !== 'Top hat')
-        .map((p) => ({ kind: 'pod', id: p.id, name: p.name, minBalance: 1, group: 'Pods' }));
+
+      const pods: CredentialOption[] = managedPods.map((p) => ({
+        kind: 'pod',
+        id: p.id,
+        name: p.name,
+        minBalance: 1,
+        group: 'Pods',
+      }));
+
+      const seenHats = new Set<string>();
+      const roles: CredentialOption[] = [];
+      for (const r of rolesRes.data ?? []) {
+        if (r.is_active === false) continue;
+        const hat = normalizeHatId(r.token_address);
+        if (!hat || seenHats.has(hat)) continue;
+        seenHats.add(hat);
+        const podName = nameOf.get(r.pod_id) ?? '';
+        const roleName = String(r.role_name ?? 'Role').trim();
+        // "Temporal Naturalism Leader" already names the pod; "Pod Leader" does not.
+        const name =
+          podName && roleName.toLowerCase().includes(podName.toLowerCase())
+            ? roleName
+            : `${roleName} (${podName})`;
+        roles.push({ kind: 'hat', id: hat, name, minBalance: 1, group: 'Roles' });
+      }
+
       const tokens: CredentialOption[] = (tokensRes.data ?? [])
         .filter((t) => t.contract_address && (t.token_type === 'erc20' || t.token_type === 'erc721'))
         .map((t) => ({
@@ -111,11 +182,16 @@ export function useCredentialOptions() {
           minBalance: 1,
           group: 'Tokens',
         }));
-      setOptions([...pods, ...tokens]);
+
+      setOptions([...pods, ...roles, ...tokens]);
       setLoading(false);
     })();
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+    // podKey captures the identity of managedPods; the array itself is not stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [podKey, podsLoading]);
 
   return { options, loading };
 }

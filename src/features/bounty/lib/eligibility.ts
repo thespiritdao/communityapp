@@ -11,7 +11,12 @@
  *   pod_members    members or leaders of `podId`
  *   token_holders  ANY of `credentials`: a pod (membership), an ERC-20
  *                  (balance >= minBalance whole tokens), an ERC-721 (count
- *                  >= minBalance), or a legacy hat id
+ *                  >= minBalance), or a pod role (a Hats Protocol hat id)
+ *
+ * Hat ids are uint256 and do not fit bounty_token_gates.hat_id (bigint), so a
+ * role gate stores the hat id as a decimal string in contract_address with
+ * hat_id null. Role holding is read from active_pod_members (the member's own
+ * hat) and, as a fallback, from the Hats contract.
  */
 
 import { createPublicClient, http, type Address } from 'viem';
@@ -19,6 +24,13 @@ import { base } from 'viem/chains';
 import { supabase } from '@/utils/supabaseClient';
 
 export type GateMode = 'public' | 'pod_members' | 'token_holders';
+
+/**
+ * DAO-level credentials (tokens with no owning pod: Proof of Curiosity,
+ * Advocate, $SYSTEM, $SELF) are issued by SpiritDAO itself. Only managers of
+ * the Executive Pod may gate a bounty on them. Same id as hatRegistry.ts.
+ */
+export const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
 
 export type CredentialKind = 'pod' | 'erc20' | 'erc721' | 'hat';
 
@@ -49,6 +61,21 @@ export interface GateRow {
   }> | null;
 }
 
+/**
+ * Hat ids appear as 0x-hex (pod_role_permissions, active_pod_members) or as
+ * decimal strings. Compare and store them in one form: decimal.
+ */
+export function normalizeHatId(raw: string | number | bigint | null | undefined): string {
+  if (raw === null || raw === undefined) return '';
+  const s = String(raw).trim();
+  if (!s) return '';
+  try {
+    return BigInt(s).toString();
+  } catch {
+    return s.toLowerCase();
+  }
+}
+
 export function gateFromRow(row: GateRow): BountyGate {
   const level = row.restriction_level;
   const podId = row.required_pod_id ?? null;
@@ -59,7 +86,7 @@ export function gateFromRow(row: GateRow): BountyGate {
         const kind = (g.token_type ?? 'hat') as CredentialKind;
         const id =
           kind === 'hat'
-            ? String(g.hat_id ?? '')
+            ? normalizeHatId(g.hat_id ?? g.contract_address)
             : String(g.contract_address ?? '').toLowerCase();
         return {
           kind,
@@ -90,7 +117,11 @@ export function describeGate(gate: BountyGate, podName?: string | null): string 
       return `Members of ${podName || 'the sponsoring pod'}`;
     case 'token_holders': {
       const names = gate.credentials.map((c) =>
-        c.kind === 'pod' ? `members of ${c.name}` : `${c.name} holders`,
+        c.kind === 'pod'
+          ? `members of ${c.name}`
+          : c.kind === 'hat'
+            ? `holders of the ${c.name} role`
+            : `${c.name} holders`,
       );
       if (names.length === 1) return capitalize(names[0]);
       return `Any of: ${names.join(', ')}`;
@@ -148,7 +179,9 @@ export function isEligible(gate: BountyGate, ctx: EligibilityContext): Eligibili
       return {
         eligible: false,
         reason: `You need one of: ${gate.credentials
-          .map((c) => (c.kind === 'pod' ? `membership of ${c.name}` : c.name))
+          .map((c) =>
+            c.kind === 'pod' ? `membership of ${c.name}` : c.kind === 'hat' ? `the ${c.name} role` : c.name,
+          )
           .join(', ')}.`,
       };
     }
@@ -196,10 +229,15 @@ export async function loadEligibilityContext(
   if (!ctx.wallet) return ctx;
 
   const [memberRes, podsRes] = await Promise.all([
-    supabase.from('active_pod_members').select('pod_id').eq('wallet', ctx.wallet),
+    supabase.from('active_pod_members').select('pod_id, hat_id').eq('wallet', ctx.wallet),
     supabase.from('pods').select('id, pod_leads, created_by_address').eq('status', 'active'),
   ]);
-  for (const m of memberRes.data ?? []) if (m.pod_id) ctx.memberPodIds.add(m.pod_id);
+  for (const m of memberRes.data ?? []) {
+    if (m.pod_id) ctx.memberPodIds.add(m.pod_id);
+    // The member's own role hat satisfies a role gate without a chain read.
+    const hat = normalizeHatId((m as { hat_id?: string | null }).hat_id);
+    if (hat) ctx.holdings.set(hat, 1);
+  }
   for (const p of podsRes.data ?? []) {
     const leads = (p.pod_leads ?? []) as string[];
     if (leads.some((l) => l?.toLowerCase() === ctx.wallet) || p.created_by_address?.toLowerCase() === ctx.wallet) {
@@ -207,7 +245,10 @@ export async function loadEligibilityContext(
     }
   }
 
-  const onchain = credentials.filter((c) => c.kind !== 'pod');
+  // Role gates already satisfied from active_pod_members need no chain read.
+  const onchain = credentials.filter(
+    (c) => c.kind !== 'pod' && !(c.kind === 'hat' && ctx.holdings.has(normalizeHatId(c.id))),
+  );
   if (onchain.length === 0) return ctx;
 
   const unique = new Map<string, CredentialGate>();

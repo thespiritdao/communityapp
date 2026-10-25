@@ -106,7 +106,23 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     bids_accepted_count: 0,
   });
 
-  const { options: credentialOptions, loading: credentialsLoading } = useCredentialOptions();
+  // Credentials the creator may gate on: only what their managed pods issue.
+  const { options: credentialOptions, loading: credentialsLoading } = useCredentialOptions(
+    managablePods,
+    podsLoading,
+  );
+
+  // If the manageable set shrinks (or loads late), drop any ticked credential
+  // that is no longer on offer so the payload never carries an out-of-scope gate.
+  useEffect(() => {
+    if (credentialsLoading) return;
+    setFormData((prev) => {
+      const kept = prev.credential_gates.filter((g) =>
+        credentialOptions.some((o) => o.kind === g.kind && o.id === g.id),
+      );
+      return kept.length === prev.credential_gates.length ? prev : { ...prev, credential_gates: kept };
+    });
+  }, [credentialOptions, credentialsLoading]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [ipfsHash, setIpfsHash] = useState<string>('');
@@ -950,18 +966,27 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           {formData.eligibility === 'credentials' && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
               <p className="text-xs text-gray-600">
-                Anyone holding <strong>any one</strong> of the credentials you tick can bid.
+                Anyone holding <strong>any one</strong> of the credentials you tick can bid. Only the
+                communities you manage bounties for, and the credentials they issue, are listed.
               </p>
               {credentialsLoading ? (
                 <p className="text-sm text-gray-500">Loading credentials…</p>
+              ) : credentialOptions.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  None of the communities you manage issues a credential yet.
+                </p>
               ) : (
-                (['Pods', 'Tokens'] as const).map((group) => {
+                (['Pods', 'Roles', 'Tokens'] as const).map((group) => {
                   const items = credentialOptions.filter((o) => o.group === group);
                   if (items.length === 0) return null;
                   return (
                     <div key={group}>
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                        {group === 'Pods' ? 'Pod membership' : 'Tokens and accreditations'}
+                        {group === 'Pods'
+                          ? 'Pod membership'
+                          : group === 'Roles'
+                            ? 'Pod roles'
+                            : 'Tokens and accreditations'}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {items.map((opt) => {
@@ -986,7 +1011,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                                   })
                                 }
                               />
-                              <span>{group === 'Pods' ? `Member of ${opt.name}` : opt.name}</span>
+                              <span>
+                                {group === 'Pods'
+                                  ? `Member of ${opt.name}`
+                                  : group === 'Roles'
+                                    ? `${opt.name} role`
+                                    : opt.name}
+                              </span>
                             </label>
                           );
                         })}

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
+import { firstGateOutOfScope, loadBountyScope } from '@/lib/bountyScope';
+import { normalizeHatId } from '@/features/bounty/lib/eligibility';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -131,6 +133,20 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    // A creator may only gate on credentials issued by communities they
+    // manage (the form offers nothing else; this is the floor under it).
+    if (gates.length > 0) {
+      const scope = await loadBountyScope(supabase, callerAddress);
+      const bad = firstGateOutOfScope(gates, scope);
+      if (bad) {
+        return NextResponse.json(
+          {
+            error: `Credential "${bad.name}" is not issued by a community you manage bounties for`,
+          },
+          { status: 403 },
+        );
+      }
+    }
 
     // Add blockchain fields if they exist (after migration)
     if (hasBlockchainFields) {
@@ -177,12 +193,15 @@ export async function POST(request: NextRequest) {
     // the bounty, which already exists on-chain; it is reported instead.
     let gateError: string | null = null;
     if (gates.length > 0) {
+      // Hat ids are uint256 and overflow the bigint hat_id column, so a role
+      // gate keeps hat_id null and stores the decimal id in contract_address
+      // (see eligibility.ts and bounty_bid_allowed()).
       const rows = gates.map((g) => ({
         bounty_id: data.id,
         token_type: g.kind,
-        hat_id: g.kind === 'hat' ? Number(g.id) : null,
+        hat_id: null,
         hat_name: g.name.slice(0, 120),
-        contract_address: g.kind === 'hat' ? null : g.id.trim().toLowerCase(),
+        contract_address: g.kind === 'hat' ? normalizeHatId(g.id) : g.id.trim().toLowerCase(),
         min_balance: Math.max(1, Number(g.minBalance) || 1),
       }));
       const { error: gErr } = await supabase.from('bounty_token_gates').insert(rows);

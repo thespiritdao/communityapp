@@ -117,7 +117,7 @@ Every bounty says who can apply. There are three kinds:
 
 - **Any SpiritDAO member.** Anyone who has finished onboarding (holds Proof of Curiosity or Advocate).
 - **Members of a pod.** Only members and leaders of the sponsoring pod. Apply to join that pod first.
-- **Holders of specific credentials.** The creator picked one or more credentials, and holding *any one* of them is enough: membership of a named pod, or a token such as Advocate, Proof of Curiosity, $SYSTEM, $SELF or $TGN.
+- **Holders of specific credentials.** The creator picked one or more credentials issued by a community they manage, and holding *any one* of them is enough: membership of that pod, one of its roles, or a token it owns (such as $TGN). Bounties from the Executive Pod can also name DAO-level credentials: Advocate, Proof of Curiosity, $SYSTEM, $SELF.
 
 **How to Check:**
 1. Open the bounty details
@@ -401,7 +401,7 @@ Every bounty carries one of three eligibility settings. Pick it in the **Who Can
 
 - **Members of this pod.** Only members and leaders of the sponsoring pod. The default.
 - **Any SpiritDAO member.** Anyone who has finished onboarding.
-- **Holders of specific credentials.** Tick one or more credentials from two groups: membership of any pod, or a token or accreditation (Advocate, Proof of Curiosity, $SYSTEM, $SELF, $TGN). Holding *any one* ticked credential is enough. Pick at least one.
+- **Holders of specific credentials.** Tick one or more credentials from three groups: membership of a pod you manage, any role that pod has defined (you need not hold it yourself), or a token that pod owns. Only communities where you can manage bounties, and the credentials they issue, are offered; the server refuses anything else. Executive Pod managers also see the DAO-level credentials (Advocate, Proof of Curiosity, $SYSTEM, $SELF). Holding *any one* ticked credential is enough. Pick at least one.
 
 What applicants see: the bounty details show a **Who can apply** line, and anyone who doesn't qualify gets one sentence saying what they're missing instead of a Bid button. The rule is enforced when a bid is submitted, not only in the display.
 
