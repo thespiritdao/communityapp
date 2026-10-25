@@ -23,6 +23,8 @@ export interface BountyScope {
   roleHatIds: Set<string>;
   /** Lower-cased contract addresses of tokens those pods own (+ DAO-level if allowed). */
   tokenAddresses: Set<string>;
+  /** Events organised by those pods (uuids). */
+  eventIds: Set<string>;
   /** Executive Pod managers may gate on DAO-level tokens. */
   allowDaoLevel: boolean;
 }
@@ -36,6 +38,7 @@ export async function loadBountyScope(
     podIds: new Set(),
     roleHatIds: new Set(),
     tokenAddresses: new Set(),
+    eventIds: new Set(),
     allowDaoLevel: false,
   };
 
@@ -140,10 +143,22 @@ export async function loadBountyScope(
         `owner_pod_id.in.(${managed.join(',')}),owner_pod_id.is.null`,
       )
     : tokensQuery.in('owner_pod_id', managed);
-  const { data: tokens } = await tokensQuery;
+  const [{ data: tokens }, { data: events }] = await Promise.all([
+    tokensQuery,
+    supabase
+      .from('events')
+      .select('id')
+      .in('organizing_pod_id', managed)
+      .in('status', ['published', 'completed']),
+  ]);
   for (const t of tokens ?? []) {
     if (t.contract_address) {
       scope.tokenAddresses.add(String(t.contract_address).toLowerCase());
+    }
+  }
+  for (const e of events ?? []) {
+    if (e.id) {
+      scope.eventIds.add(String(e.id));
     }
   }
 
@@ -168,6 +183,9 @@ export function firstGateOutOfScope(
       return g;
     }
     if (g.kind === 'hat' && !scope.roleHatIds.has(normalizeHatId(id))) {
+      return g;
+    }
+    if (g.kind === 'event' && !scope.eventIds.has(id)) {
       return g;
     }
     if (

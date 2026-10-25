@@ -82,7 +82,7 @@ export function useBountyEligibility(bounties: GatedBounty[]) {
 }
 
 export interface CredentialOption extends CredentialGate {
-  group: 'Pods' | 'Roles' | 'Tokens';
+  group: 'Pods' | 'Roles' | 'Events' | 'Tokens';
 }
 
 export interface ManagedPodRef {
@@ -97,6 +97,8 @@ export interface ManagedPodRef {
  *   Pods    membership of each managed pod
  *   Roles   every role those pods have defined, whether or not the creator
  *           holds it (a pod's roles are credentials it issues)
+ *   Events  attendance at an event those pods organised (published or
+ *           completed; a future event means "attend this to qualify")
  *   Tokens  tokens owned by those pods; DAO-level tokens (no owning pod)
  *           only for Executive Pod managers
  *
@@ -138,13 +140,20 @@ export function useCredentialOptions(managedPods: ManagedPodRef[], podsLoading: 
         ? tokensQuery.or(`owner_pod_id.in.(${ids.join(',')}),owner_pod_id.is.null`)
         : tokensQuery.in('owner_pod_id', ids);
 
-      const [rolesRes, tokensRes] = await Promise.all([
+      const [rolesRes, tokensRes, eventsRes] = await Promise.all([
         supabase
           .from('pod_role_permissions')
           .select('pod_id, token_address, role_name, is_active')
           .in('pod_id', ids)
           .order('role_name'),
         tokensQuery,
+        supabase
+          .from('events')
+          .select('id, title, event_date, status, organizing_pod_id')
+          .in('organizing_pod_id', ids)
+          .in('status', ['published', 'completed'])
+          .order('event_date', { ascending: false })
+          .limit(60),
       ]);
       if (cancelled) return;
 
@@ -183,7 +192,22 @@ export function useCredentialOptions(managedPods: ManagedPodRef[], podsLoading: 
           group: 'Tokens',
         }));
 
-      setOptions([...pods, ...roles, ...tokens]);
+      const events: CredentialOption[] = (eventsRes.data ?? []).map((e) => {
+        const when = e.event_date ? new Date(e.event_date) : null;
+        const stamp =
+          when && !Number.isNaN(when.getTime())
+            ? ` (${when.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })})`
+            : '';
+        return {
+          kind: 'event',
+          id: e.id,
+          name: `${String(e.title ?? 'Event').trim()}${stamp}`,
+          minBalance: 1,
+          group: 'Events',
+        };
+      });
+
+      setOptions([...pods, ...roles, ...events, ...tokens]);
       setLoading(false);
     })();
     return () => {

@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
             .filter(
               (g: any) =>
                 g &&
-                ['pod', 'erc20', 'erc721', 'hat'].includes(g.kind) &&
+                ['pod', 'erc20', 'erc721', 'hat', 'event'].includes(g.kind) &&
                 typeof g.id === 'string' &&
                 g.id.trim() &&
                 typeof g.name === 'string',
@@ -201,7 +201,12 @@ export async function POST(request: NextRequest) {
         token_type: g.kind,
         hat_id: null,
         hat_name: g.name.slice(0, 120),
-        contract_address: g.kind === 'hat' ? normalizeHatId(g.id) : g.id.trim().toLowerCase(),
+        contract_address:
+          g.kind === 'hat'
+            ? normalizeHatId(g.id)
+            : g.kind === 'event'
+              ? g.id.trim() // event uuid, case preserved
+              : g.id.trim().toLowerCase(),
         min_balance: Math.max(1, Number(g.minBalance) || 1),
       }));
       const { error: gErr } = await supabase.from('bounty_token_gates').insert(rows);

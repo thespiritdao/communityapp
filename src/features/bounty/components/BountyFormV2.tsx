@@ -976,7 +976,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                   None of the communities you manage issues a credential yet.
                 </p>
               ) : (
-                (['Pods', 'Roles', 'Tokens'] as const).map((group) => {
+                (['Pods', 'Roles', 'Events', 'Tokens'] as const).map((group) => {
                   const items = credentialOptions.filter((o) => o.group === group);
                   if (items.length === 0) return null;
                   return (
@@ -986,7 +986,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                           ? 'Pod membership'
                           : group === 'Roles'
                             ? 'Pod roles'
-                            : 'Tokens and accreditations'}
+                            : group === 'Events'
+                              ? 'Event attendance'
+                              : 'Tokens and accreditations'}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {items.map((opt) => {
@@ -1016,7 +1018,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                                   ? `Member of ${opt.name}`
                                   : group === 'Roles'
                                     ? `${opt.name} role`
-                                    : opt.name}
+                                    : group === 'Events'
+                                      ? `Attended ${opt.name}`
+                                      : opt.name}
                               </span>
                             </label>
                           );

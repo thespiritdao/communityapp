@@ -32,7 +32,13 @@ export type GateMode = 'public' | 'pod_members' | 'token_holders';
  */
 export const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
 
-export type CredentialKind = 'pod' | 'erc20' | 'erc721' | 'hat';
+/**
+ * 'event' = attended (checked in to, or completed) a specific event. The id
+ * is the event uuid, stored in bounty_token_gates.contract_address like a pod
+ * gate, and verified from event_registrations in both the browser and
+ * bounty_bid_allowed().
+ */
+export type CredentialKind = 'pod' | 'erc20' | 'erc721' | 'hat' | 'event';
 
 export interface CredentialGate {
   kind: CredentialKind;
@@ -87,7 +93,9 @@ export function gateFromRow(row: GateRow): BountyGate {
         const id =
           kind === 'hat'
             ? normalizeHatId(g.hat_id ?? g.contract_address)
-            : String(g.contract_address ?? '').toLowerCase();
+            : kind === 'event'
+              ? String(g.contract_address ?? '')
+              : String(g.contract_address ?? '').toLowerCase();
         return {
           kind,
           id,
@@ -121,7 +129,9 @@ export function describeGate(gate: BountyGate, podName?: string | null): string 
           ? `members of ${c.name}`
           : c.kind === 'hat'
             ? `holders of the ${c.name} role`
-            : `${c.name} holders`,
+            : c.kind === 'event'
+              ? `attendees of ${c.name}`
+              : `${c.name} holders`,
       );
       if (names.length === 1) return capitalize(names[0]);
       return `Any of: ${names.join(', ')}`;
@@ -141,6 +151,8 @@ export interface EligibilityContext {
   isMember: boolean;
   memberPodIds: Set<string>;
   leaderPodIds: Set<string>;
+  /** Events this wallet checked in to or completed (event uuids). */
+  attendedEventIds: Set<string>;
   /** Lowercased contract or hat id → balance (whole tokens / count). */
   holdings: Map<string, number>;
 }
@@ -171,6 +183,8 @@ export function isEligible(gate: BountyGate, ctx: EligibilityContext): Eligibili
       for (const c of gate.credentials) {
         if (c.kind === 'pod') {
           if (ctx.memberPodIds.has(c.id) || ctx.leaderPodIds.has(c.id)) return { eligible: true, reason: '' };
+        } else if (c.kind === 'event') {
+          if (ctx.attendedEventIds.has(c.id)) return { eligible: true, reason: '' };
         } else {
           const have = ctx.holdings.get(c.id.toLowerCase()) ?? 0;
           if (have >= c.minBalance) return { eligible: true, reason: '' };
@@ -180,12 +194,35 @@ export function isEligible(gate: BountyGate, ctx: EligibilityContext): Eligibili
         eligible: false,
         reason: `You need one of: ${gate.credentials
           .map((c) =>
-            c.kind === 'pod' ? `membership of ${c.name}` : c.kind === 'hat' ? `the ${c.name} role` : c.name,
+            c.kind === 'pod'
+              ? `membership of ${c.name}`
+              : c.kind === 'hat'
+                ? `the ${c.name} role`
+                : c.kind === 'event'
+                  ? `attendance at ${c.name}`
+                  : c.name,
           )
           .join(', ')}.`,
       };
     }
   }
+}
+
+/**
+ * "Attended" = checked in or completed. Mirrors the SQL in bounty_bid_allowed()
+ * (migration 20261025000002); keep the two in step.
+ */
+export function isAttendedRegistration(r: {
+  registration_status?: string | null;
+  checked_in_at?: string | null;
+  completed_at?: string | null;
+}): boolean {
+  return (
+    Boolean(r.checked_in_at) ||
+    Boolean(r.completed_at) ||
+    r.registration_status === 'checked_in' ||
+    r.registration_status === 'completed'
+  );
 }
 
 // ─── Loading the context ─────────────────────────────────────────────────────
@@ -224,14 +261,28 @@ export async function loadEligibilityContext(
     isMember,
     memberPodIds: new Set(),
     leaderPodIds: new Set(),
+    attendedEventIds: new Set(),
     holdings: new Map(),
   };
   if (!ctx.wallet) return ctx;
 
-  const [memberRes, podsRes] = await Promise.all([
+  // Only read registrations when an event gate is actually on screen.
+  const wantsEvents = credentials.some((c) => c.kind === 'event');
+
+  const [memberRes, podsRes, regRes] = await Promise.all([
     supabase.from('active_pod_members').select('pod_id, hat_id').eq('wallet', ctx.wallet),
     supabase.from('pods').select('id, pod_leads, created_by_address').eq('status', 'active'),
+    wantsEvents
+      ? supabase
+          .from('event_registrations')
+          .select('event_id, registration_status, checked_in_at, completed_at')
+          .eq('user_address', ctx.wallet)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
   ]);
+  for (const r of regRes.data ?? []) {
+    const reg = r as { event_id?: string; registration_status?: string; checked_in_at?: string | null; completed_at?: string | null };
+    if (isAttendedRegistration(reg) && reg.event_id) ctx.attendedEventIds.add(reg.event_id);
+  }
   for (const m of memberRes.data ?? []) {
     if (m.pod_id) ctx.memberPodIds.add(m.pod_id);
     // The member's own role hat satisfies a role gate without a chain read.
@@ -247,7 +298,10 @@ export async function loadEligibilityContext(
 
   // Role gates already satisfied from active_pod_members need no chain read.
   const onchain = credentials.filter(
-    (c) => c.kind !== 'pod' && !(c.kind === 'hat' && ctx.holdings.has(normalizeHatId(c.id))),
+    (c) =>
+      c.kind !== 'pod' &&
+      c.kind !== 'event' &&
+      !(c.kind === 'hat' && ctx.holdings.has(normalizeHatId(c.id))),
   );
   if (onchain.length === 0) return ctx;
 
