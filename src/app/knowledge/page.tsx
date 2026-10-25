@@ -8,7 +8,8 @@ import { KnowledgeGrid } from '@/features/knowledge/components/KnowledgeGrid';
 import { KnowledgeSearch } from '@/features/knowledge/components/KnowledgeSearch';
 import { supabase } from '@/utils/supabaseClient';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
-import type { KnowledgeCategory, KnowledgeItem } from '@/features/knowledge/types';
+import { courseDisplayName, loadCourseProgress } from '@/features/knowledge/lib/courseProgress';
+import type { CourseProgress, KnowledgeCategory, KnowledgeItem } from '@/features/knowledge/types';
 
 interface Pod {
   id: string;
@@ -26,10 +27,26 @@ export default function KnowledgePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedPod, setSelectedPod] = useState<string | null>(null); // null = global
+  const [courseProgress, setCourseProgress] = useState<Map<string, CourseProgress>>(new Map());
 
   useEffect(() => {
     loadPods();
   }, []);
+
+  // Course progress for the signed-in member (courses are pod categories).
+  useEffect(() => {
+    let cancelled = false;
+    if (!categories.some((c) => c.is_course)) {
+      setCourseProgress(new Map());
+      return;
+    }
+    loadCourseProgress(categories, items, address).then((m) => {
+      if (!cancelled) setCourseProgress(m);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [categories, items, address]);
 
   useEffect(() => {
     // Global KB needs no permissions — load immediately.
@@ -308,9 +325,59 @@ export default function KnowledgePage() {
             >
               {category.icon && `${category.icon} `}
               {category.name}
+              {category.is_course && (() => {
+                const p = courseProgress.get(category.id);
+                if (!p) return ' · course';
+                return p.done ? ' · ✓' : ` · ${p.completed}/${p.total}`;
+              })()}
             </button>
           ))}
         </div>
+
+        {/* Course banner */}
+        {(() => {
+          const course = selectedCategory ? categories.find((c) => c.id === selectedCategory) : null;
+          if (!course?.is_course) return null;
+          const p = courseProgress.get(course.id);
+          const pct = p && p.total > 0 ? Math.round((p.completed / p.total) * 100) : 0;
+          return (
+            <div
+              style={{
+                marginTop: '16px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(47, 93, 80, 0.3)',
+                backgroundColor: '#FFFFFF',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline' }}>
+                <p style={{ fontSize: '15px', fontWeight: 600, color: '#2F5D50' }}>
+                  Course · accreditation: {courseDisplayName(course)}
+                </p>
+                <span style={{ fontSize: '12px', color: '#5F5A54', whiteSpace: 'nowrap' }}>
+                  {!address
+                    ? 'Sign in to track progress'
+                    : p?.done
+                      ? 'Accredited ✓'
+                      : `${p?.completed ?? 0} of ${p?.total ?? 0} complete`}
+                </span>
+              </div>
+              {course.accreditation_description && (
+                <p style={{ fontSize: '13px', color: '#5F5A54', marginTop: '4px' }}>{course.accreditation_description}</p>
+              )}
+              <div
+                aria-hidden="true"
+                style={{ height: '4px', background: 'rgba(47, 93, 80, 0.12)', borderRadius: '2px', marginTop: '10px', overflow: 'hidden' }}
+              >
+                <div style={{ height: '100%', width: `${p?.done ? 100 : pct}%`, background: '#2F5D50', transition: 'width 0.3s ease' }} />
+              </div>
+              <p style={{ fontSize: '12px', color: '#5F5A54', marginTop: '8px' }}>
+                Complete every item in this category to earn the accreditation. It appears on your Identity page and can
+                unlock bounties and roles.
+              </p>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Knowledge Grid */}

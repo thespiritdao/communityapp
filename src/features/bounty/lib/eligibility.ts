@@ -38,7 +38,10 @@ export const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
  * gate, and verified from event_registrations in both the browser and
  * bounty_bid_allowed().
  */
-export type CredentialKind = 'pod' | 'erc20' | 'erc721' | 'hat' | 'event';
+export type CredentialKind = 'pod' | 'erc20' | 'erc721' | 'hat' | 'event' | 'accreditation';
+// 'accreditation' = holds an unrevoked accreditation for a course (id = the
+// course's knowledge_categories uuid, stored in contract_address). See
+// migration 20261025000003.
 
 export interface CredentialGate {
   kind: CredentialKind;
@@ -93,7 +96,7 @@ export function gateFromRow(row: GateRow): BountyGate {
         const id =
           kind === 'hat'
             ? normalizeHatId(g.hat_id ?? g.contract_address)
-            : kind === 'event'
+            : kind === 'event' || kind === 'accreditation'
               ? String(g.contract_address ?? '')
               : String(g.contract_address ?? '').toLowerCase();
         return {
@@ -131,7 +134,9 @@ export function describeGate(gate: BountyGate, podName?: string | null): string 
             ? `holders of the ${c.name} role`
             : c.kind === 'event'
               ? `attendees of ${c.name}`
-              : `${c.name} holders`,
+              : c.kind === 'accreditation'
+                ? `holders of the ${c.name} accreditation`
+                : `${c.name} holders`,
       );
       if (names.length === 1) return capitalize(names[0]);
       return `Any of: ${names.join(', ')}`;
@@ -153,6 +158,8 @@ export interface EligibilityContext {
   leaderPodIds: Set<string>;
   /** Events this wallet checked in to or completed (event uuids). */
   attendedEventIds: Set<string>;
+  /** Courses this wallet holds an unrevoked accreditation for (category uuids). */
+  accreditedCourseIds: Set<string>;
   /** Lowercased contract or hat id → balance (whole tokens / count). */
   holdings: Map<string, number>;
 }
@@ -185,6 +192,8 @@ export function isEligible(gate: BountyGate, ctx: EligibilityContext): Eligibili
           if (ctx.memberPodIds.has(c.id) || ctx.leaderPodIds.has(c.id)) return { eligible: true, reason: '' };
         } else if (c.kind === 'event') {
           if (ctx.attendedEventIds.has(c.id)) return { eligible: true, reason: '' };
+        } else if (c.kind === 'accreditation') {
+          if (ctx.accreditedCourseIds.has(c.id)) return { eligible: true, reason: '' };
         } else {
           const have = ctx.holdings.get(c.id.toLowerCase()) ?? 0;
           if (have >= c.minBalance) return { eligible: true, reason: '' };
@@ -200,7 +209,9 @@ export function isEligible(gate: BountyGate, ctx: EligibilityContext): Eligibili
                 ? `the ${c.name} role`
                 : c.kind === 'event'
                   ? `attendance at ${c.name}`
-                  : c.name,
+                  : c.kind === 'accreditation'
+                    ? `the ${c.name} accreditation`
+                    : c.name,
           )
           .join(', ')}.`,
       };
@@ -262,14 +273,16 @@ export async function loadEligibilityContext(
     memberPodIds: new Set(),
     leaderPodIds: new Set(),
     attendedEventIds: new Set(),
+    accreditedCourseIds: new Set(),
     holdings: new Map(),
   };
   if (!ctx.wallet) return ctx;
 
-  // Only read registrations when an event gate is actually on screen.
+  // Only read registrations / accreditations when such a gate is on screen.
   const wantsEvents = credentials.some((c) => c.kind === 'event');
+  const wantsAccreditations = credentials.some((c) => c.kind === 'accreditation');
 
-  const [memberRes, podsRes, regRes] = await Promise.all([
+  const [memberRes, podsRes, regRes, accRes] = await Promise.all([
     supabase.from('active_pod_members').select('pod_id, hat_id').eq('wallet', ctx.wallet),
     supabase.from('pods').select('id, pod_leads, created_by_address').eq('status', 'active'),
     wantsEvents
@@ -278,7 +291,18 @@ export async function loadEligibilityContext(
           .select('event_id, registration_status, checked_in_at, completed_at')
           .eq('user_address', ctx.wallet)
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    wantsAccreditations
+      ? supabase
+          .from('accreditations')
+          .select('course_category_id')
+          .eq('wallet_address', ctx.wallet)
+          .is('revoked_at', null)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
   ]);
+  for (const a of accRes.data ?? []) {
+    const id = (a as { course_category_id?: string | null }).course_category_id;
+    if (id) ctx.accreditedCourseIds.add(id);
+  }
   for (const r of regRes.data ?? []) {
     const reg = r as { event_id?: string; registration_status?: string; checked_in_at?: string | null; completed_at?: string | null };
     if (isAttendedRegistration(reg) && reg.event_id) ctx.attendedEventIds.add(reg.event_id);
@@ -301,6 +325,7 @@ export async function loadEligibilityContext(
     (c) =>
       c.kind !== 'pod' &&
       c.kind !== 'event' &&
+      c.kind !== 'accreditation' &&
       !(c.kind === 'hat' && ctx.holdings.has(normalizeHatId(c.id))),
   );
   if (onchain.length === 0) return ctx;

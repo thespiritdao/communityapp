@@ -5,7 +5,9 @@ import { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Eye } from 'lucide-react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
+import toast from 'react-hot-toast';
 import { ContentDisplay } from '@/features/knowledge/components/ContentDisplay';
+import { claimCourseAccreditation, courseDisplayName } from '@/features/knowledge/lib/courseProgress';
 import { supabase } from '@/utils/supabaseClient';
 import type { KnowledgeItem, KnowledgeCategory } from '@/features/knowledge/types';
 
@@ -21,6 +23,7 @@ export default function KnowledgeItemPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const viewRecordedRef = useRef(false);
+  const accreditationAnnouncedRef = useRef(false);
 
   // Unwrap async params
   const { id } = use(params);
@@ -46,13 +49,10 @@ export default function KnowledgeItemPage({ params }: PageProps) {
         return;
       }
 
-      // Check if item is public or if user has access
-      if (!itemData.is_public) {
-        // TODO: Check pod permissions when implementing pod-specific content
-        setError('You do not have access to this content');
-        return;
-      }
-
+      // Access is decided by RLS: a private pod item is only returned to that
+      // pod's members ("Members can view pod items"), so reaching this point
+      // means the member may view it. The old client-side is_public check
+      // blocked every private pod item, which made pod courses unusable.
       setItem(itemData);
 
       // Load category
@@ -147,6 +147,16 @@ export default function KnowledgeItemPage({ params }: PageProps) {
           progress_seconds: progressSeconds,
           completed,
         });
+      }
+
+      // Course: the DB trigger issues the accreditation on completion; ask for
+      // it explicitly too so the member sees it the moment they finish.
+      if (completed && category?.is_course && !accreditationAnnouncedRef.current) {
+        const id = await claimCourseAccreditation(category.id);
+        if (id) {
+          accreditationAnnouncedRef.current = true;
+          toast.success(`Accreditation earned: ${courseDisplayName(category)}`, { duration: 6000 });
+        }
       }
     } catch (err) {
       console.error('Error updating progress:', err);

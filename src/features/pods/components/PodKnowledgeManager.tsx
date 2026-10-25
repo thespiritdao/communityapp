@@ -56,6 +56,14 @@ export default function PodKnowledgeManager({
   const [categoryName, setCategoryName] = useState('');
   const [categoryDescription, setCategoryDescription] = useState('');
   const [categoryIcon, setCategoryIcon] = useState('📚');
+  // Course settings (migration 20261025000003)
+  const [categoryIsCourse, setCategoryIsCourse] = useState(false);
+  const [categoryAccreditationName, setCategoryAccreditationName] = useState('');
+  const [categoryAccreditationDescription, setCategoryAccreditationDescription] = useState('');
+  const [issuedCounts, setIssuedCounts] = useState<Record<string, number>>({});
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [editAccreditationName, setEditAccreditationName] = useState('');
+  const [editAccreditationDescription, setEditAccreditationDescription] = useState('');
 
   // Item form state
   const [itemTitle, setItemTitle] = useState('');
@@ -89,6 +97,23 @@ export default function PodKnowledgeManager({
       if (catError) throw catError;
       setCategories(catData || []);
 
+      // Accreditations issued per course (for the "N issued" line)
+      const courseIds = (catData || []).filter((c) => c.is_course).map((c) => c.id);
+      if (courseIds.length > 0) {
+        const { data: accData } = await supabase
+          .from('accreditations')
+          .select('course_category_id')
+          .in('course_category_id', courseIds)
+          .is('revoked_at', null);
+        const counts: Record<string, number> = {};
+        for (const a of accData || []) {
+          if (a.course_category_id) counts[a.course_category_id] = (counts[a.course_category_id] || 0) + 1;
+        }
+        setIssuedCounts(counts);
+      } else {
+        setIssuedCounts({});
+      }
+
       // Load items for this pod
       const { data: itemData, error: itemError } = await supabase
         .from('knowledge_items')
@@ -117,6 +142,9 @@ export default function PodKnowledgeManager({
         sort_order: categories.length,
         is_public: false, // Pod content is private by default
         created_by: userAddress.toLowerCase(),
+        is_course: categoryIsCourse,
+        accreditation_name: categoryIsCourse ? categoryAccreditationName.trim() || null : null,
+        accreditation_description: categoryIsCourse ? categoryAccreditationDescription.trim() || null : null,
       });
 
       if (error) throw error;
@@ -125,6 +153,9 @@ export default function PodKnowledgeManager({
       setCategoryName('');
       setCategoryDescription('');
       setCategoryIcon('📚');
+      setCategoryIsCourse(false);
+      setCategoryAccreditationName('');
+      setCategoryAccreditationDescription('');
       setShowCreateCategory(false);
       loadKnowledgeBase();
     } catch (error) {
@@ -249,6 +280,32 @@ export default function PodKnowledgeManager({
     } finally {
       setUploading(false);
     }
+  };
+
+  // Turn an existing category into a course (or back), and name its accreditation.
+  const saveCourseSettings = async (categoryId: string, isCourse: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('knowledge_categories')
+        .update({
+          is_course: isCourse,
+          accreditation_name: isCourse ? editAccreditationName.trim() || null : null,
+          accreditation_description: isCourse ? editAccreditationDescription.trim() || null : null,
+        })
+        .eq('id', categoryId);
+      if (error) throw error;
+      setEditingCourseId(null);
+      loadKnowledgeBase();
+    } catch (error) {
+      console.error('Error saving course settings:', error);
+      alert('Failed to save course settings. Please try again.');
+    }
+  };
+
+  const openCourseSettings = (category: KnowledgeCategory) => {
+    setEditingCourseId(category.id);
+    setEditAccreditationName(category.accreditation_name || '');
+    setEditAccreditationDescription(category.accreditation_description || '');
   };
 
   const deleteCategory = async (categoryId: string) => {
@@ -389,6 +446,47 @@ export default function PodKnowledgeManager({
                       rows={2}
                     />
                   </div>
+                  <div className="rounded-md border p-2" style={{ borderColor: '#D8D2C8', backgroundColor: '#FFFFFF' }}>
+                    <label className="flex items-start gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={categoryIsCourse}
+                        onChange={(e) => setCategoryIsCourse(e.target.checked)}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="font-medium">This category is a course</span>
+                        <span className="block text-xs" style={{ color: '#5F5A54' }}>
+                          Members who complete every item earn an accreditation. It shows on their Identity page and can
+                          gate bounties.
+                        </span>
+                      </span>
+                    </label>
+                    {categoryIsCourse && (
+                      <div className="mt-2 space-y-2">
+                        <div>
+                          <Label htmlFor="category-accreditation-name">Accreditation name</Label>
+                          <Input
+                            id="category-accreditation-name"
+                            value={categoryAccreditationName}
+                            onChange={(e) => setCategoryAccreditationName(e.target.value)}
+                            placeholder={categoryName ? `e.g., ${categoryName} Graduate` : 'e.g., TN Basics Graduate'}
+                            maxLength={80}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="category-accreditation-description">What it certifies (optional)</Label>
+                          <Textarea
+                            id="category-accreditation-description"
+                            value={categoryAccreditationDescription}
+                            onChange={(e) => setCategoryAccreditationDescription(e.target.value)}
+                            placeholder="One line shown with the accreditation"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex gap-2 w-full">
                     <Button
                       onClick={createCategory}
@@ -438,7 +536,71 @@ export default function PodKnowledgeManager({
                           <p className="text-xs" style={{ color: '#8F8A84' }}>
                             {items.filter((i) => i.category_id === category.id).length}{' '}
                             items
+                            {category.is_course && (
+                              <>
+                                {' · '}
+                                <span style={{ color: '#2F5D50', fontWeight: 600 }}>Course</span>
+                                {' · '}
+                                {issuedCounts[category.id] || 0} accredited
+                              </>
+                            )}
                           </p>
+                          {editingCourseId === category.id ? (
+                            <div className="mt-2 space-y-2 rounded-md border p-2" style={{ borderColor: '#D8D2C8', backgroundColor: '#FFFFFF' }}>
+                              <div>
+                                <Label htmlFor={`acc-name-${category.id}`}>Accreditation name</Label>
+                                <Input
+                                  id={`acc-name-${category.id}`}
+                                  value={editAccreditationName}
+                                  onChange={(e) => setEditAccreditationName(e.target.value)}
+                                  placeholder={`e.g., ${category.name} Graduate`}
+                                  maxLength={80}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`acc-desc-${category.id}`}>What it certifies (optional)</Label>
+                                <Textarea
+                                  id={`acc-desc-${category.id}`}
+                                  value={editAccreditationDescription}
+                                  onChange={(e) => setEditAccreditationDescription(e.target.value)}
+                                  rows={2}
+                                />
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => saveCourseSettings(category.id, true)}
+                                  style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+                                >
+                                  {category.is_course ? 'Save' : 'Make this a course'}
+                                </Button>
+                                {category.is_course && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => saveCourseSettings(category.id, false)}
+                                  >
+                                    Stop being a course
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="ghost" onClick={() => setEditingCourseId(null)}>
+                                  Cancel
+                                </Button>
+                              </div>
+                              <p className="text-xs" style={{ color: '#5F5A54' }}>
+                                Turning a course off keeps accreditations already issued; it stops new ones.
+                              </p>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openCourseSettings(category)}
+                              className="text-xs underline mt-1"
+                              style={{ color: '#2F5D50', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                            >
+                              {category.is_course ? 'Course settings' : 'Make this a course'}
+                            </button>
+                          )}
                         </div>
                       </div>
                       <Button

@@ -25,6 +25,8 @@ export interface BountyScope {
   tokenAddresses: Set<string>;
   /** Events organised by those pods (uuids). */
   eventIds: Set<string>;
+  /** Courses (knowledge categories with is_course) run by those pods. */
+  courseIds: Set<string>;
   /** Executive Pod managers may gate on DAO-level tokens. */
   allowDaoLevel: boolean;
 }
@@ -39,6 +41,7 @@ export async function loadBountyScope(
     roleHatIds: new Set(),
     tokenAddresses: new Set(),
     eventIds: new Set(),
+    courseIds: new Set(),
     allowDaoLevel: false,
   };
 
@@ -143,14 +146,24 @@ export async function loadBountyScope(
         `owner_pod_id.in.(${managed.join(',')}),owner_pod_id.is.null`,
       )
     : tokensQuery.in('owner_pod_id', managed);
-  const [{ data: tokens }, { data: events }] = await Promise.all([
+  const [{ data: tokens }, { data: events }, { data: courses }] = await Promise.all([
     tokensQuery,
     supabase
       .from('events')
       .select('id')
       .in('organizing_pod_id', managed)
       .in('status', ['published', 'completed']),
+    supabase
+      .from('knowledge_categories')
+      .select('id')
+      .in('pod_id', managed)
+      .eq('is_course', true),
   ]);
+  for (const k of courses ?? []) {
+    if (k.id) {
+      scope.courseIds.add(String(k.id));
+    }
+  }
   for (const t of tokens ?? []) {
     if (t.contract_address) {
       scope.tokenAddresses.add(String(t.contract_address).toLowerCase());
@@ -186,6 +199,9 @@ export function firstGateOutOfScope(
       return g;
     }
     if (g.kind === 'event' && !scope.eventIds.has(id)) {
+      return g;
+    }
+    if (g.kind === 'accreditation' && !scope.courseIds.has(id)) {
       return g;
     }
     if (

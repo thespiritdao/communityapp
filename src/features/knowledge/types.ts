@@ -10,6 +10,39 @@ export interface KnowledgeCategory {
   is_public: boolean;
   created_at: string;
   created_by: string;
+  /**
+   * Course (migration 20261025000003): completing every item in the category
+   * issues an accreditation named `accreditation_name` (falls back to the
+   * category name).
+   */
+  is_course?: boolean;
+  accreditation_name?: string | null;
+  accreditation_description?: string | null;
+  accreditation_image_url?: string | null;
+}
+
+/** A credential a pod has issued to a member; see `accreditations` table. */
+export interface Accreditation {
+  id: string;
+  pod_id: string;
+  course_category_id: string | null;
+  wallet_address: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  source: 'course' | 'manual';
+  issued_at: string;
+  revoked_at: string | null;
+}
+
+/** Progress through a course for one member. */
+export interface CourseProgress {
+  categoryId: string;
+  total: number;
+  completed: number;
+  /** All items complete (or the accreditation already exists). */
+  done: boolean;
+  accreditationId: string | null;
 }
 
 export interface KnowledgeItem {

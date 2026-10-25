@@ -15,9 +15,15 @@ export interface DatabaseToken {
   category: 'membership' | 'credential' | 'accreditation';
   token_address?: string; // ERC-1155 token ID (formerly hat_id)
   is_active: boolean;
-  source: 'tokens' | 'pods' | 'pod_roles' | 'event_tokens';
+  source: 'tokens' | 'pods' | 'pod_roles' | 'event_tokens' | 'accreditations';
   role_name?: string; // For pod_role_permissions tokens
 }
+
+/** Sources whose rows are per-member records: presence is ownership, no chain read. */
+export const OFFCHAIN_TOKEN_SOURCES: ReadonlySet<DatabaseToken['source']> = new Set([
+  'event_tokens',
+  'accreditations',
+]);
 
 export class DatabaseTokenService {
   /**
@@ -262,6 +268,45 @@ export class DatabaseTokenService {
   }
 
   /**
+   * Course accreditations (migration 20261025000003): issued by a pod when a
+   * member completes every item of a course category. Per-member rows, so
+   * presence is ownership.
+   */
+  static async getCourseAccreditations(userAddress: string): Promise<DatabaseToken[]> {
+    try {
+      const { data, error } = await supabase
+        .from('accreditations')
+        .select('id, pod_id, course_category_id, name, description, image_url, issued_at, pods(name)')
+        .eq('wallet_address', userAddress.toLowerCase())
+        .is('revoked_at', null)
+        .order('issued_at', { ascending: false });
+
+      if (error) {
+        return [];
+      }
+
+      return (data || []).map((row) => {
+        const pod = Array.isArray(row.pods) ? row.pods[0] : row.pods;
+        const podName = (pod as { name?: string } | null)?.name;
+        return {
+          id: `accreditation_${row.id}`,
+          name: row.name,
+          description: row.description || (podName ? `Issued by ${podName}` : 'Course accreditation'),
+          contract_address: '',
+          token_type: 'erc721' as const,
+          token_image: row.image_url || '/images/symbolobinfin.png',
+          category: 'accreditation' as const,
+          token_address: row.course_category_id || row.id,
+          is_active: true,
+          source: 'accreditations' as const,
+        };
+      });
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
    * Get all tokens for a user from all sources
    * Note: For pod role permissions, we get all available roles since
    * ownership is determined by on-chain HAT balance checks
@@ -276,11 +321,13 @@ export class DatabaseTokenService {
         podLeaderTokens,
         rolePermissions,
         eventAccreditations,
+        courseAccreditations,
       ] = await Promise.all([
         this.getTokensTableData(),
         this.getPodLeaderTokens(),
         this.getPodRolePermissions(),
         this.getEventAccreditations(userAddress),
+        this.getCourseAccreditations(userAddress),
       ]);
 
       // Pods that have pod_role_permissions entries are fully covered by rolePermissions.
@@ -301,6 +348,7 @@ export class DatabaseTokenService {
         ...fallbackLeaderTokens,
         ...rolePermissions,
         ...eventAccreditations,
+        ...courseAccreditations,
       ];
 
       // Filter by category if specified

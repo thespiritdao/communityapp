@@ -7,6 +7,7 @@ import { erc20ABI } from '@/utils/erc20ABI';
 import Image from 'next/image';
 import {
   DatabaseTokenService,
+  OFFCHAIN_TOKEN_SOURCES,
   type DatabaseToken,
 } from '../services/databaseTokenService';
 
@@ -83,8 +84,11 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
       }
     }, [walletAddress, category]);
 
-    // Prepare contract reads for checking balances
-    const contractReads = tokens.map((token) => {
+    // Prepare contract reads for checking balances. Off-chain sources
+    // (event_tokens, accreditations) have no contract; skip them so an empty
+    // address never reaches wagmi. Indexes below map back via onchainTokens.
+    const onchainTokens = tokens.filter((t) => !OFFCHAIN_TOKEN_SOURCES.has(t.source));
+    const contractReads = onchainTokens.map((token) => {
       const baseContract = {
         address: token.contract_address as `0x${string}`,
         args: [walletAddress] as const,
@@ -127,14 +131,14 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
     } = useReadContracts({
       contracts: contractReads as any[],
       query: {
-        enabled: tokens.length > 0,
+        enabled: onchainTokens.length > 0,
       },
     });
 
     // Process ownership data
     useEffect(() => {
-      if (ownershipData && !isContractLoading && tokens.length > 0) {
-        const tokensWithBalances: TokenWithBalance[] = tokens.map(
+      if (ownershipData && !isContractLoading && onchainTokens.length > 0) {
+        const tokensWithBalances: TokenWithBalance[] = onchainTokens.map(
           (token, index) => {
             const balanceResult = ownershipData[index];
             const balance = balanceResult?.result || 0n;
@@ -164,10 +168,11 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
 
         setTokenBalances(tokensWithBalances);
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ownershipData, isContractLoading, tokens, category]);
 
-    // Render loading state
-    if (isLoading || isContractLoading) {
+    // Render loading state (no contract read is pending when every token is off-chain)
+    if (isLoading || (isContractLoading && onchainTokens.length > 0)) {
       return (
         <div className="loading">
           <p>Loading {category} tokens from database...</p>
@@ -190,14 +195,14 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
     }
 
     // Accreditations are a mix of sources with different ownership semantics:
-    //  - event_tokens rows are per-user (written after tx confirmation) —
-    //    their presence IS ownership, no on-chain check needed.
+    //  - event_tokens and accreditations rows are per-user — their presence
+    //    IS ownership, no on-chain check needed.
     //  - tokens-table rows (e.g. Advocate, re-homed to 'accreditation') are
     //    global definitions shown to every user — they MUST pass the on-chain
     //    balance check or every profile shows badges the member doesn't hold.
     if (category === 'accreditation') {
       const visibleAccreditations = tokens.filter((token) => {
-        if (token.source === 'event_tokens') return true;
+        if (OFFCHAIN_TOKEN_SOURCES.has(token.source)) return true;
         const withBalance = tokenBalances.find((t) => t.id === token.id);
         return withBalance?.owned === true;
       });
@@ -224,6 +229,11 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
               />
               <div className="token-info">
                 <div className="token-name">{token.name}</div>
+                {token.source === 'accreditations' && token.description && (
+                  <div className="token-description" style={{ fontSize: '12px', opacity: 0.75 }}>
+                    {token.description}
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
             .filter(
               (g: any) =>
                 g &&
-                ['pod', 'erc20', 'erc721', 'hat', 'event'].includes(g.kind) &&
+                ['pod', 'erc20', 'erc721', 'hat', 'event', 'accreditation'].includes(g.kind) &&
                 typeof g.id === 'string' &&
                 g.id.trim() &&
                 typeof g.name === 'string',
@@ -204,8 +204,8 @@ export async function POST(request: NextRequest) {
         contract_address:
           g.kind === 'hat'
             ? normalizeHatId(g.id)
-            : g.kind === 'event'
-              ? g.id.trim() // event uuid, case preserved
+            : g.kind === 'event' || g.kind === 'accreditation'
+              ? g.id.trim() // uuid, case preserved
               : g.id.trim().toLowerCase(),
         min_balance: Math.max(1, Number(g.minBalance) || 1),
       }));

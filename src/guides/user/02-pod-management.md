@@ -160,6 +160,8 @@ Control who can join:
 
 Pod modules come in three kinds:
 - **Core** (included): Chat, Forum, Treasury, Governance, Events, Bounties, Marketplace, Knowledge Base, Sub-Pods
+
+**Courses and accreditations.** In the Knowledge Base manager, tick *This category is a course* when creating a category (or use *Make this a course* on an existing one) and give the accreditation a name, for example "TN Basics Graduate". Add the items in order. When a member has completed every item, the accreditation is issued to them automatically; the category card shows how many members hold it. Accreditations appear on the member's Identity page and can be required by bounties ("Holders of specific credentials → Course accreditations"). Turning a course off stops new issues but keeps the ones already earned; a leader can revoke an individual accreditation if needed.
 - **Add-ons**: Surveys, Password Vault, Custom Appearance (see the [Pod Faces guide](18-pod-faces.md)), Places — a members-only shared map of your community's land, partners, sites and ideas (see the [Journal and Places guide](19-journal-and-places.md))
 - **Paid**: Community AI Agent (a monthly $SYSTEM subscription)
 

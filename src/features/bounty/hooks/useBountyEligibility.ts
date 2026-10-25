@@ -82,7 +82,7 @@ export function useBountyEligibility(bounties: GatedBounty[]) {
 }
 
 export interface CredentialOption extends CredentialGate {
-  group: 'Pods' | 'Roles' | 'Events' | 'Tokens';
+  group: 'Pods' | 'Roles' | 'Accreditations' | 'Events' | 'Tokens';
 }
 
 export interface ManagedPodRef {
@@ -97,6 +97,8 @@ export interface ManagedPodRef {
  *   Pods    membership of each managed pod
  *   Roles   every role those pods have defined, whether or not the creator
  *           holds it (a pod's roles are credentials it issues)
+ *   Accreditations  courses those pods run (knowledge categories marked
+ *           is_course); holding the course's accreditation satisfies the gate
  *   Events  attendance at an event those pods organised (published or
  *           completed; a future event means "attend this to qualify")
  *   Tokens  tokens owned by those pods; DAO-level tokens (no owning pod)
@@ -140,7 +142,7 @@ export function useCredentialOptions(managedPods: ManagedPodRef[], podsLoading: 
         ? tokensQuery.or(`owner_pod_id.in.(${ids.join(',')}),owner_pod_id.is.null`)
         : tokensQuery.in('owner_pod_id', ids);
 
-      const [rolesRes, tokensRes, eventsRes] = await Promise.all([
+      const [rolesRes, tokensRes, eventsRes, coursesRes] = await Promise.all([
         supabase
           .from('pod_role_permissions')
           .select('pod_id, token_address, role_name, is_active')
@@ -154,6 +156,12 @@ export function useCredentialOptions(managedPods: ManagedPodRef[], podsLoading: 
           .in('status', ['published', 'completed'])
           .order('event_date', { ascending: false })
           .limit(60),
+        supabase
+          .from('knowledge_categories')
+          .select('id, name, accreditation_name, pod_id')
+          .in('pod_id', ids)
+          .eq('is_course', true)
+          .order('name'),
       ]);
       if (cancelled) return;
 
@@ -207,7 +215,15 @@ export function useCredentialOptions(managedPods: ManagedPodRef[], podsLoading: 
         };
       });
 
-      setOptions([...pods, ...roles, ...events, ...tokens]);
+      const accreditations: CredentialOption[] = (coursesRes.data ?? []).map((k) => ({
+        kind: 'accreditation',
+        id: k.id,
+        name: String(k.accreditation_name ?? '').trim() || String(k.name ?? 'Course'),
+        minBalance: 1,
+        group: 'Accreditations',
+      }));
+
+      setOptions([...pods, ...roles, ...accreditations, ...events, ...tokens]);
       setLoading(false);
     })();
     return () => {

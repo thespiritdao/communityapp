@@ -166,6 +166,7 @@ SpiritDAO uses role-based permissions:
 - Video tutorials for every platform feature
 - Step-by-step written guides
 - Guided tour to walk through the full app in ~2 minutes
+- **Courses.** A pod can mark a knowledge category as a course. Complete every item in it and the pod issues you an accreditation. It appears under Accreditations on your Identity page, and pods can require it for bounties and, later, for roles. A course category shows your progress ("2/4") in the category list; pick it to see the accreditation it leads to.
 
 ---
 
