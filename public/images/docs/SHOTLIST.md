@@ -2,7 +2,7 @@
 
 *Generated from `public/images/docs/manifest.json` by `scripts/docs-screenshots.mjs plan`. Edit the manifest, not this file.*
 
-**86 shots** — 42 P1, 33 P2, 11 P3. Do P1 first across all guides; the docs are useful with P1 alone.
+**94 shots** — 48 P1, 34 P2, 12 P3. Do P1 first across all guides; the docs are useful with P1 alone.
 
 ## Capture standard
 
@@ -182,6 +182,30 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Crop:** Viewport.
 - **Reuse:** public/images/appimages/treasurysettings.PNG (check)
 
+### ⬜ `14-knowledge-base-manager.png` — P1 — must have
+
+- **Where in the doc:** after-body of `### Knowledge Base Module`
+- **Caption:** The Knowledge Base manager inside the expanded module card: categories on top, items below.
+- **Screen:** `/pods/<pod-id>/manage` as *pod leader*
+- **What to show:** Modules tab, Knowledge Base card expanded so the manager shows with at least one category and one item. Add Category button visible.
+- **Crop:** Viewport.
+
+### ⬜ `15-course-settings.png` — P1 — must have
+
+- **Where in the doc:** before-body of `### Courses and Accreditations`
+- **Caption:** Add Category with 'This category is a course' ticked: accreditation name and what it certifies.
+- **Screen:** `/pods/<pod-id>/manage` as *pod leader*
+- **What to show:** Add Category form open, name filled (e.g. 'Basics of Temporal Naturalism'), the course box ticked so the accreditation name field shows 'TN Basics Graduate'. Before clicking Create.
+- **Crop:** Viewport, or crop to the form.
+
+### ⬜ `16-course-progress.png` — P2 — should have
+
+- **Where in the doc:** after-body of `### Courses and Accreditations`
+- **Caption:** What a member sees: the course chip with progress and the accreditation banner.
+- **Screen:** `/knowledge` as *pod member (not a leader)*
+- **What to show:** Pod selected in the dropdown, the course category chip selected so it reads e.g. '2/4' and the banner shows 'Course · accreditation: TN Basics Graduate' with the progress bar.
+- **Crop:** Viewport.
+
 ---
 
 ## Governance & Voting  `03-governance-voting.md` → folder `governance/`
@@ -310,7 +334,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Where in the doc:** after-body of `### Who Can Apply`
 - **Caption:** Who can apply: the three settings, with the credential picker open.
 - **Screen:** `/bounty` as *bounty creator*
-- **What to show:** Create tab. "Who Can Apply" set to "Holders of specific credentials" with the picker open, one pod and one token ticked, and the preview sentence underneath visible.
+- **What to show:** Create tab. 'Who Can Apply' set to 'Holders of specific credentials' with the picker open, one pod and one token ticked, and the preview sentence underneath visible.
 - **Crop:** Tight crop on the Who Can Apply box and the preview line.
 
 ### ⬜ `11-who-can-apply-detail.png` — P1 — must have
@@ -318,8 +342,16 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Where in the doc:** after-body of `### Who Can Apply`
 - **Caption:** A bounty's details with the "Who can apply" line and the reason shown to a member who doesn't qualify.
 - **Screen:** `/bounty` as *member who does not qualify*
-- **What to show:** A bounty's detail dialog on the Public tab: the "Who can apply" line and the amber reason line under it, no Bid button. Use a credential-gated or pod-restricted bounty and a second account that is not in that pod.
+- **What to show:** A bounty's detail dialog on the Public tab: the 'Who can apply' line and the amber reason line under it, no Bid button. Use a credential-gated or pod-restricted bounty and a second account that is not in that pod.
 - **Crop:** Tight crop on the Who can apply block.
+
+### ⬜ `12-course-accreditation-gate.png` — P3 — nice to have
+
+- **Where in the doc:** after-body of `### Who Can Apply`
+- **Caption:** Holders of specific credentials: the Course accreditations group, scoped to pods you manage.
+- **Screen:** `/bounty` as *pod leader with a course*
+- **What to show:** Create bounty form, Who Can Apply set to Holders of specific credentials, the picker showing Pod membership, Pod roles, Course accreditations groups.
+- **Crop:** Crop to the Who Can Apply box.
 
 ---
 
@@ -550,7 +582,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Where in the doc:** after-body of `## Your First Visit: Pick a Path`
 - **Caption:** The first-visit question on the home screen.
 - **Screen:** `/home` as *member*
-- **What to show:** The "What brings you here?" modal with its three options and "Ask me later". Reset `onboarding_intent` on the member first so the modal shows.
+- **What to show:** The 'What brings you here?' modal with its three options and 'Ask me later'. Reset the member's onboarding_intent first so the modal shows.
 - **Crop:** Tight crop on the modal.
 
 ### ✅ `04-your-checklist.png` — P1 — must have
@@ -558,7 +590,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **Where in the doc:** after-body of `### Your checklist`
 - **Caption:** The checklist for the Just explore path, with one step done.
 - **Screen:** `/home` as *member*
-- **What to show:** Progress card for the Explore path with at least one step checked: Show me, the next-step button, Change path, Hide.
+- **What to show:** Progress card for the Explore path with at least one step checked, showing Show me, the next-step button, Change path, and Hide.
 - **Crop:** Tight crop on the card.
 
 ---
@@ -573,7 +605,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Linked Wallets section with the Link button and, if possible, the MetaMask signature prompt.
 - **Crop:** Viewport.
 
-### ❌ `02-linked-list.png` — P3 — nice to have
+### ✅ `02-linked-list.png` — P3 — nice to have
 
 - **Where in the doc:** after-body of `## Checking that it worked`
 - **Caption:** A linked external wallet listed with its type.
@@ -585,7 +617,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 
 ## Surveys  `11-surveys.md` → folder `surveys/`
 
-### ⬜ `01-survey-banner.png` — P1 — must have
+### ✅ `01-survey-banner.png` — P1 — must have
 
 - **Where in the doc:** before-body of `## Taking a survey (members)`
 - **Caption:** An active survey on the pod page.
@@ -630,7 +662,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Modules tab with the Password Vault card toggled on.
 - **Crop:** Tight crop.
 
-### ❌ `02-first-time-setup.png` — P1 — must have
+### ⬜ `02-first-time-setup.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## Unlocking the vault (every member, each session)`
 - **Caption:** Unlocking the vault: sign once per browser session.
@@ -696,10 +728,10 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 ### ✅ `01-self-holdings.png` — P1 — must have
 
 - **Where in the doc:** after-body of `## What $SELF is`
-- **Caption:** Your $SELF holdings by epoch.
-- **Screen:** `/claims` as *member with $SELF*
-- **What to show:** The $SELF holdings card with epochs and decay shown.
-- **Crop:** Tight crop.
+- **Caption:** Your spendable $SELF, already adjusted for decay.
+- **Screen:** `/identity` as *member with $SELF*
+- **What to show:** The balances block showing $SELF and $SYSTEM. The $SELF figure is the decayed, spendable amount — there is no per-epoch breakdown on any member screen.
+- **Crop:** Tight crop of the balances block.
 
 ### ✅ `02-tenure-band.png` — P2 — should have
 
@@ -753,7 +785,7 @@ Placement: *before-body* = the image goes directly under the heading; *after-bod
 - **What to show:** Invite Friends panel expanded.
 - **Crop:** Viewport.
 
-### i ✅ `02-pod-invite-links.png` — P2 — should have
+### ✅ `02-pod-invite-links.png` — P2 — should have
 
 - **Where in the doc:** after-body of `## Pod invite links, in depth (for pod leaders)`
 - **Caption:** Pod invite links and the pending-mint queue.

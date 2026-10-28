@@ -159,9 +159,7 @@ Control who can join:
 **Available Modules:**
 
 Pod modules come in three kinds:
-- **Core** (included): Chat, Forum, Treasury, Governance, Events, Bounties, Marketplace, Knowledge Base, Sub-Pods
-
-**Courses and accreditations.** In the Knowledge Base manager, tick *This category is a course* when creating a category (or use *Make this a course* on an existing one) and give the accreditation a name, for example "TN Basics Graduate". Add the items in order. When a member has completed every item, the accreditation is issued to them automatically; the category card shows how many members hold it. Accreditations appear on the member's Identity page and can be required by bounties ("Holders of specific credentials → Course accreditations"). Turning a course off stops new issues but keeps the ones already earned; a leader can revoke an individual accreditation if needed.
+- **Core** (included): Chat, Forum, Treasury, Governance, Events, Bounties, Marketplace, Knowledge Base (including courses that issue accreditations, see [Knowledge Base Module](#knowledge-base-module)), Sub-Pods
 - **Add-ons**: Surveys, Password Vault, Custom Appearance (see the [Pod Faces guide](18-pod-faces.md)), Places — a members-only shared map of your community's land, partners, sites and ideas (see the [Journal and Places guide](19-journal-and-places.md))
 - **Paid**: Community AI Agent (a monthly $SYSTEM subscription)
 
@@ -454,6 +452,37 @@ Pod modules come in three kinds:
 ---
 
 ![Treasury tab: balances, distribution, approvals.](https://app.spiritdao.org/images/docs/pods/13-treasury-tab.png)
+
+### Knowledge Base Module
+
+Your pod's own library: videos, documents, and written pages, organised into categories. Pod content is private to members by default.
+
+**Where it lives:** your pod → **Manage** → **Modules** → expand the **Knowledge Base** card. The manager appears inside the expanded card (it is not a separate page). You need the Knowledge Base module enabled and the knowledge-base-manage permission on your role.
+
+**Adding content:**
+1. Click **Add Category** and give it an icon, a name, and a description.
+2. Click **Add Item**, pick the category, choose a content type (video, document, or markdown), and upload or paste the content.
+3. Items appear to members under **Knowledge Base** → your pod, in the order you set.
+
+### Courses and Accreditations
+
+A course is a knowledge category with one box ticked. When a member completes every item in it, your pod issues them an accreditation automatically. It appears under **Accreditations** on their Identity page, and other pods and bounties can require it.
+
+**Create a course:**
+1. In the Knowledge Base manager, click **Add Category**.
+2. Fill in the icon, name, and description as usual.
+3. Tick **This category is a course**. Two fields appear: the **accreditation name** (for example "TN Basics Graduate") and an optional line saying what it certifies.
+4. Click **Create**, then add the course items in order. Four to six is a good length.
+
+**Turn an existing category into a course:** on that category's card, click **Make this a course**, fill in the accreditation name, and click **Make this a course** again to save. The same link reads **Course settings** afterwards.
+
+**What members see:** on the Knowledge Base page the category shows their progress ("2/4"), and selecting it shows the accreditation they are working toward with a progress bar. The moment they complete the last item, the accreditation is issued and a confirmation appears.
+
+**What you see:** the category card reads "Course · N accredited", so you know how many members have finished.
+
+**Using it:** when a bounty's "Who can apply" is set to *Holders of specific credentials*, your courses appear under **Course accreditations**. Requiring an accreditation for a pod role is coming next.
+
+**Changing your mind:** *Stop being a course* keeps every accreditation already earned and stops new ones. A leader can revoke an individual member's accreditation if it was issued in error.
 
 ## Best Practices
 

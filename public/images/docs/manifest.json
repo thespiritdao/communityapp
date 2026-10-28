@@ -1367,6 +1367,62 @@
         "state": "Location section with sharing on, an address found, and Approximate selected.",
         "crop": "Tight crop."
       }
+    },
+    {
+      "slug": "pods",
+      "file": "14-knowledge-base-manager.png",
+      "heading": "### Knowledge Base Module",
+      "placement": "after-body",
+      "priority": 1,
+      "caption": "The Knowledge Base manager inside the expanded module card: categories on top, items below.",
+      "capture": {
+        "url": "/pods/<pod-id>/manage",
+        "actor": "pod leader",
+        "state": "Modules tab, Knowledge Base card expanded so the manager shows with at least one category and one item. Add Category button visible.",
+        "crop": "Viewport."
+      }
+    },
+    {
+      "slug": "pods",
+      "file": "15-course-settings.png",
+      "heading": "### Courses and Accreditations",
+      "placement": "before-body",
+      "priority": 1,
+      "caption": "Add Category with 'This category is a course' ticked: accreditation name and what it certifies.",
+      "capture": {
+        "url": "/pods/<pod-id>/manage",
+        "actor": "pod leader",
+        "state": "Add Category form open, name filled (e.g. 'Basics of Temporal Naturalism'), the course box ticked so the accreditation name field shows 'TN Basics Graduate'. Before clicking Create.",
+        "crop": "Viewport, or crop to the form."
+      }
+    },
+    {
+      "slug": "pods",
+      "file": "16-course-progress.png",
+      "heading": "### Courses and Accreditations",
+      "placement": "after-body",
+      "priority": 2,
+      "caption": "What a member sees: the course chip with progress and the accreditation banner.",
+      "capture": {
+        "url": "/knowledge",
+        "actor": "pod member (not a leader)",
+        "state": "Pod selected in the dropdown, the course category chip selected so it reads e.g. '2/4' and the banner shows 'Course · accreditation: TN Basics Graduate' with the progress bar.",
+        "crop": "Viewport."
+      }
+    },
+    {
+      "slug": "bounties",
+      "file": "12-course-accreditation-gate.png",
+      "heading": "### Who Can Apply",
+      "placement": "after-body",
+      "priority": 3,
+      "caption": "Holders of specific credentials: the Course accreditations group, scoped to pods you manage.",
+      "capture": {
+        "url": "/bounty",
+        "actor": "pod leader with a course",
+        "state": "Create bounty form, Who Can Apply set to Holders of specific credentials, the picker showing Pod membership, Pod roles, Course accreditations groups.",
+        "crop": "Crop to the Who Can Apply box."
+      }
     }
   ]
 }
