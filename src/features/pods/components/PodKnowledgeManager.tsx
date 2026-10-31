@@ -64,6 +64,10 @@ export default function PodKnowledgeManager({
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editAccreditationName, setEditAccreditationName] = useState('');
   const [editAccreditationDescription, setEditAccreditationDescription] = useState('');
+  // Accreditation image: shown on the credential in Identity → Accreditations.
+  const [accreditationImageFile, setAccreditationImageFile] = useState<File | null>(null);
+  const [editAccreditationImageFile, setEditAccreditationImageFile] = useState<File | null>(null);
+  const [savingCourse, setSavingCourse] = useState(false);
 
   // Item form state
   const [itemTitle, setItemTitle] = useState('');
@@ -134,6 +138,10 @@ export default function PodKnowledgeManager({
     if (!categoryName.trim() || !userAddress) return;
 
     try {
+      setSavingCourse(true);
+      const accreditationImageUrl =
+        categoryIsCourse && accreditationImageFile ? await uploadAccreditationImage(accreditationImageFile) : null;
+
       const { error } = await supabase.from('knowledge_categories').insert({
         pod_id: podId,
         name: categoryName,
@@ -145,9 +153,11 @@ export default function PodKnowledgeManager({
         is_course: categoryIsCourse,
         accreditation_name: categoryIsCourse ? categoryAccreditationName.trim() || null : null,
         accreditation_description: categoryIsCourse ? categoryAccreditationDescription.trim() || null : null,
+        accreditation_image_url: accreditationImageUrl,
       });
 
       if (error) throw error;
+      setAccreditationImageFile(null);
 
       // Reset form and reload
       setCategoryName('');
@@ -161,6 +171,8 @@ export default function PodKnowledgeManager({
     } catch (error) {
       console.error('Error creating category:', error);
       alert('Failed to create category. Please try again.');
+    } finally {
+      setSavingCourse(false);
     }
   };
 
@@ -196,6 +208,19 @@ export default function PodKnowledgeManager({
       .from('knowledge-documents')
       .getPublicUrl(fileName);
 
+    return publicUrl;
+  };
+
+  // Same bucket as item thumbnails; the credential image is public by design
+  // (it is displayed on members' profiles). Square images read best.
+  const uploadAccreditationImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${podId}/accreditations/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const { error } = await supabase.storage.from('knowledge-documents').upload(fileName, file);
+    if (error) throw error;
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('knowledge-documents').getPublicUrl(fileName);
     return publicUrl;
   };
 
@@ -285,20 +310,44 @@ export default function PodKnowledgeManager({
   // Turn an existing category into a course (or back), and name its accreditation.
   const saveCourseSettings = async (categoryId: string, isCourse: boolean) => {
     try {
-      const { error } = await supabase
-        .from('knowledge_categories')
-        .update({
-          is_course: isCourse,
-          accreditation_name: isCourse ? editAccreditationName.trim() || null : null,
-          accreditation_description: isCourse ? editAccreditationDescription.trim() || null : null,
-        })
-        .eq('id', categoryId);
+      setSavingCourse(true);
+      const patch: Record<string, unknown> = {
+        is_course: isCourse,
+        accreditation_name: isCourse ? editAccreditationName.trim() || null : null,
+        accreditation_description: isCourse ? editAccreditationDescription.trim() || null : null,
+      };
+      // A new image replaces the old one; no file selected leaves it as is.
+      if (isCourse && editAccreditationImageFile) {
+        patch.accreditation_image_url = await uploadAccreditationImage(editAccreditationImageFile);
+      }
+      const { error } = await supabase.from('knowledge_categories').update(patch).eq('id', categoryId);
       if (error) throw error;
+
+      // Keep credentials already issued in step with the course's current
+      // name and image, so members' profiles show the updated badge.
+      if (isCourse) {
+        const sync: Record<string, unknown> = {};
+        const name = editAccreditationName.trim();
+        if (name) sync.name = name;
+        if (patch.accreditation_image_url) sync.image_url = patch.accreditation_image_url;
+        if (Object.keys(sync).length > 0) {
+          const { error: syncError } = await supabase
+            .from('accreditations')
+            .update(sync)
+            .eq('course_category_id', categoryId)
+            .is('revoked_at', null);
+          if (syncError) console.warn('Issued accreditations not updated:', syncError.message);
+        }
+      }
+
       setEditingCourseId(null);
+      setEditAccreditationImageFile(null);
       loadKnowledgeBase();
     } catch (error) {
       console.error('Error saving course settings:', error);
       alert('Failed to save course settings. Please try again.');
+    } finally {
+      setSavingCourse(false);
     }
   };
 
@@ -306,6 +355,7 @@ export default function PodKnowledgeManager({
     setEditingCourseId(category.id);
     setEditAccreditationName(category.accreditation_name || '');
     setEditAccreditationDescription(category.accreditation_description || '');
+    setEditAccreditationImageFile(null);
   };
 
   const deleteCategory = async (categoryId: string) => {
@@ -484,16 +534,44 @@ export default function PodKnowledgeManager({
                             rows={2}
                           />
                         </div>
+                        <div>
+                          <Label htmlFor="category-accreditation-image">
+                            <span className="flex items-center gap-1">
+                              <ImageIcon size={14} />
+                              Accreditation image (optional)
+                            </span>
+                          </Label>
+                          <Input
+                            id="category-accreditation-image"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setAccreditationImageFile(e.target.files?.[0] || null)}
+                            className="mt-1"
+                          />
+                          {accreditationImageFile && (
+                            <img
+                              src={URL.createObjectURL(accreditationImageFile)}
+                              alt="Accreditation preview"
+                              className="mt-2 rounded-md border object-cover"
+                              style={{ width: 96, height: 96, borderColor: '#E8E4DC' }}
+                            />
+                          )}
+                          <p className="text-xs mt-1" style={{ color: '#8F8A84' }}>
+                            Shown on the credential in members' Identity pages. Square, at least 500×500. Without one, the
+                            SpiritDAO symbol is used.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
                   <div className="flex gap-2 w-full">
                     <Button
                       onClick={createCategory}
+                      disabled={savingCourse}
                       style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                       className="flex-1"
                     >
-                      Create
+                      {savingCourse ? 'Creating…' : 'Create'}
                     </Button>
                     <Button
                       onClick={() => setShowCreateCategory(false)}
@@ -566,13 +644,46 @@ export default function PodKnowledgeManager({
                                   rows={2}
                                 />
                               </div>
+                              <div>
+                                <Label htmlFor={`acc-image-${category.id}`}>
+                                  <span className="flex items-center gap-1">
+                                    <ImageIcon size={14} />
+                                    Accreditation image (optional)
+                                  </span>
+                                </Label>
+                                <div className="flex items-center gap-3 mt-1">
+                                  {(editAccreditationImageFile || category.accreditation_image_url) && (
+                                    <img
+                                      src={
+                                        editAccreditationImageFile
+                                          ? URL.createObjectURL(editAccreditationImageFile)
+                                          : (category.accreditation_image_url as string)
+                                      }
+                                      alt="Accreditation"
+                                      className="rounded-md border object-cover flex-shrink-0"
+                                      style={{ width: 64, height: 64, borderColor: '#E8E4DC' }}
+                                    />
+                                  )}
+                                  <Input
+                                    id={`acc-image-${category.id}`}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => setEditAccreditationImageFile(e.target.files?.[0] || null)}
+                                  />
+                                </div>
+                                <p className="text-xs mt-1" style={{ color: '#8F8A84' }}>
+                                  Square, at least 500×500. Replacing it updates the badge on every member who already
+                                  holds this accreditation.
+                                </p>
+                              </div>
                               <div className="flex flex-wrap gap-2">
                                 <Button
                                   size="sm"
+                                  disabled={savingCourse}
                                   onClick={() => saveCourseSettings(category.id, true)}
                                   style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                                 >
-                                  {category.is_course ? 'Save' : 'Make this a course'}
+                                  {savingCourse ? 'Saving…' : category.is_course ? 'Save' : 'Make this a course'}
                                 </Button>
                                 {category.is_course && (
                                   <Button

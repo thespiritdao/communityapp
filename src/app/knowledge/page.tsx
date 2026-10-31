@@ -350,10 +350,19 @@ export default function KnowledgePage() {
                 backgroundColor: '#FFFFFF',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline' }}>
-                <p style={{ fontSize: '15px', fontWeight: 600, color: '#2F5D50' }}>
-                  Course · accreditation: {courseDisplayName(course)}
-                </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  {course.accreditation_image_url && (
+                    <img
+                      src={course.accreditation_image_url}
+                      alt=""
+                      style={{ width: 40, height: 40, borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  )}
+                  <p style={{ fontSize: '15px', fontWeight: 600, color: '#2F5D50' }}>
+                    Course · accreditation: {courseDisplayName(course)}
+                  </p>
+                </div>
                 <span style={{ fontSize: '12px', color: '#5F5A54', whiteSpace: 'nowrap' }}>
                   {!address
                     ? 'Sign in to track progress'

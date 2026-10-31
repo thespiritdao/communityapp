@@ -471,7 +471,7 @@ A course is a knowledge category with one box ticked. When a member completes ev
 **Create a course:**
 1. In the Knowledge Base manager, click **Add Category**.
 2. Fill in the icon, name, and description as usual.
-3. Tick **This category is a course**. Two fields appear: the **accreditation name** (for example "TN Basics Graduate") and an optional line saying what it certifies.
+3. Tick **This category is a course**. Three fields appear: the **accreditation name** (for example "TN Basics Graduate"), an optional line saying what it certifies, and an optional **accreditation image**. The image is the badge shown on the credential in members' Identity pages; use a square image of at least 500×500. Without one, the SpiritDAO symbol is used. Replacing the image later updates the badge for everyone who already holds the accreditation.
 4. Click **Create**, then add the course items in order. Four to six is a good length.
 
 **Turn an existing category into a course:** on that category's card, click **Make this a course**, fill in the accreditation name, and click **Make this a course** again to save. The same link reads **Course settings** afterwards.
