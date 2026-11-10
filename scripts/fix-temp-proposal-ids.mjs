@@ -14,9 +14,14 @@ import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http, decodeEventLog } from 'viem';
 import { base } from 'viem/chains';
 
-const SUPABASE_URL = 'https://yqgqodofeliuurrmxlks.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = '[REDACTED]';
-const RPC_URL = 'https://api.developer.coinbase.com/rpc/v1/base/[REDACTED]';
+// Credentials come from the environment (see .env.example). Never hardcode them here.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !RPC_URL) {
+  console.error('Set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_RPC_URL first.');
+  process.exit(1);
+}
 
 const PROPOSAL_CREATED_ABI = [
   {

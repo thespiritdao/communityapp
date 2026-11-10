@@ -141,7 +141,7 @@ const podId = process.argv[3];
 if (!userEmail || !podId) {
   console.log('Usage: node scripts/test-rls-lookup.mjs <user-email> <pod-id>');
   console.log('\nExample:');
-  console.log('  node scripts/test-rls-lookup.mjs member@example.org f2bc166d-33d5-47dc-8409-ea8d445d3fc0');
+  console.log('  node scripts/test-rls-lookup.mjs member@example.org 00000000-0000-0000-0000-000000000000');
   process.exit(1);
 }
 

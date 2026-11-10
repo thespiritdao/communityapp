@@ -1,7 +1,10 @@
 {
   "name": "SpiritDAO Community App",
   "version": "0.35.6",
-  "repository": "https://github.com/thespiritdao",
+  "private": true,
+  "repository": "https://github.com/thespiritdao/communityapp",
+  "homepage": "https://app.spiritdao.org",
+  "bugs": "https://github.com/thespiritdao/communityapp/issues",
   "license": "MIT",
   "scripts": {
     "prebuild": "node scripts/copy-maplibre-worker.mjs",

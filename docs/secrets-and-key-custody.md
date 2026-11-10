@@ -3,6 +3,15 @@
 *Written 2026-09-20 as item 5 of the hardening plan. Contains no secret values,
 only names, what each one can do, and how to rotate it. Safe to make public.*
 
+> **Status 2026-11-10.** Everything flagged below has been resolved. The database
+> password was rotated (2026-09-21), the legacy anon and service-role API keys were
+> disabled (2026-09-23), the legacy JWT secret was revoked and HS256 verification
+> removed from the app (2026-09-25), and the Coinbase Developer Platform key that
+> had been committed as a file was deleted and replaced (2026-09-29). Before the
+> repository was made public its history was rewritten to drop the files that had
+> ever held those values. The sections below are kept as the record of the finding
+> and the runbook that fixed it.
+
 ---
 
 ## The finding that matters most

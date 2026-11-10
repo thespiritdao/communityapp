@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Base Discord
-    url: https://base.org/discord
-    about: The official Base Discord community.
+  - name: SpiritDAO website
+    url: https://spiritdao.org
+    about: Learn about the project and how to get in touch.
+  - name: Security reports
+    url: https://github.com/thespiritdao/communityapp/blob/main/SECURITY.md
+    about: Please do not open public issues for security problems.

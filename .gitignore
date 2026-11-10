@@ -121,3 +121,40 @@ src/app/api/marketing/
 
 # MapLibre worker, copied at build time (scripts/copy-maplibre-worker.mjs)
 public/maplibre/
+
+
+# ============================================================
+# Open-source hygiene (added 2026-11-10). These stay on disk locally
+# but must never be committed again.
+# ============================================================
+# Tool/editor state and local notes
+.claude/settings.local.json
+VERCEL_ENV_SETUP.txt
+GOLIVE_GUIDE
+icp.txt
+supabase/.temp/
+*.log
+*.tsbuildinfo
+deploy_result*.json
+deploy_status.json
+new_deploy.json
+old_deploy.json
+dependabot-audit.json
+filetree.py
+list_directory_structure*.py
+*.backup
+# Python virtualenvs and third-party PDFs used only for local RAG ingestion
+**/venv/
+src/sensemaker/*.pdf
+# Broken submodule pointer (no .gitmodules); vendor it properly if ever needed
+safe-apps-sdk/
+# Internal drafts: outreach, grants, partner memos, beta-tester lists (personal data)
+docs/archive/outreach/
+docs/archive/research/
+docs/*grant*
+docs/marketing-audit-*
+docs/agentworld-*
+src/features/pods/FEST_submission_draft.md
+src/features/pods/airdrop-attempt.txt
+scripts/airdrop-advocate-to-beta-testers.ts
+scripts/batch-airdrop*.ts

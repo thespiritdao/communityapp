@@ -150,7 +150,7 @@ The chatbot was trained on **7 academic PDFs** (9,667 vectors total) from the Sp
 ### Upload Process (Historical Context)
 
 **Date:** 2025-10-19
-**Location:** Local Windows machine (`C:\Users\PC\Documents\DAO\App\commapp\src\sensemaker`)
+**Location:** Local machine (`<repo>/src/sensemaker`)
 **Method:** PowerShell script with environment variables
 
 ```powershell
@@ -160,7 +160,7 @@ $env:PINECONE_API_KEY = "pcsk_..."
 $env:PINECONE_INDEX_NAME = "spiritdao-books"
 
 # Run upload script
-python upload_documents.py "C:\Users\PC\Documents\DAO\App\commapp\src\sensemaker"
+python upload_documents.py "<repo>/src/sensemaker"
 ```
 
 **Why from local machine?**
@@ -178,7 +178,7 @@ PythonAnywhere's server firewall blocks Pinecone connections even on paid tier. 
 
 **Adding New Documents:**
 
-1. Place PDFs in local directory (e.g., `C:\Users\PC\Documents\DAO\App\commapp\src\sensemaker`)
+1. Place PDFs in local directory (e.g., `<repo>/src/sensemaker`)
 2. Add new entries to `SOURCE_NAME_MAPPING` in `rag_service.py`:
    ```python
    SOURCE_NAME_MAPPING = {
@@ -572,8 +572,8 @@ function SensemakerWidget() {
 
 ```bash
 # Backend
-cp -r C:/Users/PC/Documents/Tributary/spiritdao_chatbot/services \
-     C:/Users/PC/Documents/DAO/App/commapp/src/sensemaker/
+cp -r <path-to>/spiritdao_chatbot/services \
+     <repo>/src/sensemaker/
 
 # Frontend (create new component)
 # Use widget.html as reference for React component

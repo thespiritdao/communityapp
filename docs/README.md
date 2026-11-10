@@ -69,25 +69,20 @@ current reference:
 | Subfolder | Contents |
 |---|---|
 | `archive/newsletters/` | Published member-facing newsletter drafts (point-in-time). |
-| `archive/outreach/` | Outreach drafts, the investor/partner memo, the TreeGens ask. |
 | `archive/self-redesign-specs/` | Working notes + intermediate specs from the $SELF redesign. Canonical shipped spec stays active: `spec-self-soulbound-redesign.md`. |
 | `archive/audits/` | Dated point-in-time audits (snapshots, not living docs). |
-| `archive/research/` | Ecosystem/competitive research + conversation notes. |
 
 To resurrect something as living reference, move it back and index it above.
 
 ## What's NOT in here
 
-- **Memory** lives at `C:\Users\PC\.claude\projects\C--Users-PC-Documents-DAO-App-commapp\memory\` —
-  point-in-time observations, may be stale. Use as a hint, not a
-  source of truth.
 - **Schema migrations** live at `supabase/migrations/` — the
   authoritative DB shape.
 - **Per-feature READMEs** sometimes exist inside `src/features/*/`
   for very feature-local notes.
-- **Outreach / partnership materials** previously lived here; those
-  have moved out of this directory to keep the engineering doc
-  surface clean.
+- **Outreach, grant and partnership materials** are kept outside the
+  repository. They are not engineering reference and some contain
+  personal contact details.
 
 ## When you add a doc
 
