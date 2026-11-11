@@ -67,5 +67,5 @@ merge and when you review one.
 
 ## License
 
-By contributing you agree that your contributions are licensed under the MIT
-License that covers this repository.
+By contributing you agree that your contributions are licensed under the GNU
+Affero General Public License v3.0 that covers this repository.

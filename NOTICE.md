@@ -1,7 +1,10 @@
 # Third-party notices
 
-This project is released under the MIT License (see `LICENSE`). It contains or
-derives from the following third-party work, each under its own license.
+This project is released under the GNU Affero General Public License v3.0 (see
+`LICENSE`). The SpiritDAO name, logo and brand assets are trademarks of
+SpiritDAO Inc and are not licensed. The project contains or derives from the
+following third-party work, each under its own license, which is compatible
+with and preserved alongside the AGPL.
 
 ## OnchainKit (Coinbase)
 

@@ -117,4 +117,9 @@ contains code derived from it (notably under `src/core`, `src/wallet`,
 Coinbase's MIT license; see [`NOTICE.md`](NOTICE.md).
 
 Everything else is Copyright (c) 2024-2026 SpiritDAO Inc and released under the
-MIT License. See [`LICENSE`](LICENSE).
+GNU Affero General Public License v3.0. See [`LICENSE`](LICENSE). In short: you
+may run, study, modify and redistribute it, and if you run a modified version as
+a service you must offer its source to your users under the same terms.
+
+The SpiritDAO name, logo and brand assets are not covered by the code license
+and may not be used to present a fork as SpiritDAO or as endorsed by it.
