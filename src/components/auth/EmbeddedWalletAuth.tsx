@@ -1,4 +1,4 @@
-// src/wallet/components/EmbeddedWalletAuth.tsx
+// src/components/auth/EmbeddedWalletAuth.tsx
 'use client';
 
 import { useState } from 'react';

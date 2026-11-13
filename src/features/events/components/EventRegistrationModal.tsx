@@ -5,7 +5,7 @@ import type React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { useEvmAddress, useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
 import { useUserWallet } from '@/hooks/useUserWallet';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
 import {

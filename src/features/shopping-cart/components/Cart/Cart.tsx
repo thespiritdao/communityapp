@@ -7,7 +7,7 @@ import { usePublicClient } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { keccak256, toBytes, type Log, encodeFunctionData } from 'viem';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 const purchaseBurnABI = require('src/abis/purchaseBurnABI.json');
 const purchaseRouterABI = require('src/abis/PurchaseRouter.json');
 const purchaseRouterDecentralizedABI = require('src/abis/PurchaseRouterDecentralized.json');

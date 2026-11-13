@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';

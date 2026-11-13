@@ -3,7 +3,7 @@
 import type React from 'react';
 import { useState, useCallback } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 import { usePublicClient } from 'wagmi';
 

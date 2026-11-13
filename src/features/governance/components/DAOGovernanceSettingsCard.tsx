@@ -42,7 +42,7 @@ import {
   type ThresholdPreset,
 } from '@/features/pods/components/ThresholdPicker';
 import { ProposalThreadSelector } from './ProposalThreadSelector';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 import {
   BASE_SECONDS_PER_BLOCK,

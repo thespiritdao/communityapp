@@ -17,7 +17,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { AgreementIPFSService } from '../services/AgreementIPFSService';
 import { keccak256, toHex, encodeFunctionData } from 'viem';
-import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution } from '@/hooks/useSendUserOperationWithAttribution';
 
 interface OnChainAgreementSigningModalProps {
   isOpen: boolean;

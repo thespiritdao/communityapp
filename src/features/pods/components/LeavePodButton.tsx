@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { ensureAuthHeaders } from '@/lib/authHeaders';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 
 const HATS_ADDRESS = (process.env.NEXT_PUBLIC_HATS_CONTRACT ||
   '0x3bc1a0ad72417f2d411118085256fc53cbddd137') as `0x${string}`;

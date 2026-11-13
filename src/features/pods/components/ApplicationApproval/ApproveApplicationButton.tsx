@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserWallet } from '@/hooks/useUserWallet';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import {
   encodeFunctionData,
   decodeEventLog,

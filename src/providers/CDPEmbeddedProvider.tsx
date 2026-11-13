@@ -1,16 +1,14 @@
-// src/wallet/components/CDPEmbeddedProvider.tsx
+// src/providers/CDPEmbeddedProvider.tsx
 'use client';
 
 import type { ReactNode } from 'react';
 import { CDPHooksProvider } from '@coinbase/cdp-hooks';
 import { WagmiProvider } from 'wagmi';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { validateContractAddresses } from '@/config/contracts';
 import { wagmiConfig } from '@/config/wagmi.client';
 import { base } from 'wagmi/chains';
-import { DEFAULT_PRIVACY_URL, DEFAULT_TERMS_URL } from '@/constants';
 
 // Create the QueryClient instance outside component with conservative defaults
 // to prevent excessive RPC calls and rate limiting
@@ -174,25 +172,6 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
     [projectId, paymasterEndpoint],
   );
 
-  // OnchainKit config - Paymaster for gasless transactions (using same endpoint as CDP)
-  const onchainKitConfig = useMemo(
-    () => ({
-      appearance: {
-        name: 'SpiritDAO',
-        logo: '/spiritdaosymbol.png',
-        mode: 'auto' as const,
-        theme: 'minimal' as const,
-      },
-      wallet: {
-        display: 'modal' as const,
-        termsUrl: DEFAULT_TERMS_URL,
-        privacyUrl: DEFAULT_PRIVACY_URL,
-      },
-      paymaster: paymasterEndpoint,
-    }),
-    [paymasterEndpoint],
-  );
-
   if (!paymasterEndpoint) {
     console.warn(
       '⚠️ PAYMASTER NOT CONFIGURED - Users will need to pay gas fees!',
@@ -208,15 +187,9 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
   return (
     <WagmiProvider config={wagmiConfig} reconnectOnMount={true}>
       <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={process.env.NEXT_PUBLIC_CDP_API_CLIENT!}
-          chain={base}
-          config={onchainKitConfig}
-        >
-          <CDPHooksProvider config={cdpConfig}>
-            {children}
-          </CDPHooksProvider>
-        </OnchainKitProvider>
+        <CDPHooksProvider config={cdpConfig}>
+          {children}
+        </CDPHooksProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

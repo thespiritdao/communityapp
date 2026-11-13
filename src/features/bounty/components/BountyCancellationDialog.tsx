@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, type Abi } from 'viem';
 import { Loader2 } from 'lucide-react';
 import {

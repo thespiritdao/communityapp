@@ -35,7 +35,7 @@
 
 import React, { useState } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
 import {

@@ -9,7 +9,7 @@ import { CommunityProvider } from '@/context/CommunityContext';
 import { FaceProvider } from '@/context/FaceContext';
 import { UnifiedNotificationProvider } from '@/context/UnifiedNotificationContext';
 import { TokenBalancesProvider } from '@/context/TokenBalancesContext';
-import { CDPEmbeddedProvider } from '../wallet/components/CDPEmbeddedProvider';
+import { CDPEmbeddedProvider } from '@/providers/CDPEmbeddedProvider';
 import { ProfilesProvider } from '@/features/identity/context/ProfilesProvider';
 import { AuthProvider } from '@/features/identity';
 import { ContractConfigProvider } from '@/providers/ContractConfigProvider';

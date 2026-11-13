@@ -11,7 +11,7 @@ import {
   hasCompletedOnboarding,
 } from '@/services/inviteCodeService';
 import { useIsInitialized, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
-import { EmbeddedWalletAuth } from '@/wallet/components/EmbeddedWalletAuth';
+import { EmbeddedWalletAuth } from '@/components/auth/EmbeddedWalletAuth';
 import { cdpFetch } from '@/features/identity/lib/cdpSession';
 import { trackEvent } from '@/lib/analytics';
 

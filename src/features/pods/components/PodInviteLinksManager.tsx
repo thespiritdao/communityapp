@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { encodeFunctionData, parseAbi } from 'viem';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { supabase } from '@/lib/supabase';
 import { Link2, Copy, Check, XCircle, Users } from 'lucide-react';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';

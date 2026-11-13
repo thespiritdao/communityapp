@@ -116,7 +116,7 @@ export const wagmiConfig = createConfig({
 Because `useSendUserOperation` takes a `data` field on each call, we can append the suffix to the calldata at the call site via a wrapper hook. This requires no changes to the CDP SDK.
 
 ```ts
-// src/wallet/hooks/useSendUserOperationWithAttribution.ts
+// src/hooks/useSendUserOperationWithAttribution.ts
 import { useSendUserOperation } from '@coinbase/cdp-hooks';
 import { Attribution } from 'ox/erc8021';
 import { concat } from 'viem';
@@ -178,7 +178,7 @@ Then replace `useSendUserOperation` imports in transaction-sending components wi
 
 **Phase 3 — CDP Layer (Option B, full coverage)**
 
-1. Create `src/wallet/hooks/useSendUserOperationWithAttribution.ts`
+1. Create `src/hooks/useSendUserOperationWithAttribution.ts`
 2. Swap imports in the 7 files listed above (grep-and-replace)
 3. Test on a staging deploy: execute one transaction from each flow, verify on block explorer that input data ends with the `8021` pattern
 4. Deploy to production
@@ -192,7 +192,7 @@ Then replace `useSendUserOperation` imports in transaction-sending components wi
 | `package.json` | Add `ox` dep, bump `viem` to `2.45.x` | Low — semver compatible |
 | `.env` / Vercel env | Add `NEXT_PUBLIC_BUILDER_CODE` | Zero |
 | `src/config/wagmi.client.ts` | Add `dataSuffix` to `createConfig` | Very low |
-| `src/wallet/hooks/useSendUserOperationWithAttribution.ts` | **New file** — wrapper hook | Low |
+| `src/hooks/useSendUserOperationWithAttribution.ts` | **New file** — wrapper hook | Low |
 | `src/app/claims/ClaimTab.tsx` | Swap hook import | Low |
 | `src/features/bounty/components/BidForm.tsx` | Swap hook import | Low |
 | `src/features/bounty/components/BidApprovalFlow.tsx` | Swap hook import | Low |

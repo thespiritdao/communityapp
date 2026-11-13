@@ -8,7 +8,7 @@ import {
   useWaitForTransactionReceipt,
 } from 'wagmi';
 import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { useQueryClient } from '@tanstack/react-query';
 import { base } from 'viem/chains';
 import { encodeFunctionData, type Abi } from 'viem';

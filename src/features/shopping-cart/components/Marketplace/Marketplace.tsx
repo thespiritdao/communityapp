@@ -6,7 +6,7 @@ import Filter from '@/features/shopping-cart/components/Filter/Filter';
 import Products from '@/features/shopping-cart/components/Products/Products';
 import Cart from '@/features/shopping-cart/components/Cart';
 import { useProducts } from '@/features/shopping-cart/contexts/products-context';
-import { ConnectWallet } from '@/wallet/components/ConnectWallet';
+import Link from 'next/link';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 import * as S from './styles';
 import TopBar from '@/features/shopping-cart/components/Cart/TopBar';
@@ -36,8 +36,21 @@ export default function Marketplace() {
     );
   }
 
-  // If not logged in, show the ConnectWallet component.
-  if (!isConnected || !address) return <ConnectWallet />;
+  // Not signed in: send the member to the home page, which owns the CDP
+  // sign-in and onboarding flow, rather than starting a second login path here.
+  if (!isConnected || !address) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen gap-4 px-4 text-center">
+        <p className="text-muted-foreground">Sign in to browse the marketplace.</p>
+        <Link
+          href="/"
+          className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-primary-foreground hover:opacity-90"
+        >
+          Sign in
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <S.Container>

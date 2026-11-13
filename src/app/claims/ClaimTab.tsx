@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { toast } from 'react-hot-toast';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { Info, Flame, CheckCircle, Loader2, ArrowRight } from 'lucide-react';

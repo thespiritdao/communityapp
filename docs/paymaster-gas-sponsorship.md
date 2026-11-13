@@ -162,7 +162,7 @@ For a new globally-deployed contract:
 | Path | Role |
 |---|---|
 | `src/app/api/paymaster/route.ts` | The proxy |
-| `src/wallet/hooks/useSendUserOperationWithAttribution.ts` | Wrapped CDP hook with Builder Codes attribution + paymaster routing |
+| `src/hooks/useSendUserOperationWithAttribution.ts` | Wrapped CDP hook with Builder Codes attribution + paymaster routing |
 | `vercel.json` | (No cron config — proxy is request/response only) |
 
 ## Related docs

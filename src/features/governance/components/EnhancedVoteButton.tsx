@@ -4,7 +4,7 @@ import type React from 'react';
 import { useState } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';

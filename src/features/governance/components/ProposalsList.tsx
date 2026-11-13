@@ -4,7 +4,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
-import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution } from '@/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 import { parseAbiItem, type Abi } from 'viem';
 import DAOGovernorABIJson from '@/abis/DAOGovernorABI.json';

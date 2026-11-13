@@ -14,7 +14,7 @@ import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-
 import { supabase } from '@/utils/supabaseClient';
 import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { useToast } from '@/components/ui/use-toast';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import {
   buildSignAgreementCall,
   isOnChainAgreementConfigured,

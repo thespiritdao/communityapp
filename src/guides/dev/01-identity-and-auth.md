@@ -154,7 +154,7 @@ on-chain" → device wallet.
 | `src/app/api/auth/link-confirm/route.ts` | redeem a link code, attach wallet |
 | `src/services/userWalletsService.ts` | data access for `user_wallets` |
 | `src/features/identity/components/LinkNewDeviceModal.tsx` | link-a-device UI |
-| `src/wallet/components/CDPEmbeddedProvider.tsx` | CDP embedded-wallet provider |
+| `src/providers/CDPEmbeddedProvider.tsx` | CDP embedded-wallet provider |
 
 ---
 

@@ -5,7 +5,7 @@ import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { Card, CardContent } from '@/components/ui/card';
 import { Crown, CheckCircle, Loader2 } from 'lucide-react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
 import { Button } from '@/components/ui/button';

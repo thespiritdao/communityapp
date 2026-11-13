@@ -3,7 +3,7 @@ const nextConfig = {
   // Disable React Strict Mode in development for faster loading
   // Strict Mode causes double-rendering which slows down auth flows
   reactStrictMode: process.env.NODE_ENV === 'production',
-  transpilePackages: ['@coinbase/onchainkit'],
+  // (OnchainKit removed 2026-11; no packages need transpiling)
   outputFileTracingRoot: process.cwd(),
   typescript: {
     // TEMPORARY: Skip type checking during build to prevent OOM errors

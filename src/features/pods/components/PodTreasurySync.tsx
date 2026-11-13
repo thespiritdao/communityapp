@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useEvmAddress, useIsSignedIn, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import {
   Card,

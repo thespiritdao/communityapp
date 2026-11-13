@@ -9,7 +9,7 @@
 
 import React, { useState } from 'react';
 import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, parseAbi } from 'viem';
 import { cdpFetch } from '@/features/identity/lib/cdpSession';
 

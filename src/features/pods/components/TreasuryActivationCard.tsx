@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Coins, Copy, ExternalLink, Rocket, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution } from '@/hooks/useSendUserOperationWithAttribution';
 import { publicClient } from '@/config/wagmi.client';
 import { supabase } from '@/utils/supabaseClient';
 import PodTreasuryDeployerV3Abi from '@/abis/PodTreasuryDeployerV3.json';

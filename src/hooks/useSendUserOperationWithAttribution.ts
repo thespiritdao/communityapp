@@ -1,4 +1,4 @@
-// src/wallet/hooks/useSendUserOperationWithAttribution.ts
+// src/hooks/useSendUserOperationWithAttribution.ts
 //
 // Drop-in replacement for useSendUserOperation from @coinbase/cdp-hooks.
 // Passes ERC-8021 dataSuffix as a top-level param to sendUserOperation so

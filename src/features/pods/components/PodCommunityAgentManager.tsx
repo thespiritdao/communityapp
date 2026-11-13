@@ -23,7 +23,7 @@ import {
   Camera,
 } from 'lucide-react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution } from '@/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, parseUnits } from 'viem';
 import AgentEventDrafts from './AgentEventDrafts';
 import purchaseRouterABI from '@/abis/PurchaseRouterDecentralized.json';

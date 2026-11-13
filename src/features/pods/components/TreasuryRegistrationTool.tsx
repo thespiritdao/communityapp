@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useReadContract } from 'wagmi';
 import { parseAbi, encodeFunctionData } from 'viem';
-import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { useSendUserOperationWithAttribution } from '@/hooks/useSendUserOperationWithAttribution';
 
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_TREASURY_FACTORY as `0x${string}`;
 
