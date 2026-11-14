@@ -1,7 +1,0 @@
-  1. Phase 1: Create Management HAT
-  2. Phase 2: Deploy Proxy
-  3. Phase 3: Mint HATs to Leaders
-  4. Phase 4: Create Proxy Admin HAT
-  5. Phase 5: Mint Admin HAT to Proxy
-  6. Phase 6: Setup Complete
-  7. Phase 7: Set Eligibility Module Admin ← NEW - This is what was missing!
