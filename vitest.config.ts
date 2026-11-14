@@ -21,7 +21,6 @@ export default defineConfig({
         '**/mocks.tsx',
         '**/*Svg.tsx',
         '**/types.ts',
-        '.storybook/**',
         '.yarn/**',
         'esm/**',
         'framegear/**',
