@@ -293,7 +293,7 @@ export default function TermsOfServicePage() {
               </li>
               <li>
                 <strong>Contract Address:</strong>{' '}
-                0x1317Ae277266D38C4E492558f8693F14143a6A65
+                {process.env.NEXT_PUBLIC_SYSTEM_TOKEN}
               </li>
             </ul>
           </div>
@@ -361,7 +361,7 @@ export default function TermsOfServicePage() {
               </li>
               <li>
                 <strong>Contract Address:</strong>{' '}
-                0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21
+                {process.env.NEXT_PUBLIC_SELF_TOKEN}
               </li>
             </ul>
           </div>
