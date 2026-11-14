@@ -1,4 +1,5 @@
 'use client';
+import { PODS } from '@/config/deployment';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ import { getAuthHeaders } from '@/lib/authHeaders';
  */
 export default function SyncPodMembersPage() {
   const { evmAddress: address } = useEvmAddress();
-  const [podId, setPodId] = useState('e35c9e25-d29f-4988-b1e8-2902e960b94c'); // Default to Executive Pod
+  const [podId, setPodId] = useState(PODS.governance ?? ''); // Default to the governance (executive) pod
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +64,7 @@ export default function SyncPodMembersPage() {
   };
 
   const quickSyncExecutivePod = () => {
-    setPodId('e35c9e25-d29f-4988-b1e8-2902e960b94c');
+    setPodId(PODS.governance ?? '');
     setTimeout(handleSync, 100);
   };
 
@@ -96,7 +97,7 @@ export default function SyncPodMembersPage() {
                 value={podId}
                 onChange={(e) => setPodId(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
-                placeholder="e.g., e35c9e25-d29f-4988-b1e8-2902e960b94c"
+                placeholder="Pod UUID"
                 disabled={syncing}
               />
             </div>
@@ -173,7 +174,7 @@ export default function SyncPodMembersPage() {
             <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
               <span className="font-medium">Executive Pod</span>
               <code className="text-xs bg-gray-200 px-2 py-1 rounded">
-                e35c9e25-d29f-4988-b1e8-2902e960b94c
+                {PODS.governance ?? 'not configured'}
               </code>
             </div>
           </div>

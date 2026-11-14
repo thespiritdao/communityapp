@@ -28,13 +28,14 @@
 //   anything. The legacy self-signed path was removed when the secret was
 //   revoked on 2026-09-25.
 
+import { agentEmailDomain } from '@/config/deployment.server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { isRegisteredAgent } from '@/lib/agentGuard';
 import { issueSupabaseSession } from '@/lib/issueSession';
 
 // Reserved address space for agent accounts. Nothing is ever mailed to these;
 // they exist because Supabase issues sessions by email.
-const AGENT_EMAIL_DOMAIN = 'agents.spiritdao.org';
+// Synthetic agent accounts are <wallet>@AGENT_EMAIL_DOMAIN (see deployment.server.ts).
 
 function supabaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -53,7 +54,7 @@ function adminClient(): SupabaseClient {
 // ── Current: an account per agent, a Supabase-issued token ──────────────────
 
 export function agentAccountEmail(agentWallet: string): string {
-  return `${agentWallet.toLowerCase()}@${AGENT_EMAIL_DOMAIN}`;
+  return `${agentWallet.toLowerCase()}@${agentEmailDomain()}`;
 }
 
 /**

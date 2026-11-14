@@ -1,4 +1,5 @@
 'use client';
+import { appUrl } from '@/config/deployment';
 
 /**
  * PodInviteLinksManager — leader tool on the pod Members tab.
@@ -147,7 +148,7 @@ export function PodInviteLinksManager({
 
   const handleCopy = useCallback((code: string) => {
     navigator.clipboard
-      .writeText(`https://app.spiritdao.org/?invite=${code}`)
+      .writeText(`${appUrl()}/?invite=${code}`)
       .then(() => {
         setCopied(code);
         setTimeout(() => setCopied(null), 2000);

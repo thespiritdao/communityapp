@@ -6,6 +6,7 @@
 // Authorization is the CALLER's responsibility — this helper assumes the caller
 // has already verified the wallet is a leader/exec of the pod.
 
+import { appUrl } from '@/config/deployment';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -47,7 +48,7 @@ export async function getOrCreatePodInviteUrl(
       (l.max_uses == null || l.use_count < l.max_uses),
   );
   if (reusable) {
-    return { code: reusable.code, url: `https://app.spiritdao.org/?invite=${reusable.code}` };
+    return { code: reusable.code, url: `${appUrl()}/?invite=${reusable.code}` };
   }
 
   // Resolve the pod's default member role. Leader vs member is distinguished by
@@ -92,5 +93,5 @@ export async function getOrCreatePodInviteUrl(
     console.error('[podInviteLink] create failed:', error);
     return null;
   }
-  return { code: link.code, url: `https://app.spiritdao.org/?invite=${link.code}` };
+  return { code: link.code, url: `${appUrl()}/?invite=${link.code}` };
 }

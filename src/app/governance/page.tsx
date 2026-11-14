@@ -108,14 +108,6 @@ export default function GovernancePage() {
     isError: postsError,
   } = useGovernanceForumPosts(selectedCategoryId);
 
-  // Replace this with your real categories source
-  const categories = [
-    { id: '00000000-0000-0000-0000-000000000001', name: 'General' },
-    { id: '818a2a59-5d79-4ec4-8752-da87c480e7e9', name: 'Executive Pod' },
-    { id: '92697690-0792-475a-918e-ccc085fbaf23', name: 'Dev Pod' },
-    // …other forum categories
-  ];
-
   // Called after a new proposal is successfully created
   const handleProposalCreated = useCallback(() => {
     refetchProposals();

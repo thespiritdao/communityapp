@@ -14,6 +14,7 @@
  * - Validates wallet address format before minting
  */
 
+import { PODS } from '@/config/deployment';
 import { requireInternalSecret } from '@/lib/mintAuth';
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -58,7 +59,7 @@ async function syncToPodMembers(
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Pod ID for executive pod
-    const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+    const EXECUTIVE_POD_ID = (PODS.governance ?? '');
 
     const hatId = await getHatId('EXECUTIVE_POD_LEADER');
 

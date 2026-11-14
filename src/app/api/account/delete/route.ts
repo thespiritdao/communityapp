@@ -1,9 +1,11 @@
 // POST /api/account/delete — member-initiated account deletion request.
 // Auth: signed-in member (JWT → wallet). Records the request in
-// account_deletion_requests and notifies tech@spiritdao.org, who completes
+// account_deletion_requests and notifies SUPPORT_EMAIL, who completes
 // the deletion within 30 days (same process as the public
 // /identity/account-deletion page). Body must include { confirm: "DELETE" }.
 
+import { appUrl, CONTACT_EMAIL } from '@/config/deployment';
+import { emailFrom, supportInbox } from '@/config/deployment.server';
 import { type NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
@@ -64,8 +66,8 @@ export async function POST(req: NextRequest) {
   let emailSent = false;
   try {
     const { error: sendError } = await resend.emails.send({
-      from: 'SpiritDAO <community@spiritdao.org>',
-      to: 'tech@spiritdao.org',
+      from: emailFrom(),
+      to: supportInbox(),
       subject: `Account deletion request — ${name}`,
       text: [
         'A member requested account deletion from the app.',
@@ -76,7 +78,7 @@ export async function POST(req: NextRequest) {
         `Requested: ${new Date().toISOString()}`,
         '',
         'Per the published policy, deletion must be completed within 30 days:',
-        'https://app.spiritdao.org/identity/account-deletion',
+        `${appUrl()}/identity/account-deletion`,
       ].join('\n'),
     });
     if (sendError) {
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
 
   if (insertError && !emailSent) {
     return NextResponse.json(
-      { error: 'Could not submit the request. Please email tech@spiritdao.org.' },
+      { error: `Could not submit the request. Please email ${supportInbox()}.` },
       { status: 500 },
     );
   }
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
   if (profile?.email) {
     try {
       await resend.emails.send({
-        from: 'SpiritDAO <community@spiritdao.org>',
+        from: emailFrom(),
         to: profile.email,
         subject: 'Your SpiritDAO account deletion request',
         text: [
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
           '',
           'We received your request to delete your SpiritDAO Community account.',
           'It will be completed within 30 days. Details on what is deleted and',
-          'what is retained: https://app.spiritdao.org/identity/account-deletion',
+          `what is retained: ${appUrl()}/identity/account-deletion`,
           '',
           'If you did not make this request, reply to this email immediately.',
           '',

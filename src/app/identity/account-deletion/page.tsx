@@ -1,6 +1,7 @@
 // src/app/identity/account-deletion/page.tsx
 // Public page (no auth) — linked from the Google Play data-safety form and
 // the privacy policy. Must remain reachable without login.
+import { appHost, SUPPORT_EMAIL } from '@/config/deployment';
 import Link from 'next/link';
 
 export const metadata = {
@@ -18,7 +19,7 @@ export default function AccountDeletionPage() {
         </h1>
         <p className="text-sm text-gray-600 mb-8">
           For the SpiritDAO Community app (org.spiritdao.app) and
-          app.spiritdao.org
+          {appHost()}
         </p>
 
         <section className="mb-8">
@@ -39,10 +40,10 @@ export default function AccountDeletionPage() {
           </p>
           <p className="mb-4">
             <a
-              href="mailto:tech@spiritdao.org?subject=Account%20Deletion%20Request"
+              href={`mailto:${SUPPORT_EMAIL ?? ''}?subject=Account%20Deletion%20Request`}
               className="inline-block bg-green-800 text-white font-semibold px-6 py-3 rounded-lg hover:bg-green-900"
             >
-              Email tech@spiritdao.org
+              Email {SUPPORT_EMAIL}
             </a>
           </p>
           <p className="text-gray-700 mb-4">
@@ -104,10 +105,10 @@ export default function AccountDeletionPage() {
             for full details on the data we collect and your rights, or contact
             us at{' '}
             <a
-              href="mailto:tech@spiritdao.org"
+              href={`mailto:${SUPPORT_EMAIL ?? ''}`}
               className="text-green-800 underline"
             >
-              tech@spiritdao.org
+              {SUPPORT_EMAIL}
             </a>
             .
           </p>

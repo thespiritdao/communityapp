@@ -2,6 +2,9 @@
  * Shared helpers for email digest cron jobs (weekly + daily).
  */
 
+import { APP_NAME, CONTACT_EMAIL } from '@/config/deployment';
+import { emailFrom } from '@/config/deployment.server';
+import { appUrl as deploymentUrl } from '@/config/deployment';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
@@ -11,10 +14,9 @@ const supabase = createClient(
 );
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_ADDRESS = 'SpiritDAO <community@spiritdao.org>';
 import { appUrl } from '@/lib/safeAppPath';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+const APP_URL = deploymentUrl();
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -131,7 +133,7 @@ export async function runDigest(period: DigestPeriod): Promise<{
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const { error } = await resend.emails.send({
-          from: FROM_ADDRESS,
+          from: emailFrom(),
           to: profile.email,
           subject: `Your SpiritDAO ${periodLabel} Digest — ${allNotifications.length} update${allNotifications.length !== 1 ? 's' : ''}`,
           html,
@@ -265,7 +267,7 @@ function renderDigestHtml(
     <div style="text-align:center;margin-top:20px;font-size:12px;color:#999;">
       <p>You're receiving this because you have ${periodLabel.toLowerCase()} digests enabled.</p>
       <p><a href="${APP_URL}/notifications/preferences" style="color:#2F5D50;">Manage email preferences</a></p>
-      <p style="margin-top:8px;">SpiritDAO &mdash; community@spiritdao.org</p>
+      <p style="margin-top:8px;">${APP_NAME}${CONTACT_EMAIL ? ` &mdash; ${CONTACT_EMAIL}` : ''}</p>
     </div>
 
   </div>

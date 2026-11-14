@@ -1,6 +1,7 @@
 // src/app/api/pods/notify-exec/route.ts
 // Notify exec hat wearers when a new pod is submitted for review.
 
+import { PODS } from '@/config/deployment';
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { sendServerNotificationBatch } from '@/lib/serverNotifications';
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get exec pod members from DB
-    const EXEC_POD_UUID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+    const EXEC_POD_UUID = (PODS.governance ?? '');
     const { data: execMembers } = await supabaseAdmin
       .from('pod_members')
       .select('wallet')

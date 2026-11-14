@@ -1,3 +1,6 @@
+import { ORG_EIN, ORG_NAME } from '@/config/deployment';
+import { appUrl, appHost, CONTACT_EMAIL } from '@/config/deployment';
+import { emailFrom } from '@/config/deployment.server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 
@@ -52,7 +55,7 @@ export async function sendTokensReceivedEmail({
     if (!isDonation) {
       const fromLabel = senderName ?? 'a community member';
       const { error } = await resend.emails.send({
-        from: 'SpiritDAO <community@spiritdao.org>',
+        from: emailFrom(),
         to: profile.email,
         subject: `You received ${systemTokens.toFixed(2)} $${tokenSymbol}`,
         text: [
@@ -62,10 +65,10 @@ export async function sendTokensReceivedEmail({
           '',
           'You can distribute these funds to pods or community members, or use them for Artifact purchases, Events, or Bounties.',
           '',
-          'Check your full balance on your Identity card at app.spiritdao.org.',
+          `Check your full balance on your Identity card at ${appHost()}.`,
           '',
           'The SpiritDAO Team',
-          'community@spiritdao.org | https://app.spiritdao.org',
+          [CONTACT_EMAIL, appUrl()].filter(Boolean).join(' | '),
         ].join('\n'),
       });
       if (error) console.error('[donationEmail] Resend error (gift):', error);
@@ -83,7 +86,7 @@ export async function sendTokensReceivedEmail({
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const { error } = await resend.emails.send({
-      from: 'SpiritDAO <community@spiritdao.org>',
+      from: emailFrom(),
       to: profile.email,
       subject: `Your SpiritDAO donation receipt — $${fmt(fiat)}`,
       text: [
@@ -105,8 +108,8 @@ export async function sendTokensReceivedEmail({
         '─────────────────────────────',
         'TAX RECEIPT',
         '─────────────────────────────',
-        'SpiritDAO is a registered 501(c)(3) nonprofit organization.',
-        'EIN: 99-1308806',
+        `${ORG_NAME} is a registered 501(c)(3) nonprofit organization.`,
+        `EIN: ${ORG_EIN}`,
         '',
         `In exchange for your donation, you received $SYSTEM tokens with an`,
         `estimated fair market value of $${fmt(systemTokens)}.`,
@@ -126,12 +129,12 @@ export async function sendTokensReceivedEmail({
         '• Use them for Artifact purchases, Events, or Bounties',
         '• Redeem for cash via the Claims function in the donation section',
         '',
-        'Check your full balance on your Identity card at app.spiritdao.org.',
+        `Check your full balance on your Identity card at ${appHost()}.`,
         '',
         'The SpiritDAO Team',
-        'community@spiritdao.org | https://app.spiritdao.org',
+        [CONTACT_EMAIL, appUrl()].filter(Boolean).join(' | '),
         '',
-        'SpiritDAO is a 501(c)(3) nonprofit organization. EIN: 99-1308806.',
+        `${ORG_NAME} is a 501(c)(3) nonprofit organization. EIN: ${ORG_EIN}.`,
         'Contributions are tax-deductible to the extent permitted by law.',
       ].join('\n'),
     });

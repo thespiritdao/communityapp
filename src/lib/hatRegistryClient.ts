@@ -4,12 +4,12 @@
  * Client-side hat ID store, populated at app startup from /api/hat-registry.
  * Mirrors the keys in src/lib/hatRegistry.ts.
  *
- * Current hats (top hat 0x00000749):
- *   EXECUTIVE_POD_LEADER       — Executive Pod leader hat
- *   COMMUNITY_PODS_PARENT      — Community Pods parent hat
- *   TEMPORAL_NATURALISM        — Temporal Naturalism pod hat
- *   TEMPORAL_NATURALISM_LEADER — Temporal Naturalism leader hat
- *   TEMPORAL_NATURALISM_MEMBER — Temporal Naturalism member hat
+ * Keys (resolved from the structural pods configured in the environment):
+ *   EXECUTIVE_POD_LEADER  — governance pod's management (leader) hat
+ *   COMMUNITY_PODS_PARENT — community parent pod's management hat
+ *   DEFAULT_POD           — default community's pod hat
+ *   DEFAULT_POD_LEADER    — default community's leader hat
+ *   DEFAULT_POD_MEMBER    — default community's member hat
  */
 
 import type { HatIds, HatKey } from '@/lib/hatRegistry';

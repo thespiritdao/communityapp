@@ -1,4 +1,6 @@
 // src/services/communityAgent/types.ts
+import { PODS } from '@/config/deployment';
+import { AGENT_GRANT_FUNDED_POD_IDS } from '@/config/deployment.server';
 
 /** Default fallback pseudo-wallet. Each pod gets a unique derived address. */
 export const AGENT_PSEUDO_WALLET = '0x000000000000000000000000000000000000ca10';
@@ -14,8 +16,12 @@ export function deriveAgentWallet(podId: string): string {
   return `0x${padded}`.toLowerCase();
 }
 
-export const TN_POD_ID = 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0';
-export const EXEC_POD_ID = 'e35c9e25-c5f6-4b97-a1d3-4c2e5b6d8f90';
+/**
+ * Pod whose agent runs the dedicated Kairos persona and also draws on the
+ * shared philosophy corpus. Configured with NEXT_PUBLIC_KAIROS_POD_ID; when
+ * unset, every pod's agent uses the default persona.
+ */
+export const KAIROS_POD_ID: string | undefined = PODS.kairos;
 
 /**
  * Pods whose agent operation is funded by DAO grant rather than a treasury
@@ -23,7 +29,7 @@ export const EXEC_POD_ID = 'e35c9e25-c5f6-4b97-a1d3-4c2e5b6d8f90';
  * grant-funded or not, is subject to the recurring existence referendum
  * (Congregant Phase 4). No pod's agent runs by default forever.
  */
-export const GRANT_FUNDED_POD_IDS = [TN_POD_ID, EXEC_POD_ID];
+export const GRANT_FUNDED_POD_IDS: string[] = AGENT_GRANT_FUNDED_POD_IDS;
 
 /** @deprecated Use GRANT_FUNDED_POD_IDS — "exempt" meant payment only, never referendum */
 export const EXEMPT_POD_IDS = GRANT_FUNDED_POD_IDS;

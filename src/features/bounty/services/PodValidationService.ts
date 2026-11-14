@@ -4,8 +4,7 @@ import PodAuthorizationFactoryABI from '@/abis/PodAuthorizationFactory.json';
 
 // Get contract addresses from environment
 const POD_AUTHORIZATION_FACTORY_ADDRESS =
-  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`) ||
-  ('0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`);
+  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`);
 
 // Create a config for contract reads
 const config = createConfig({

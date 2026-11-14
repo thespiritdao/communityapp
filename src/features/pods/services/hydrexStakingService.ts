@@ -29,15 +29,18 @@ export const HYDREX_STAKING_ENABLED =
 // Docs: https://liquidity.api.hydrex.fi/docs
 export const HYDREX_API_BASE = 'https://liquidity.api.hydrex.fi';
 
-// $TGN on Base — must match the registered `tokens` row used for gating.
-export const TGN_TOKEN_ADDRESS =
-  '0xd75dfa972c6136f1c594fec1945302f885e1ab29';
+// Partner token whose staked balance can gate eligibility — must match the
+// registered `tokens` row used for gating (NEXT_PUBLIC_HYDREX_TGN_TOKEN).
+export const TGN_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_HYDREX_TGN_TOKEN ?? '';
 
-// Known $TGN pools on Hydrex (Base). Only positions in these pools qualify.
-export const HYDREX_TGN_POOLS = {
-  AZUSD_TGN: '0x30816a9e6572407a83ba5fd18e145d9dd81540f5',
-  USDC_TGN: '0x38564ddf10fe9941139f92d6ccdde2e094b83603',
-} as const;
+// Hydrex pools whose positions qualify (NEXT_PUBLIC_HYDREX_TGN_POOLS,
+// comma-separated pool addresses).
+export const HYDREX_TGN_POOLS: readonly string[] = (
+  process.env.NEXT_PUBLIC_HYDREX_TGN_POOLS ?? ''
+)
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
 
 /**
  * How a concentrated-liquidity position converts to "staked $TGN":

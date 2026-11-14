@@ -9,6 +9,7 @@
  * - First user exception handling
  */
 
+import { INVITE_BOOTSTRAP_WALLETS } from '@/config/deployment';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -19,7 +20,8 @@ import { supabase } from '@/lib/supabase';
 // Constants
 // ============================================================
 
-const FIRST_USER_WALLET = '0x12a0cf22d632c859b793f852af03b9d515580244';
+// Wallets that may join without an invite code come from
+// NEXT_PUBLIC_INVITE_BOOTSTRAP_WALLETS (see src/config/deployment.ts).
 
 // Characters used for invite codes (excludes confusing: 0, O, I, 1)
 const INVITE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -124,7 +126,7 @@ export async function assignInviteCodeToUser(
  * Check if wallet is the first user (exception case)
  */
 export function isFirstUser(walletAddress: string): boolean {
-  return walletAddress.toLowerCase() === FIRST_USER_WALLET.toLowerCase();
+  return INVITE_BOOTSTRAP_WALLETS.includes(walletAddress.toLowerCase());
 }
 
 /**

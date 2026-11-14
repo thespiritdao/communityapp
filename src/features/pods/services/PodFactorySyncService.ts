@@ -12,8 +12,7 @@ import { base } from 'viem/chains';
 
 // Deployed factory contract address
 const POD_AUTHORIZATION_FACTORY_ADDRESS =
-  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`) ||
-  ('0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`);
+  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`);
 
 // Temporary ABI definition until we compile and generate the JSON
 const PodAuthorizationFactoryABI = [

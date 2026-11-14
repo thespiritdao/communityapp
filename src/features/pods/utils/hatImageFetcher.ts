@@ -1,3 +1,4 @@
+import { getClientHatIds } from '@/lib/hatRegistryClient';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 
@@ -87,25 +88,18 @@ export async function fetchMultipleHatImages(
 }
 
 /**
- * Your specific HAT IDs for easy reference
+ * The deployment's structural hats, from the hat registry (loaded at app
+ * start). Keys are registry key names; unresolved keys are omitted.
  */
-export const EXISTING_HATS = {
-  EXECUTIVE_POD:
-    '0x0000074900010000000000000000000000000000000000000000000000000000',
-  DEV_POD: '0x0000074900020000000000000000000000000000000000000000000000000000',
-  BOUNTY_MANAGEMENT:
-    '0x0000074900010001000100000000000000000000000000000000000000000000',
-  FORUM_MANAGEMENT:
-    '0x0000074900010001000400000000000000000000000000000000000000000000',
-  CHAT_MANAGEMENT:
-    '0x0000074900010001000300000000000000000000000000000000000000000000',
-  EVENT_MANAGEMENT:
-    '0x0000074900010001000500000000000000000000000000000000000000000000',
-} as const;
+export function getExistingHats(): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(getClientHatIds()).filter(([, id]) => Boolean(id)),
+  ) as Record<string, string>;
+}
 
 /**
- * Fetch images for all your existing HATs
+ * Fetch images for the deployment's structural hats
  */
 export async function fetchAllExistingHatImages() {
-  return await fetchMultipleHatImages(Object.values(EXISTING_HATS));
+  return await fetchMultipleHatImages(Object.values(getExistingHats()));
 }

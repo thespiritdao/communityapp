@@ -13,15 +13,12 @@ import PodBountyServiceABI from '@/abis/PodBountyService.json';
 
 const BountyManagerV5ABI = BountyManagerV5Artifact.abi;
 
-const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
+const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS) as `0x${string}`;
 
 const BOUNTY_MANAGER_ABI = BountyManagerV5ABI;
 
-const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-  '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5') as `0x${string}`;
-const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
-  '0x1b8d424695E63ABca04E94bA46c03f1D83e14020') as `0x${string}`;
+const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN) as `0x${string}`;
+const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN) as `0x${string}`;
 const HATS_PROTOCOL_ADDRESS = (process.env.NEXT_PUBLIC_HATS_CONTRACT ||
   '0x3bc1a0ad72417f2d411118085256fc53cbddd137') as `0x${string}`;
 

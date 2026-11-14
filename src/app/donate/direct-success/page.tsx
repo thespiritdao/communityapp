@@ -1,4 +1,5 @@
 'use client';
+import { ORG_EIN } from '@/config/deployment';
 
 import React from 'react';
 import Link from 'next/link';
@@ -33,7 +34,7 @@ export default function DirectDonationSuccessPage() {
             This donation is <strong>100% tax-deductible</strong>.
           </p>
           <p className="text-[#1F453A] dark:text-[#B8D9CA]">
-            <strong>EIN:</strong> 99-1308806
+            <strong>EIN:</strong> {ORG_EIN}
           </p>
           <p className="text-[#5F5A54] dark:text-[#8FAAA1] text-xs">
             No goods or services were provided in exchange for this contribution.

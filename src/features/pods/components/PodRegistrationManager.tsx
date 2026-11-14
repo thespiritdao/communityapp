@@ -1,4 +1,5 @@
 'use client';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 import type React from 'react';
 import { useState } from 'react';
@@ -50,7 +51,11 @@ export const PodRegistrationManager: React.FC = () => {
   const [selectedPodId, setSelectedPodId] = useState<string>('');
   const [isExecuting, setIsExecuting] = useState(false);
 
-  // Executive Pod data from the database - needs to be registered in smart contract
+  // The governance (executive) pod, registered in the PodCreationManager
+  // contract. Its leader hat comes from the hat registry; the parent is the
+  // top hat of the same tree (first 4 bytes of any hat id in that tree).
+  const execLeaderHat = getClientHatId('EXECUTIVE_POD_LEADER') ?? '';
+  const topHat = execLeaderHat ? `${execLeaderHat.slice(0, 10)}${'0'.repeat(56)}` : '';
   const podsToRegister: PodForRegistration[] = [
     {
       id: 'executive-pod',
@@ -63,10 +68,8 @@ export const PodRegistrationManager: React.FC = () => {
         // These should be the actual Executive Pod lead addresses
         address || '0x0000000000000000000000000000000000000000', // For now, use connected user
       ],
-      parentHatId:
-        '0x0000074900000000000000000000000000000000000000000000000000000000', // Root DAO HAT
-      pod_leader_hat_id:
-        '0x0000074900010000000000000000000000000000000000000000000000000000',
+      parentHatId: topHat, // Top hat of the tree
+      pod_leader_hat_id: execLeaderHat,
     },
   ];
 
@@ -176,7 +179,7 @@ export const PodRegistrationManager: React.FC = () => {
             </ul>
             <p className="mt-2 text-xs" style={{ color: '#C6933F' }}>
               Note: You have the Pod Leader HAT
-              (0x0000074900010000000000000000000000000000000000000000000000000000).
+              ({execLeaderHat || 'not resolved'}).
               Pod Member HATs will be created automatically when the pod is
               activated.
             </p>

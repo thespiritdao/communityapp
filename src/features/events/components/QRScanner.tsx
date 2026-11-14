@@ -333,9 +333,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     // Use the actual event ID from props for testing
     const testQRData = {
       eventId: eventId, // Use the actual event ID passed to this component
-      walletAddress: '0x12a0cf22d632c859b793f852af03b9d515580244',
+      walletAddress: '0x0000000000000000000000000000000000000000',
       userId: null, // Will be filled by proper profile lookup
-      registrationId: '90a8e308-e96d-42ac-a10c-9d6ae292f0e0',
+      registrationId: '00000000-0000-0000-0000-000000000000',
       timestamp: Date.now(),
       expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       version: '2.0',

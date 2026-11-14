@@ -4,6 +4,7 @@
 //   no podId     → the caller's personal referral link (app access only).
 // Auth: JWT (any onboarded member for the personal link; leader/exec for a pod link).
 
+import { appUrl } from '@/config/deployment';
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import {
@@ -15,7 +16,6 @@ import { getOrCreatePodInviteUrl } from '@/lib/podInviteLink';
 
 export const runtime = 'nodejs';
 
-const APP_URL = 'https://app.spiritdao.org';
 
 export async function GET(req: NextRequest) {
   const wallet = await getWalletFromRequest(req);
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     type: 'referral',
-    url: `${APP_URL}/?invite=${sender.referral_key}`,
+    url: `${appUrl()}/?invite=${sender.referral_key}`,
     code: sender.referral_key,
   });
 }

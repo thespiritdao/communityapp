@@ -108,11 +108,9 @@ export const EligibilityCriteriaDisplay: React.FC<
     if (criterion.type === 'token_balance') {
       // Check for $SELF or $SYSTEM tokens by contract address
       const SELF_ADDRESS =
-        process.env.NEXT_PUBLIC_SELF_TOKEN?.toLowerCase() ||
-        '0xe9b4ab2eb9397fa41ac3223e96f9d988beff5d21'.toLowerCase();
+        process.env.NEXT_PUBLIC_SELF_TOKEN?.toLowerCase().toLowerCase();
       const SYSTEM_ADDRESS =
-        process.env.NEXT_PUBLIC_SYSTEM_TOKEN?.toLowerCase() ||
-        '0x1317ae277266d38c4e492558f8693f14143a6a65'.toLowerCase();
+        process.env.NEXT_PUBLIC_SYSTEM_TOKEN?.toLowerCase().toLowerCase();
 
       const contractLower = criterion.contract_address?.toLowerCase();
 
@@ -184,7 +182,7 @@ export const EligibilityCriteriaDisplay: React.FC<
       const contractLower = criterion.contract_address.toLowerCase();
 
       // Known contract addresses mapping
-      if (contractLower === '0x592e560171d2a882474cdfc3bbeedb21ceb4015d') {
+      if (contractLower === (process.env.NEXT_PUBLIC_ADVOCATE ?? '').toLowerCase()) {
         console.log('✅ Recognized Advocate contract address');
         return 'Advocate';
       }

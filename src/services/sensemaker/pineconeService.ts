@@ -1,5 +1,6 @@
 // src/services/sensemaker/pineconeService.ts
 
+import { pineconeIndexName, PINECONE_PHILOSOPHY_INDEX } from '@/config/deployment.server';
 import { Pinecone } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
 
@@ -44,8 +45,8 @@ async function getEmbedding(text: string): Promise<number[]> {
 /**
  * Query Pinecone for relevant context from specified namespace
  * Routes to appropriate index based on query type:
- * - spiritdao: Uses 'sensemaker' index with 'spiritdao' namespace
- * - temporal-naturalism: Uses existing 'spiritdao-books' index
+ * - spiritdao: Uses PINECONE_INDEX_NAME with the 'spiritdao' namespace
+ * - temporal-naturalism: Uses PINECONE_PHILOSOPHY_INDEX (default namespace)
  */
 export async function queryPinecone(
   userMessage: string,
@@ -60,14 +61,17 @@ export async function queryPinecone(
 
     if (namespace === 'spiritdao') {
       // DAO queries use sensemaker index with spiritdao namespace
-      indexName = process.env.PINECONE_INDEX_NAME || 'sensemaker';
+      indexName = pineconeIndexName();
       useNamespace = true;
       console.log(
         `[Pinecone] Querying index: ${indexName}, namespace: ${namespace}`,
       );
     } else {
-      // Philosophy queries use existing spiritdao-books index (default namespace)
-      indexName = 'spiritdao-books';
+      // Philosophy queries use the philosophy library index (default namespace)
+      if (!PINECONE_PHILOSOPHY_INDEX) {
+        throw new Error('PINECONE_PHILOSOPHY_INDEX is not configured');
+      }
+      indexName = PINECONE_PHILOSOPHY_INDEX;
       useNamespace = false;
       console.log(
         `[Pinecone] Querying index: ${indexName}, namespace: (default)`,
@@ -92,7 +96,7 @@ export async function queryPinecone(
       });
     } else {
       // Philosophy queries: use default namespace (empty string)
-      // spiritdao-books stores vectors in the default namespace
+      // the philosophy index stores vectors in the default namespace
       queryResponse = await index.namespace('').query({
         vector: embedding,
         topK,
@@ -133,12 +137,12 @@ export async function queryPinecone(
 
 /**
  * Check if Pinecone is properly configured
- * Checks both sensemaker (DAO) and spiritdao-books (Philosophy) indexes
+ * Checks the community index and, when configured, the philosophy index
  */
 export async function checkPineconeConnection(): Promise<boolean> {
   try {
     // Check sensemaker index (DAO)
-    const daoIndexName = process.env.PINECONE_INDEX_NAME || 'sensemaker';
+    const daoIndexName = pineconeIndexName();
     const daoIndex = getPinecone().index(daoIndexName);
     const daoStats = await daoIndex.describeIndexStats();
 
@@ -150,12 +154,13 @@ export async function checkPineconeConnection(): Promise<boolean> {
       Object.keys(daoStats.namespaces || {}),
     );
 
-    // Check spiritdao-books index (Philosophy)
-    const philIndex = getPinecone().index('spiritdao-books');
+    // Check the philosophy library index, when configured
+    if (!PINECONE_PHILOSOPHY_INDEX) return true;
+    const philIndex = getPinecone().index(PINECONE_PHILOSOPHY_INDEX);
     const philStats = await philIndex.describeIndexStats();
 
     console.log('[Pinecone] Philosophy index connection successful');
-    console.log(`[Pinecone] Philosophy index: spiritdao-books`);
+    console.log(`[Pinecone] Philosophy index: ${PINECONE_PHILOSOPHY_INDEX}`);
     console.log(
       `[Pinecone] Philosophy total vectors: ${philStats.totalRecordCount}`,
     );
@@ -175,7 +180,7 @@ export async function getNamespaceStats(namespace: Namespace): Promise<{
   dimensionality?: number;
 }> {
   try {
-    const indexName = process.env.PINECONE_INDEX_NAME || 'sensemaker';
+    const indexName = pineconeIndexName();
     const index = getPinecone().index(indexName);
 
     const stats = await index.describeIndexStats();

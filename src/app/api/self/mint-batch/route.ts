@@ -19,6 +19,7 @@
 // 'exec_review' rows are NOT minted here — they require explicit Exec approval
 // (a separate route/UI, §7) to flip to 'approved'/'pending' first.
 
+import { backendSmartWallet } from '@/config/deployment.server';
 import { NextRequest, NextResponse } from 'next/server';
 import { encodeFunctionData, parseAbi, keccak256, toBytes } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -44,7 +45,8 @@ const SELF_MINTER = process.env.NEXT_PUBLIC_SELF_MINTER as `0x${string}` | undef
 // Backend smart wallet that submits sponsored ops (same one used by mint-poc).
 // It — not the POD_ADMIN EOA — is the on-chain msg.sender, so it must hold
 // ATTESTOR_ROLE on SelfMinter.
-const BACKEND_SMART_WALLET = '0x05c06af9fe1a996144902D9571d1d2783866cF63' as const;
+// Backend CDP smart wallet (BACKEND_SMART_WALLET_ADDRESS), resolved at use time.
+const BACKEND_SMART_WALLET = (): `0x${string}` => backendSmartWallet();
 
 const MINTER_ABI = parseAbi([
   'struct MintItem { address to; uint224 communityId; uint32 epoch; uint256 amount; bytes32 sourceRef; }',
@@ -174,7 +176,7 @@ export async function POST(req: NextRequest) {
         : (`0x${ATTESTOR_KEY}` as `0x${string}`),
     );
     const wallet = toSmartWallet({
-      smartWalletAddress: BACKEND_SMART_WALLET,
+      smartWalletAddress: BACKEND_SMART_WALLET(),
       signer,
     });
 

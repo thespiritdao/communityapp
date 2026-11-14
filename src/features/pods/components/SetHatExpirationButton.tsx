@@ -10,7 +10,7 @@ import { encodeFunctionData } from 'viem';
 import TimeBasedToggleModuleABI from '@/contracts/TimeBasedToggleModuleABI.json';
 
 interface SetHatExpirationButtonProps {
-  hatId: string; // Hex string like "0x000000880001000b000000000000000000000000000000000000000000000000"
+  hatId: string; // Hex string like "0x000000010001000b000000000000000000000000000000000000000000000000"
   expirationTimestamp: number; // Unix timestamp in seconds
   onSuccess?: () => void;
 }

@@ -6,6 +6,8 @@
 // at pod scale that is fine. Never call this from the browser: CSP does
 // not allow the host, and the UA header is required.
 
+import { APP_NAME } from '@/config/deployment';
+import { geocodeContactEmail } from '@/config/deployment.server';
 export interface GeocodeResult {
   label: string;
   lat: number;
@@ -13,7 +15,8 @@ export interface GeocodeResult {
 }
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
-const USER_AGENT = 'SpiritDAO Community App (ron@spiritdao.org)';
+// Nominatim's usage policy requires an identifying user agent with a contact.
+const userAgent = () => `${APP_NAME} Community App (${geocodeContactEmail()})`;
 const MAX_QUERY = 200;
 
 export function normalizeGeocodeQuery(q: unknown): string {
@@ -36,7 +39,7 @@ export async function geocode(
   url.searchParams.set('limit', String(Math.min(Math.max(opts.limit ?? 5, 1), 10)));
   url.searchParams.set('q', q);
 
-  const headers: Record<string, string> = { 'User-Agent': USER_AGENT };
+  const headers: Record<string, string> = { 'User-Agent': userAgent() };
   if (opts.acceptLanguage) headers['Accept-Language'] = opts.acceptLanguage;
 
   const res = await fetch(url.toString(), { headers, cache: 'no-store' });

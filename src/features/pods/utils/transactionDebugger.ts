@@ -195,7 +195,7 @@ export function testTransactionCallCreation() {
   ];
 
   const testCall = createTransactionCall(
-    '0x43C124Df0dFb324CCC742808D9FdF62C764f2644',
+    '0x0000000000000000000000000000000000000001',
     mockABI,
     'testFunction',
     ['test-parameter'],

@@ -30,8 +30,7 @@ import { computeLeaf, computeMerkleRoot, LEAF_FORMULA } from '@/lib/ledgerMerkle
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-const LEDGER_ANCHOR = (process.env.NEXT_PUBLIC_LEDGER_ANCHOR ||
-  '0xDbcE1A7cA8a3C887D4E112FE36994D545e032b21') as `0x${string}`;
+const LEDGER_ANCHOR = (process.env.NEXT_PUBLIC_LEDGER_ANCHOR) as `0x${string}`;
 
 const ANCHOR_ABI = parseAbi([
   'function anchor(bytes32 merkleRoot, uint64 periodStart, uint64 periodEnd, uint32 eventCount) external returns (uint256)',

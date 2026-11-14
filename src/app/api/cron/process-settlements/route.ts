@@ -1,3 +1,5 @@
+import { appUrl } from '@/config/deployment';
+import { PODS } from '@/config/deployment';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCronAllowingDev } from '@/lib/cronAuth';
@@ -7,8 +9,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+const EXEC_POD_ID = (PODS.governance ?? '');
+const BASE_URL = appUrl();
 
 /**
  * Notify all active EP members that settled card donations are ready to approve.

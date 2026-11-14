@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   fetchAllExistingHatImages,
-  EXISTING_HATS,
+  getExistingHats,
 } from '../utils/hatImageFetcher';
 
 export const HatImageViewer: React.FC = () => {
@@ -71,7 +71,7 @@ export const HatImageViewer: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(EXISTING_HATS).map(([name, hatId]) => {
+            {Object.entries(getExistingHats()).map(([name, hatId]) => {
               const imageUri = images[hatId];
               const displayName = name
                 .replace(/_/g, ' ')
@@ -150,16 +150,16 @@ export const HatImageViewer: React.FC = () => {
             <div className="bg-white p-2 rounded font-mono text-xs mt-2 border">
               createPodProposal(
               <br />
-              &nbsp;&nbsp;"executive-pod",
+              &nbsp;&nbsp;"&lt;pod-id&gt;",
               <br />
-              &nbsp;&nbsp;"Executive Pod", <br />
-              &nbsp;&nbsp;"Main governance pod",
+              &nbsp;&nbsp;"&lt;Pod name&gt;", <br />
+              &nbsp;&nbsp;"&lt;Description&gt;",
               <br />
               &nbsp;&nbsp;"[PASTE_IMAGE_URI_HERE]", // ← Use copied URI
               <br />
-              &nbsp;&nbsp;["0x12a0cf22d632c859b793f852af03b9d515580244"],
+              &nbsp;&nbsp;["&lt;pod lead address&gt;"],
               <br />
-              &nbsp;&nbsp;0x0000074900000000000000000000000000000000000000000000000000000000
+              &nbsp;&nbsp;&lt;parent hat id&gt;
               <br />)
             </div>
           </div>

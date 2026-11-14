@@ -32,8 +32,7 @@ const EXPORT_VERSION = 'v1';
 const MAX_LIMIT = 1000;
 const DEFAULT_LIMIT = 200;
 
-const LEDGER_ANCHOR = process.env.NEXT_PUBLIC_LEDGER_ANCHOR ||
-  '0xDbcE1A7cA8a3C887D4E112FE36994D545e032b21';
+const LEDGER_ANCHOR = process.env.NEXT_PUBLIC_LEDGER_ANCHOR;
 
 /** Public fields only — mirrors exactly what the Merkle leaf covers, plus display fields */
 const EVENT_FIELDS = 'id, type, category, title, actor, actor_type, recipient_address, pod_id, amount_value, amount_token, url, created_at';

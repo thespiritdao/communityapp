@@ -1,5 +1,6 @@
 // src/providers/CDPEmbeddedProvider.tsx
 'use client';
+import { APP_NAME } from '@/config/deployment';
 
 import type { ReactNode } from 'react';
 import { CDPHooksProvider } from '@coinbase/cdp-hooks';
@@ -166,7 +167,7 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
           },
         ],
       },
-      appName: 'SpiritDAO',
+      appName: APP_NAME,
       appLogoUrl: '/spiritdaosymbol.png',
     }),
     [projectId, paymasterEndpoint],

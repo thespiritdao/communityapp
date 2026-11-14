@@ -565,7 +565,7 @@ export default function ConsolidatedTreasuryDeployer({
                 <div className="flex flex-wrap gap-2">
                   {DEFAULT_SUPPORTED_TOKENS.map((token, index) => (
                     <Badge key={index} variant="secondary">
-                      {token === '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+                      {token.toLowerCase() === (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ?? '').toLowerCase()
                         ? '$SPIRIT'
                         : '$SELF'}
                     </Badge>

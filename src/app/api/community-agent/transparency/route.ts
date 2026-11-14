@@ -13,7 +13,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getCorpusSummary } from '@/services/communityAgent/forumCorpusService';
-import { TN_POD_ID } from '@/services/communityAgent/types';
+import { KAIROS_POD_ID } from '@/services/communityAgent/types';
 import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const cfg = data.community_agent_config || {};
-  const summary = await getCorpusSummary(podId, cfg, podId === TN_POD_ID);
+  const summary = await getCorpusSummary(podId, cfg, podId === KAIROS_POD_ID);
 
   // Caller's own opt-out status, when authenticated
   let myOptOut: boolean | null = null;

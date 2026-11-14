@@ -32,12 +32,8 @@ import { UnifiedAgreementService } from '../services/UnifiedAgreementService';
 import { AgreementIPFSService } from '../services/AgreementIPFSService';
 
 // Token constants from environment variables
-const SYSTEM_TOKEN_ADDRESS =
-  process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-  '0x1317Ae277266D38C4E492558f8693F14143a6A65';
-const SELF_TOKEN_ADDRESS =
-  process.env.NEXT_PUBLIC_SELF_TOKEN ||
-  '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21';
+const SYSTEM_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN ?? '';
+const SELF_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SELF_TOKEN ?? '';
 
 interface AvailableToken {
   name: string;

@@ -1,4 +1,5 @@
 // src/app/layout.tsx
+import { APP_NAME, BASE_APP_ID } from '@/config/deployment';
 import { ModuleErrorBoundary } from '@/components/ModuleErrorBoundary';
 import { PWAManager } from '@/components/PWAManager';
 import { GA_MEASUREMENT_ID } from '@/lib/analytics';
@@ -23,22 +24,20 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 // PWA Metadata
 export const metadata: Metadata = {
-  title: 'SpiritDAO Community',
+  title: `${APP_NAME} Community`,
   description:
     'Decentralized community platform for coordination and governance',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SpiritDAO',
+    title: APP_NAME,
   },
   icons: {
     icon: '/icons/icon-192.png',
     apple: '/apple-touch-icon.png',
   },
-  other: {
-    'base:app_id': '69d3bb0887bcdc902b52fd3b',
-  },
+  other: BASE_APP_ID ? { 'base:app_id': BASE_APP_ID } : {},
 };
 
 export const viewport: Viewport = {

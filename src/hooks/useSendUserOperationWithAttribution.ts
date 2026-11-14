@@ -1,25 +1,25 @@
 // src/hooks/useSendUserOperationWithAttribution.ts
 //
 // Drop-in replacement for useSendUserOperation from @coinbase/cdp-hooks.
-// Passes ERC-8021 dataSuffix as a top-level param to sendUserOperation so
-// the CDP SDK appends it to the outer UserOperation callData — the correct
-// location for Base builder code attribution indexing.
+// Passes an ERC-8021 dataSuffix as a top-level param to sendUserOperation so
+// the CDP SDK appends it to the outer UserOperation callData, the location
+// Base builder-code attribution indexing reads.
 //
-// Builder Code: bc_hqymcgxs
-// Suffix format: [0x0b][ASCII "bc_hqymcgxs"][0x00 schema][16-byte ERC marker]
-// Encoded: 0x0b62635f6871796d636778730080218021802180218021802180218021
+// The builder code comes from NEXT_PUBLIC_BUILDER_CODE (see
+// src/config/deployment.ts). With no builder code configured, operations are
+// sent unchanged.
 
 import { useSendUserOperation } from '@coinbase/cdp-hooks';
-
-const ATTRIBUTION_SUFFIX = '0x0b62635f6871796d636778730080218021802180218021802180218021';
+import { BUILDER_CODE_USEROP_SUFFIX } from '@/config/deployment';
 
 export function useSendUserOperationWithAttribution() {
   const { sendUserOperation, ...rest } = useSendUserOperation();
 
   const sendUserOperationWithAttribution: typeof sendUserOperation = (params) => {
+    if (!BUILDER_CODE_USEROP_SUFFIX) return sendUserOperation(params);
     return sendUserOperation({
       ...params,
-      dataSuffix: ATTRIBUTION_SUFFIX,
+      dataSuffix: BUILDER_CODE_USEROP_SUFFIX,
     } as any);
   };
 

@@ -19,6 +19,7 @@
  * hat) and, as a fallback, from the Hats contract.
  */
 
+import { PODS } from '@/config/deployment';
 import { createPublicClient, http, type Address } from 'viem';
 import { base } from 'viem/chains';
 import { supabase } from '@/utils/supabaseClient';
@@ -30,7 +31,7 @@ export type GateMode = 'public' | 'pod_members' | 'token_holders';
  * Advocate, $SYSTEM, $SELF) are issued by SpiritDAO itself. Only managers of
  * the Executive Pod may gate a bounty on them. Same id as hatRegistry.ts.
  */
-export const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+export const EXECUTIVE_POD_ID = (PODS.governance ?? '');
 
 /**
  * 'event' = attended (checked in to, or completed) a specific event. The id

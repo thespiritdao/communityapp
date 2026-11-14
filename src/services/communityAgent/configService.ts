@@ -6,7 +6,7 @@ import {
   SubscriptionStatus,
   EXEMPT_POD_IDS,
   AGENT_PSEUDO_WALLET,
-  TN_POD_ID,
+  KAIROS_POD_ID,
   deriveAgentWallet,
 } from './types';
 

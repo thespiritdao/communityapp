@@ -19,6 +19,7 @@
  * - Audit trail of all permission checks
  */
 
+import { PODS } from '@/config/deployment';
 import { supabase } from '@/utils/supabaseClient';
 
 export interface UserPermissions {
@@ -211,7 +212,7 @@ export class DatabaseFirstPermissionService {
 
       if (!podMembership) {
         // Check if user is Executive Pod member (can manage ALL pods)
-        const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+        const EXEC_POD_ID = (PODS.governance ?? '');
         const execMembership = memberships.find((m) => m.podId === EXEC_POD_ID);
 
         if (execMembership && execMembership.membershipType === 'leader') {
@@ -411,7 +412,7 @@ export class DatabaseFirstPermissionService {
   }> {
     const memberships = await this.getUserPodMemberships(userAddress);
 
-    const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+    const EXEC_POD_ID = (PODS.governance ?? '');
     const isExecutiveLeader = memberships.some(
       (m) => m.podId === EXEC_POD_ID && m.membershipType === 'leader',
     );

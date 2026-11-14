@@ -1,3 +1,19 @@
+// Deployment-specific hosts, derived from the environment at build time.
+const originOf = (url) => {
+  try {
+    return url ? new URL(url).origin : '';
+  } catch {
+    return '';
+  }
+};
+const SUPABASE_ORIGIN = originOf(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const SUPABASE_HOST = SUPABASE_ORIGIN ? new URL(SUPABASE_ORIGIN).hostname : '';
+const LIVEKIT_ORIGIN = originOf(
+  (process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL || '').replace(/^ws/, 'http'),
+);
+const FILES_ORIGIN = originOf(process.env.NEXT_PUBLIC_FILES_HOST);
+const cspHosts = (...hosts) => hosts.filter(Boolean).join(' ');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Disable React Strict Mode in development for faster loading
@@ -111,11 +127,9 @@ const nextConfig = {
         hostname: '*.wallet.coinbase.com',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'yqgqodofeliuurrmxlks.supabase.co',
-        pathname: '/**',
-      },
+      ...(SUPABASE_HOST
+        ? [{ protocol: 'https', hostname: SUPABASE_HOST, pathname: '/**' }]
+        : []),
       {
         protocol: 'https',
         hostname: 'gateway.pinata.cloud',
@@ -179,8 +193,7 @@ const nextConfig = {
                 https://keys.coinbase.com
                 https://mainnet.base.org
                 https://base-mainnet.infura.io
-                https://yqgqodofeliuurrmxlks.supabase.co
-                wss://yqgqodofeliuurrmxlks.supabase.co
+                ${cspHosts(SUPABASE_ORIGIN, SUPABASE_ORIGIN.replace(/^https/, 'wss'))}
                 https://api.thegraph.com
                 https://gateway-arbitrum.network.thegraph.com
                 https://api.pinata.cloud
@@ -190,8 +203,7 @@ const nextConfig = {
                 https://api.stripe.com
                 https://*.livekit.cloud
                 wss://*.livekit.cloud
-                https://livekit.spiritdao.org
-                wss://livekit.spiritdao.org
+                ${cspHosts(LIVEKIT_ORIGIN, LIVEKIT_ORIGIN.replace(/^https/, 'wss'))}
                 https://tiles.openfreemap.org;
               worker-src 'self' blob:;
               child-src 'self' blob:;
@@ -203,11 +215,10 @@ const nextConfig = {
                 https://ui-avatars.com;
               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
               font-src 'self' https://fonts.gstatic.com;
-              media-src 'self' https://files.spiritdao.org;
+              media-src 'self' ${cspHosts(FILES_ORIGIN)};
               frame-src 'self'
                 https://*.coinbase.com
                 https://keys.coinbase.com
-                https://spiritdao.pythonanywhere.com
                 https://js.stripe.com
                 https://hooks.stripe.com;
             `

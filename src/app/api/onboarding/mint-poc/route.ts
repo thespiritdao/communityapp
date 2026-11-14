@@ -14,6 +14,9 @@ import { createClient } from '@supabase/supabase-js';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { isRegisteredAgent } from '@/lib/agentGuard';
 import { verifyCdpWalletOwnership } from '@/lib/cdpAuth';
+import { PODS } from '@/config/deployment';
+import { backendSmartWallet } from '@/config/deployment.server';
+import { getHatId } from '@/lib/hatRegistry';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -23,8 +26,9 @@ const HAT_MINTER_ABI = parseAbi([
   'function hasTNMemberHat(address user) external view returns (bool)',
 ]);
 
-const TN_POD_ID = 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0';
-const TN_MEMBER_HAT_ID = '0x0000074900020001000100000000000000000000000000000000000000000000';
+// New members are also enrolled in the deployment's default community, when
+// one is configured (NEXT_PUBLIC_DEFAULT_POD_ID). The HatMinter contract's
+// mintTNMemberHat mints that community's member hat.
 
 async function mintTNMemberHat(
   walletAddress: string,
@@ -36,8 +40,11 @@ async function mintTNMemberHat(
   const hatMinterAddress = process.env.NEXT_PUBLIC_HAT_MINTER as `0x${string}` | undefined;
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 
+  if (!PODS.defaultCommunity) {
+    return; // no default community configured for this deployment
+  }
   if (!hatMinterAddress) {
-    console.warn('⚠️ HAT_MINTER not configured — skipping TN Member HAT mint');
+    console.warn('⚠️ HAT_MINTER not configured — skipping default-community member hat mint');
     return;
   }
 
@@ -61,7 +68,7 @@ async function mintTNMemberHat(
     privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}`
   );
   const wallet = toSmartWallet({
-    smartWalletAddress: '0x05c06af9fe1a996144902D9571d1d2783866cF63',
+    smartWalletAddress: backendSmartWallet(),
     signer,
   });
 
@@ -100,6 +107,11 @@ async function syncTNMembership(walletAddress: string): Promise<void> {
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase service credentials missing; TN membership not recorded');
   }
+  const podId = PODS.defaultCommunity;
+  const memberHatId = await getHatId('DEFAULT_POD_MEMBER');
+  if (!podId || !memberHatId) {
+    throw new Error('Default community or its member hat is not configured; membership not recorded');
+  }
   const supabase = createClient(supabaseUrl, supabaseKey);
   const wallet = walletAddress.toLowerCase();
   const now = new Date().toISOString();
@@ -107,18 +119,18 @@ async function syncTNMembership(walletAddress: string): Promise<void> {
   const { data: existing, error: readError } = await supabase
     .from('pod_members')
     .select('id, is_active')
-    .eq('pod_id', TN_POD_ID)
+    .eq('pod_id', podId)
     .eq('wallet', wallet)
     .maybeSingle();
   if (readError) throw new Error(`TN pod_members read failed: ${readError.message}`);
 
   if (!existing) {
     const { error } = await supabase.from('pod_members').insert({
-      pod_id: TN_POD_ID,
+      pod_id: podId,
       wallet,
       membership_type: 'member',
       role: 'member',
-      hat_id: TN_MEMBER_HAT_ID,
+      hat_id: memberHatId,
       is_active: true,
       joined_at: now,
       created_at: now,
@@ -213,7 +225,7 @@ export async function POST(request: NextRequest) {
       privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}`
     );
     const wallet = toSmartWallet({
-      smartWalletAddress: '0x05c06af9fe1a996144902D9571d1d2783866cF63',
+      smartWalletAddress: backendSmartWallet(),
       signer,
     });
 
@@ -241,7 +253,7 @@ export async function POST(request: NextRequest) {
     // failure here must never break onboarding.
     recordExplorerEvent({
       type: 'member_joined',
-      title: 'New member joined SpiritDAO',
+      title: 'New member joined',
       actor: walletAddress,
       url: '/members',
       metadata: { txHash, source: 'poc_mint' },

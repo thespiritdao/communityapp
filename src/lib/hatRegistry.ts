@@ -1,19 +1,15 @@
 /**
  * Hat Registry
  *
- * Server-side utility that resolves named hat keys to their on-chain hat IDs
- * by querying `pod_role_permissions.token_address`.
+ * Server-side utility that resolves named hat keys to on-chain hat ids.
  *
- * There is NO separate registry table — pod_role_permissions is the source
- * of truth. When a pod's hat tree is redeployed, update the token_address
- * in pod_role_permissions and all lookups update automatically.
+ * Every key is a hat of one of the deployment's structural pods (see PODS in
+ * src/config/deployment.ts), read from that pod's row in `pods`:
+ *   - a pod's management hat is its leader hat,
+ *   - a pod's membership hat is its member hat.
  *
- * Current hat tree (top hat 0x00000749):
- *   Executive Pod Leader    0x0000074900010000...  pod e35c9e25
- *   Community Pod parent    0x0000074900020000...  pod 86d2d359 (parent hat, no role row)
- *   Temporal Naturalism     0x0000074900020001...  pod f2bc166d (pod hat)
- *   TN Leader               0x0000074900020001000000...  pod f2bc166d, role "Temporal Naturalism Leader"
- *   TN Member               0x0000074900020001000100...  pod f2bc166d, role "Temporal Naturalism Member"
+ * There is no separate registry table. When a hat tree is redeployed, update
+ * `pods.management_hat_id` / `pods.membership_hat_id` and lookups follow.
  *
  * Server-side usage:
  *   import { getHatId, getHatIdBigInt } from '@/lib/hatRegistry';
@@ -21,47 +17,27 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { PODS } from '@/config/deployment';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type HatKey =
   | 'EXECUTIVE_POD_LEADER'
   | 'COMMUNITY_PODS_PARENT'
-  | 'TEMPORAL_NATURALISM'
-  | 'TEMPORAL_NATURALISM_LEADER'
-  | 'TEMPORAL_NATURALISM_MEMBER';
+  | 'DEFAULT_POD'
+  | 'DEFAULT_POD_LEADER'
+  | 'DEFAULT_POD_MEMBER';
 
 export type HatIds = Record<HatKey, `0x${string}` | undefined>;
 
-// ─── Pod / role lookup map ────────────────────────────────────────────────────
-// Maps each HatKey to the (pod_id, role_name) row in pod_role_permissions.
-// COMMUNITY_PODS_PARENT is the pod's own hat — stored in pods.management_hat_id,
-// not in pod_role_permissions — so we fall back to a direct pods query for that one.
+type HatColumn = 'management_hat_id' | 'membership_hat_id';
 
-const POD_ROLE_LOOKUPS: Record<
-  HatKey,
-  { podId: string; roleName: string } | { podId: string; fromPodColumn: 'management_hat_id' | 'membership_hat_id' }
-> = {
-  EXECUTIVE_POD_LEADER: {
-    podId: 'e35c9e25-d29f-4988-b1e8-2902e960b94c',
-    roleName: 'Executive Pod Leader',
-  },
-  COMMUNITY_PODS_PARENT: {
-    podId: '86d2d359-2e38-4267-b7b7-c7f6155063e2',
-    fromPodColumn: 'management_hat_id',
-  },
-  TEMPORAL_NATURALISM: {
-    podId: 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0',
-    fromPodColumn: 'management_hat_id',
-  },
-  TEMPORAL_NATURALISM_LEADER: {
-    podId: 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0',
-    roleName: 'Temporal Naturalism Leader',
-  },
-  TEMPORAL_NATURALISM_MEMBER: {
-    podId: 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0',
-    roleName: 'Temporal Naturalism Member',
-  },
+const LOOKUPS: Record<HatKey, { podId: string | undefined; column: HatColumn }> = {
+  EXECUTIVE_POD_LEADER: { podId: PODS.governance, column: 'management_hat_id' },
+  COMMUNITY_PODS_PARENT: { podId: PODS.communityParent, column: 'management_hat_id' },
+  DEFAULT_POD: { podId: PODS.defaultCommunity, column: 'management_hat_id' },
+  DEFAULT_POD_LEADER: { podId: PODS.defaultCommunity, column: 'management_hat_id' },
+  DEFAULT_POD_MEMBER: { podId: PODS.defaultCommunity, column: 'membership_hat_id' },
 };
 
 // ─── Cache ───────────────────────────────────────────────────────────────────
@@ -77,49 +53,31 @@ async function loadFromDb(): Promise<HatIds> {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
+  const podIds = [...new Set(Object.values(LOOKUPS).map((l) => l.podId).filter(Boolean))] as string[];
   const ids: Partial<HatIds> = {};
 
-  for (const [key, lookup] of Object.entries(POD_ROLE_LOOKUPS) as [HatKey, typeof POD_ROLE_LOOKUPS[HatKey]][]) {
-    try {
-      if ('roleName' in lookup) {
-        // Query pod_role_permissions by pod_id + role_name
-        const { data } = await supabase
-          .from('pod_role_permissions')
-          .select('token_address')
-          .eq('pod_id', lookup.podId)
-          .ilike('role_name', lookup.roleName)
-          .limit(1)
-          .single();
-
-        if (data?.token_address?.startsWith('0x')) {
-          ids[key] = data.token_address as `0x${string}`;
-        }
-      } else {
-        // Query pods table for management_hat_id or membership_hat_id
-        const { data } = await supabase
-          .from('pods')
-          .select(lookup.fromPodColumn)
-          .eq('id', lookup.podId)
-          .single();
-
-        const hatId = data?.[lookup.fromPodColumn];
-        if (hatId?.startsWith('0x')) {
-          ids[key] = hatId as `0x${string}`;
-        }
+  if (podIds.length > 0) {
+    const { data, error } = await supabase
+      .from('pods')
+      .select('id, management_hat_id, membership_hat_id')
+      .in('id', podIds);
+    if (error) {
+      console.error('[hatRegistry] pods lookup failed:', error.message);
+    }
+    const byId = new Map((data ?? []).map((p: any) => [p.id as string, p]));
+    for (const [key, { podId, column }] of Object.entries(LOOKUPS) as [HatKey, (typeof LOOKUPS)[HatKey]][]) {
+      const hatId = podId ? byId.get(podId)?.[column] : undefined;
+      if (typeof hatId === 'string' && hatId.startsWith('0x')) {
+        ids[key] = hatId as `0x${string}`;
       }
-    } catch (err) {
-      // Non-fatal — key will be undefined, callers handle gracefully — but log
-      // it so a misconfigured/recreated pod doesn't fail silently.
-      console.error(`[hatRegistry] lookup failed for "${key}":`, err);
     }
   }
 
-  // Surface any required hats that did not resolve. A missing key here means a
-  // pod UUID in POD_ROLE_LOOKUPS no longer matches a row (pod recreated/renamed,
-  // role renamed, or NULL management_hat_id) — which silently breaks governance
-  // and onboarding. Make it loud rather than failing open without a trace.
-  const unresolved = (Object.keys(POD_ROLE_LOOKUPS) as HatKey[]).filter(
-    (k) => !ids[k],
+  // A key whose pod is configured but did not resolve means the pod row is
+  // missing or has a NULL hat column, which breaks governance or onboarding.
+  // Keys whose pod is not configured are optional and stay silent.
+  const unresolved = (Object.keys(LOOKUPS) as HatKey[]).filter(
+    (k) => LOOKUPS[k].podId && !ids[k],
   );
   if (unresolved.length > 0) {
     console.error(
@@ -148,8 +106,8 @@ export async function getHatIdBigInt(key: HatKey): Promise<bigint> {
   const hatId = await getHatId(key);
   if (!hatId) {
     throw new Error(
-      `Hat ID for '${key}' not found in pod_role_permissions. ` +
-      `Update the token_address for that role after deploying the new hat tree.`,
+      `Hat id for '${key}' could not be resolved. Check that the pod configured ` +
+        `for it in the environment exists and has its hat columns set.`,
     );
   }
   return BigInt(hatId);

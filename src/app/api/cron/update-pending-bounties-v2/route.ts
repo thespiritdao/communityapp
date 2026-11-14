@@ -15,14 +15,12 @@ const publicClient = createPublicClient({
   transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
 });
 
-const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
+const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS) as `0x${string}`;
 
 const BOUNTY_CREATED_TOPIC = '0x53902e1474335a04152927f2e2b4e98a09b6a6f269fbab584d6ec3b22176995c';
 
 // CDP Bundler URL for querying userOperation status
-const BUNDLER_URL = process.env.NEXT_PUBLIC_PAYMASTER ||
-  'https://api.developer.coinbase.com/rpc/v1/base/[REDACTED]';
+const BUNDLER_URL = process.env.NEXT_PUBLIC_PAYMASTER ?? '';
 
 /**
  * Query CDP bundler for userOperation receipt

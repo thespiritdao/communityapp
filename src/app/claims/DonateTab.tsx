@@ -1,4 +1,5 @@
 'use client';
+import { ORG_EIN, ORG_NAME } from '@/config/deployment';
 
 import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
@@ -620,7 +621,7 @@ export default function DonateTab() {
               About Direct Donations
             </p>
             <p style={{ fontSize: '14px', color: '#5F5A54', marginBottom: '12px' }}>
-              SpiritDAO is a 501(c)(3) nonprofit (EIN: 99-1308806) providing infrastructure for mission-driven and lifestyle communities. 100% of direct donations support our operations fund, which allows us to continue offering our ecosystem for free to communities around the world.
+              {ORG_NAME} is a 501(c)(3) nonprofit (EIN: {ORG_EIN}) providing infrastructure for mission-driven and lifestyle communities. 100% of direct donations support our operations fund, which allows us to continue offering our ecosystem for free to communities around the world.
             </p>
             <p style={{ fontSize: '14px', color: '#5F5A54', marginBottom: '12px' }}>
               Unlike ecosystem funding (which returns $SYSTEM tokens), direct donations are a charitable contribution with no goods or services provided in exchange. Your entire donation is <strong style={{ color: '#1F453A' }}>tax-deductible to the full extent permitted by law</strong>.

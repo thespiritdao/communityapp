@@ -352,13 +352,10 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       // Token address based on selection (FIXED: Use correct Base mainnet addresses)
       const tokenAddress =
         formData.value.token === 'SYSTEM'
-          ? ((process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-              '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5') as `0x${string}`)
-          : ((process.env.NEXT_PUBLIC_SELF_TOKEN ||
-              '0x1b8d424695E63ABca04E94bA46c03f1D83e14020') as `0x${string}`);
+          ? ((process.env.NEXT_PUBLIC_SYSTEM_TOKEN) as `0x${string}`)
+          : ((process.env.NEXT_PUBLIC_SELF_TOKEN) as `0x${string}`);
 
-      const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-        '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
+      const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS) as `0x${string}`;
 
       const amount = parseEther(formData.value.amount);
 
@@ -620,8 +617,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         console.log('📋 Total logs in receipt:', logs?.length);
 
         // Find BountyCreated event
-        const BOUNTY_MANAGER = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-          '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
+        const BOUNTY_MANAGER = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS) as `0x${string}`;
 
         const bountyCreatedLog = logs?.find(
           (log: any) =>
@@ -736,8 +732,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         const currentFormData = formDataRef.current;
         const tokenAddress =
           currentFormData.value.token === 'SYSTEM'
-            ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5'
-            : process.env.NEXT_PUBLIC_SELF_TOKEN || '0x1b8d424695E63ABca04E94bA46c03f1D83e14020';
+            ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN
+            : process.env.NEXT_PUBLIC_SELF_TOKEN;
 
         // Save without on-chain bountyId (will be updated later)
         console.log('💾 Initiating database save with pending status...');

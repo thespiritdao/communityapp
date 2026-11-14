@@ -9,9 +9,8 @@
 //
 // Every call is a no-op when the tag is absent (dev, blocked, SSR).
 
-/** GA4 measurement ID — the spiritdao.org property, shared for cross-domain attribution. */
-export const GA_MEASUREMENT_ID =
-  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-20VLR793DH';
+/** GA4 measurement ID (NEXT_PUBLIC_GA_MEASUREMENT_ID); analytics is off when unset. */
+export { GA_MEASUREMENT_ID } from '@/config/deployment';
 
 type GtagFn = (...args: unknown[]) => void;
 

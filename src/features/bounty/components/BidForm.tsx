@@ -182,10 +182,7 @@ export const BidForm: React.FC<BidFormProps> = ({
               log.topics &&
               log.topics.length >= 3 &&
               log.address?.toLowerCase() ===
-                (
-                  process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-                  '0x29e653502083442B8B6C7c969557022F6a3CC64C'
-                ).toLowerCase(),
+                (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ?? '').toLowerCase(),
           );
 
           if (bidPlacedLog) {
@@ -399,8 +396,7 @@ export const BidForm: React.FC<BidFormProps> = ({
       console.log('🎯 Contract: BountyManager - placeBid');
       console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
-      const contractAddress = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-        '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
+      const contractAddress = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS) as `0x${string}`;
 
       // EXACT FAUCET PATTERN: Encode call data
       const callData = encodeFunctionData({

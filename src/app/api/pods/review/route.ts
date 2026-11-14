@@ -10,6 +10,7 @@
 // For community-level pods: caller must wear the exec hat.
 // For sub-pods: caller must wear the parent pod's management hat.
 
+import { PODS } from '@/config/deployment';
 import { type NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
@@ -122,7 +123,7 @@ async function resolveManagerAndHat(pod: {
   management_hat_id: string | null;
   creation_manager_address: string | null;
 }) {
-  const COMMUNITY_PARENT_UUID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
+  const COMMUNITY_PARENT_UUID = (PODS.communityParent ?? '');
   const isCommunityLevel = !pod.parent_pod_id || pod.parent_pod_id === COMMUNITY_PARENT_UUID;
 
   if (isCommunityLevel) {
@@ -372,7 +373,7 @@ export async function GET(req: NextRequest) {
       query = query.eq('parent_pod_id', parentId);
     } else {
       // Community-level pods: parent is the community pods parent
-      const COMMUNITY_PARENT_UUID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
+      const COMMUNITY_PARENT_UUID = (PODS.communityParent ?? '');
       query = query.eq('parent_pod_id', COMMUNITY_PARENT_UUID);
     }
 

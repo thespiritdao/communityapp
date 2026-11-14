@@ -8,10 +8,9 @@ const HATS_CONTRACT_ADDRESS = process.env
   .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
 
 // Module addresses for correct configuration
-const HAT_CONTROLLED_MODULE =
-  '0x50DA25530F76FcF83dA7457a97DC72042EE55373' as const; // should be the TOGGLE
-const PASSTHROUGH_MODULE =
-  '0xBDB317b6734Af8311460e457C74a0953f73B0704' as const; // should be the ELIGIBILITY
+// Toggle and eligibility modules applied by the repair flow below.
+const HAT_CONTROLLED_MODULE = (process.env.NEXT_PUBLIC_HAT_CONTROLLED_TOGGLE_MODULE ?? '') as `0x${string}`; // TOGGLE
+const PASSTHROUGH_MODULE = (process.env.NEXT_PUBLIC_EXEC_MEMBER_TOGGLE_MODULE ?? '') as `0x${string}`; // ELIGIBILITY
 
 // Minimal ABIs for hat operations
 const abiViewHat = [

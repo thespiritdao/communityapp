@@ -1491,8 +1491,7 @@ export default function Cart({
   const testApproveCall = [
     {
       to:
-        process.env.NEXT_PUBLIC_SELF_TOKEN ||
-        '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21', // $SELF token address
+        process.env.NEXT_PUBLIC_SELF_TOKEN, // $SELF token address
       abi: [
         {
           name: 'approve',
@@ -1507,8 +1506,7 @@ export default function Cart({
       ],
       functionName: 'approve',
       args: [
-        process.env.NEXT_PUBLIC_PURCHASE_BURN ||
-          '0x5CaD68445feAb8d96a8535B60CC3758B3139B3F7', // purchaseBurn contract
+        process.env.NEXT_PUBLIC_PURCHASE_BURN, // purchaseBurn contract
         '500000000000000000', // 0.5 $SELF
       ],
     },

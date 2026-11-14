@@ -10,6 +10,8 @@
  * the website's artizen-webhook.js.
  */
 
+import { CONTACT_EMAIL, ORG_EIN, ORG_NAME, ORG_URL } from '@/config/deployment';
+import { emailFromDonations } from '@/config/deployment.server';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -128,8 +130,8 @@ function fmt(n: number): string {
 function generateSystemReceiptPdf(r: SystemDonationReceipt): string {
   const lines: PdfLine[] = [
     { text: 'SPIRITDAO DONATION RECEIPT', x: 50, y: 750, size: 16, bold: true },
-    { text: 'SpiritDAO — 501(c)(3) Nonprofit Organization', x: 50, y: 720, size: 11 },
-    { text: 'EIN: 99-1308806', x: 50, y: 705, size: 11 },
+    { text: `${ORG_NAME} — 501(c)(3) Nonprofit Organization`, x: 50, y: 720, size: 11 },
+    { text: `EIN: ${ORG_EIN}`, x: 50, y: 705, size: 11 },
     { text: '-----------------------------------------------------', x: 50, y: 688, size: 10 },
 
     { text: `Date: ${r.donationDate}`, x: 50, y: 665, size: 11 },
@@ -166,8 +168,8 @@ function generateSystemReceiptPdf(r: SystemDonationReceipt): string {
     { text: 'No goods or services beyond the $SYSTEM tokens described above', x: 50, y: 174, size: 11 },
     { text: 'were provided in connection with this contribution.', x: 50, y: 157, size: 11 },
     { text: '-----------------------------------------------------', x: 50, y: 140, size: 10 },
-    { text: 'Questions? Contact us at community@spiritdao.org', x: 50, y: 117, size: 10 },
-    { text: 'spiritdao.org', x: 50, y: 102, size: 10 },
+    { text: `Questions? Contact us at ${CONTACT_EMAIL ?? ''}`, x: 50, y: 117, size: 10 },
+    { text: ORG_URL ? new URL(ORG_URL).host : '', x: 50, y: 102, size: 10 },
   ];
 
   return buildPdf(lines);
@@ -176,8 +178,8 @@ function generateSystemReceiptPdf(r: SystemDonationReceipt): string {
 function generateDirectReceiptPdf(r: DirectDonationReceipt): string {
   const lines: PdfLine[] = [
     { text: 'SPIRITDAO DONATION RECEIPT', x: 50, y: 750, size: 16, bold: true },
-    { text: 'SpiritDAO — 501(c)(3) Nonprofit Organization', x: 50, y: 720, size: 11 },
-    { text: 'EIN: 99-1308806', x: 50, y: 705, size: 11 },
+    { text: `${ORG_NAME} — 501(c)(3) Nonprofit Organization`, x: 50, y: 720, size: 11 },
+    { text: `EIN: ${ORG_EIN}`, x: 50, y: 705, size: 11 },
     { text: '-----------------------------------------------------', x: 50, y: 688, size: 10 },
 
     { text: `Date: ${r.donationDate}`, x: 50, y: 665, size: 11 },
@@ -193,7 +195,7 @@ function generateDirectReceiptPdf(r: DirectDonationReceipt): string {
 
     { text: 'TAX RECEIPT', x: 50, y: 494, size: 12, bold: true },
     { text: 'This letter serves as your official receipt for tax purposes.', x: 50, y: 474, size: 11 },
-    { text: 'SpiritDAO is a registered 501(c)(3) nonprofit organization.', x: 50, y: 457, size: 11 },
+    { text: `${ORG_NAME} is a registered 501(c)(3) nonprofit organization.`, x: 50, y: 457, size: 11 },
     { text: '', x: 50, y: 444, size: 11 },
     { text: `Your entire donation of $${fmt(r.fiatAmount)} is tax-deductible to the`, x: 50, y: 431, size: 11 },
     { text: 'full extent permitted by law.', x: 50, y: 414, size: 11 },
@@ -208,8 +210,8 @@ function generateDirectReceiptPdf(r: DirectDonationReceipt): string {
 
     { text: 'Please retain this document as your official donation receipt.', x: 50, y: 271, size: 11 },
     { text: '-----------------------------------------------------', x: 50, y: 254, size: 10 },
-    { text: 'Questions? Contact us at community@spiritdao.org', x: 50, y: 231, size: 10 },
-    { text: 'spiritdao.org', x: 50, y: 216, size: 10 },
+    { text: `Questions? Contact us at ${CONTACT_EMAIL ?? ''}`, x: 50, y: 231, size: 10 },
+    { text: ORG_URL ? new URL(ORG_URL).host : '', x: 50, y: 216, size: 10 },
   ];
 
   return buildPdf(lines);
@@ -247,7 +249,7 @@ export async function sendDonationReceiptEmail(receipt: DonationReceipt): Promis
       : buildDirectEmailBody(receipt);
 
     const { error } = await resend.emails.send({
-      from: 'SpiritDAO Donations <donations@spiritdao.org>',
+      from: emailFromDonations(),
       to: receipt.donorEmail,
       subject,
       html: bodyText,
@@ -329,10 +331,10 @@ function buildSystemEmailBody(r: SystemDonationReceipt): string {
 
   <div style="border-top: 1px solid #D8D2C8; margin-top: 32px; padding-top: 20px;">
     <p style="font-size: 0.75rem; color: #8FAAA1; margin: 0 0 8px;">
-      SpiritDAO is a registered 501(c)(3) (EIN: 99-1308806)
+      ${ORG_NAME} is a registered 501(c)(3) (EIN: ${ORG_EIN})
     </p>
     <p style="font-size: 0.75rem; color: #8FAAA1; margin: 0;">
-      Questions? Contact us at <a href="mailto:community@spiritdao.org" style="color: #8FAAA1;">community@spiritdao.org</a>
+      Questions? Contact us at <a href="mailto:${CONTACT_EMAIL ?? ''}" style="color: #8FAAA1;">${CONTACT_EMAIL ?? ''}</a>
     </p>
   </div>
 
@@ -379,7 +381,7 @@ function buildDirectEmailBody(r: DirectDonationReceipt): string {
   </div>
 
   <p style="font-size: 0.9375rem; color: #5F5A54; line-height: 1.7;">
-    SpiritDAO is a registered 501(c)(3) nonprofit organization (EIN: 99-1308806). Your entire donation of <strong>$${fmt(r.fiatAmount)}</strong> is tax-deductible to the full extent permitted by law.
+    ${ORG_NAME} is a registered 501(c)(3) nonprofit organization (EIN: ${ORG_EIN}). Your entire donation of <strong>$${fmt(r.fiatAmount)}</strong> is tax-deductible to the full extent permitted by law.
   </p>
 
   <p style="font-size: 0.9375rem; color: #5F5A54; line-height: 1.7;">
@@ -388,10 +390,10 @@ function buildDirectEmailBody(r: DirectDonationReceipt): string {
 
   <div style="border-top: 1px solid #D8D2C8; margin-top: 32px; padding-top: 20px;">
     <p style="font-size: 0.75rem; color: #8FAAA1; margin: 0 0 8px;">
-      SpiritDAO is a registered 501(c)(3) (EIN: 99-1308806)
+      ${ORG_NAME} is a registered 501(c)(3) (EIN: ${ORG_EIN})
     </p>
     <p style="font-size: 0.75rem; color: #8FAAA1; margin: 0;">
-      Questions? Contact us at <a href="mailto:community@spiritdao.org" style="color: #8FAAA1;">community@spiritdao.org</a>
+      Questions? Contact us at <a href="mailto:${CONTACT_EMAIL ?? ''}" style="color: #8FAAA1;">${CONTACT_EMAIL ?? ''}</a>
     </p>
   </div>
 

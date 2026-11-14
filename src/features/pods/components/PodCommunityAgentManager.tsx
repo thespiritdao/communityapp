@@ -1,5 +1,6 @@
 // Pod Community Agent Manager - Configure AI agent for your pod
 'use client';
+import { PODS } from '@/config/deployment';
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/utils/supabaseClient';
@@ -28,7 +29,7 @@ import { encodeFunctionData, parseUnits } from 'viem';
 import AgentEventDrafts from './AgentEventDrafts';
 import purchaseRouterABI from '@/abis/PurchaseRouterDecentralized.json';
 
-const TN_POD_ID = 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0';
+const KAIROS_POD_ID = PODS.kairos;
 
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 const PURCHASE_ROUTER = process.env.NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}`;
@@ -810,7 +811,7 @@ export default function PodCommunityAgentManager({
           <Label htmlFor="agent-persona" className="text-xs text-muted-foreground">
             Persona / System Prompt
           </Label>
-          {podId === TN_POD_ID ? (
+          {KAIROS_POD_ID && podId === KAIROS_POD_ID ? (
             <div className="mt-1 p-3 rounded-lg text-sm" style={{ backgroundColor: '#F5EDD7', border: '1px solid #D1C4A9' }}>
               <p className="font-medium text-[#3C3C3C] text-xs">Kairos — Dedicated Persona</p>
               <p className="text-xs text-[#7C6F5B] mt-1">
@@ -830,7 +831,7 @@ export default function PodCommunityAgentManager({
               rows={5}
             />
           )}
-          {podId !== TN_POD_ID && (
+          {!(KAIROS_POD_ID && podId === KAIROS_POD_ID) && (
             <p className="text-[10px] text-[#A39171] mt-1">
               Leave blank to use the default prompt shown above. Edit to customize your agent's personality, tone, and expertise.
             </p>
@@ -942,9 +943,9 @@ export default function PodCommunityAgentManager({
           Knowledge Base
         </div>
         <div className="p-3 rounded-lg text-sm space-y-1" style={{ backgroundColor: '#F5EDD7', border: '1px solid #D1C4A9' }}>
-          {podId === 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0' ? (
+          {KAIROS_POD_ID && podId === KAIROS_POD_ID ? (
             <>
-              <p className="font-medium text-[#3C3C3C]">Connected to Temporal Naturalism library</p>
+              <p className="font-medium text-[#3C3C3C]">Connected to the shared philosophy library</p>
               <p className="text-xs text-[#7C6F5B]">
                 Your agent draws from the shared philosophy collection plus any documents you upload.
               </p>

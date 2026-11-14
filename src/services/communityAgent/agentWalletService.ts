@@ -12,6 +12,7 @@
 // community_agent_config is pure public data, and every signer is recoverable
 // from the one env secret.
 
+import { backendSmartWallet } from '@/config/deployment.server';
 import { createHmac } from 'crypto';
 import { createPublicClient, http, encodeFunctionData, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -38,7 +39,7 @@ export const AGENT_REGISTRY_ABI = parseAbi([
 ]);
 
 /** Backend admin smart wallet (same account used by mint-poc / self mint routes) */
-const ADMIN_SMART_WALLET = '0x05c06af9fe1a996144902D9571d1d2783866cF63' as const;
+// Backend CDP smart wallet (BACKEND_SMART_WALLET_ADDRESS), resolved at use time.
 
 /** secp256k1 curve order — derived keys must be in (0, n) */
 const SECP256K1_N = BigInt(
@@ -228,7 +229,7 @@ export async function registerAgentOnchain(podId: string, agentAddress: string):
   const signer = privateKeyToAccount(
     adminKey.startsWith('0x') ? (adminKey as `0x${string}`) : `0x${adminKey}`,
   );
-  const wallet = toSmartWallet({ smartWalletAddress: ADMIN_SMART_WALLET, signer });
+  const wallet = toSmartWallet({ smartWalletAddress: backendSmartWallet(), signer });
 
   const callData = encodeFunctionData({
     abi: AGENT_REGISTRY_ABI,

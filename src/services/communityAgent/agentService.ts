@@ -9,7 +9,7 @@ import { queryAgentCorpus } from './corpusService';
 import { buildKairosSystemPrompt } from './prompts/kairos';
 import { buildDefaultSystemPrompt } from './prompts/default';
 import {
-  TN_POD_ID,
+  KAIROS_POD_ID,
   type AgentContentRequest,
   type AgentContentResponse,
   type ConversationMessage,
@@ -84,7 +84,7 @@ export async function generateAgentContent(
 
   // Build system prompt based on pod type
   let systemPrompt: string;
-  if (request.podId === TN_POD_ID) {
+  if (request.podId === KAIROS_POD_ID) {
     systemPrompt = buildKairosSystemPrompt(
       request.taskType,
       contextString,

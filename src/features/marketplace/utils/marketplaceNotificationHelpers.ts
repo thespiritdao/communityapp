@@ -85,7 +85,7 @@ export async function getFulfillmentManagers(
     let podId: string | undefined;
 
     if (requiredToken.startsWith('pod_')) {
-      // Dynamic format: pod_f2bc166d-33d5-47dc-8409-ea8d445d3fc0_leader
+      // Dynamic format: pod_<pod-uuid>_leader
       // Extract the UUID (everything between 'pod_' and the last '_')
       const parts = requiredToken.split('_');
       if (parts.length >= 2) {

@@ -432,7 +432,7 @@ export function ProfileEditForm({
                   type="url"
                   className="input"
                   {...register('website')}
-                  placeholder="https://spiritdao.org"
+                  placeholder="https://example.org"
                 />
                 <small style={{ fontSize: '0.85rem', color: '#555' }}>
                   Please include https://

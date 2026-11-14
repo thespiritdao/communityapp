@@ -19,7 +19,7 @@ const LOCAL_TOKEN_MAPPING: Record<string, LocalTokenInfo> = {
     name: '$SELF',
     description: "SpiritDAO's time-bound community currency.",
     image: '/images/erc20tokens/SelfToken.png',
-    contract_address: '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21',
+    contract_address: process.env.NEXT_PUBLIC_SELF_TOKEN ?? '',
     token_type: 'erc20',
   },
   $system: {
@@ -27,7 +27,7 @@ const LOCAL_TOKEN_MAPPING: Record<string, LocalTokenInfo> = {
     name: '$SYSTEM',
     description: "SpiritDAO's fiat-bound community currency.",
     image: '/images/erc20tokens/SystemToken.png',
-    contract_address: '0x1317Ae277266D38C4E492558f8693F14143a6A65',
+    contract_address: process.env.NEXT_PUBLIC_SYSTEM_TOKEN ?? '',
     token_type: 'erc20',
   },
   advocate: {

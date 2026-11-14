@@ -11,8 +11,7 @@ import PodAuthorizationFactoryABI from '@/abis/PodAuthorizationFactory.json';
 
 // Use PodAuthorizationFactory instead of PodBountyService
 const POD_AUTHORIZATION_FACTORY_ADDRESS =
-  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`) ||
-  ('0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`);
+  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`);
 
 export class PodBlockchainSyncService {
   private static publicClient = createPublicClient({

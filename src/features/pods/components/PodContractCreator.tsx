@@ -50,14 +50,12 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
   const { sendUserOperation } = useSendUserOperation();
   const [step, setStep] = useState<'propose' | 'activate'>('propose');
   const [formData, setFormData] = useState({
-    podId: 'executive-pod',
-    name: 'Executive Pod',
-    description:
-      'Main executive leadership pod for DAO governance and operations',
-    imageURI: 'https://example.com/executive-pod.png',
+    podId: '',
+    name: '',
+    description: '',
+    imageURI: '',
     podLeads: '', // comma-separated addresses
-    parentHatId:
-      '50280300534235943217053983137291611206333274348038167677258233114787840', // Top Hat ID in decimal (0x0000074900000000...)
+    parentHatId: '', // parent hat id, in decimal
   });
   const [createdPodId, setCreatedPodId] = useState<string>('');
   const [isProposing, setIsProposing] = useState(false);

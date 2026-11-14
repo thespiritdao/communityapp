@@ -9,6 +9,8 @@
 //      (the mint itself must stay a frontend exec action — admin EOA cannot
 //      use the CDP paymaster)
 
+import { appUrl } from '@/config/deployment';
+import { PODS } from '@/config/deployment';
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
@@ -21,8 +23,8 @@ export const maxDuration = 300;
 
 const POD_CREATION_MANAGER = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
-const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+const EXEC_POD_ID = (PODS.governance ?? '');
+const BASE_URL = appUrl();
 
 // PodStatus enum in PodCreationManagerV2: 0=PendingReview, 1=Active, 2=Vetoed, 3=Inactive
 const CHAIN_STATUS = { PENDING_REVIEW: 0, ACTIVE: 1, VETOED: 2, INACTIVE: 3 } as const;

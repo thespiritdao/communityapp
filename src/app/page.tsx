@@ -115,7 +115,8 @@ function PageContent() {
   // very first render — before any effects run. This prevents the invite gate race condition.
   const [hasKnownUser, setHasKnownUser] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    const SUPABASE_PROJECT = 'yqgqodofeliuurrmxlks';
+    // supabase-js stores the session under sb-<project-ref>-auth-token.
+    const SUPABASE_PROJECT = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://local').hostname.split('.')[0];
     try {
       const stored = localStorage.getItem(`sb-${SUPABASE_PROJECT}-auth-token`);
       if (stored) {
@@ -232,7 +233,7 @@ function PageContent() {
         hasKnownUser,
         oauthInProgress,
         returning_user: localStorage.getItem('returning_user'),
-        sb_key: !!localStorage.getItem('sb-yqgqodofeliuurrmxlks-auth-token'),
+        sb_key: !!localStorage.getItem(`sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://local').hostname.split('.')[0]}-auth-token`),
       };
 
       const urlParams = new URLSearchParams(window.location.search);

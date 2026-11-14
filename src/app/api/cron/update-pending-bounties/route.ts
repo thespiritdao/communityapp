@@ -28,8 +28,7 @@ const BOUNTY_CREATED_EVENT_ABI = {
   ],
 } as const;
 
-const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
+const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS) as `0x${string}`;
 
 /**
  * Cron job to update pending bounties

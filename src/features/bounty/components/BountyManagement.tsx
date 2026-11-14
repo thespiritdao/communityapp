@@ -358,7 +358,6 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
       effectiveStatusFilter,
       activeTab,
       podId,
-      targetBountyId: '735611ef-9809-4681-8aaf-db3d22c62ae8',
     });
 
     const filtered = bounties.filter((bounty) => {
@@ -380,31 +379,6 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
       // Filter by pod: show pod-specific bounties + DAO-wide (required_pod_id null)
       const isDAOWide = (bounty as any).required_pod_id === null || (bounty as any).required_pod_id === undefined;
       const matchesPod = podId === 'all' || !podId || bounty.podId === podId || isDAOWide;
-
-      // Log Test Bounty 18 specifically
-      if (bounty.id === '735611ef-9809-4681-8aaf-db3d22c62ae8') {
-        console.log('🎯 TEST BOUNTY 18 FILTERING:', {
-          bountyId: bounty.id,
-          title: bounty.title,
-          status: bounty.status,
-          statusLabel:
-            bounty.status === 0
-              ? 'open'
-              : bounty.status === 1
-                ? 'assigned'
-                : bounty.status === 2
-                  ? 'completed'
-                  : 'cancelled',
-          podId: bounty.podId,
-          searchTerm,
-          effectiveStatusFilter,
-          matchesSearch,
-          matchesStatus,
-          matchesCategory,
-          matchesPod,
-          willBeIncluded: matchesSearch && matchesStatus && matchesCategory && matchesPod,
-        });
-      }
 
       return matchesSearch && matchesStatus && matchesCategory && matchesPod;
     });

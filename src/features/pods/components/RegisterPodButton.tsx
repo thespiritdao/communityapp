@@ -11,8 +11,7 @@ import PodBountyServiceABIJson from '@/abis/PodBountyService.json';
 
 const PodBountyServiceABI = PodBountyServiceABIJson as Abi;
 
-const POD_BOUNTY_SERVICE =
-  '0xbccee13f13Ca4f97758c79C8FF05ff7EB9290396' as `0x${string}`;
+const POD_BOUNTY_SERVICE = process.env.NEXT_PUBLIC_POD_BOUNTY_SERVICE as `0x${string}`;
 
 interface RegisterPodButtonProps {
   pod: {

@@ -3,6 +3,7 @@
 // Links grant MEMBER roles only — leader roles always go through explicit
 // approval flows.
 
+import { appUrl } from '@/config/deployment';
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import {
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     link,
-    url: `https://app.spiritdao.org/?invite=${link.code}`,
+    url: `${appUrl()}/?invite=${link.code}`,
   });
 }
 

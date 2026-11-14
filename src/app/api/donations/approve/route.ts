@@ -1,3 +1,4 @@
+import { PODS } from '@/config/deployment';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http, getAddress } from 'viem';
@@ -42,7 +43,7 @@ async function verifyExecutiveRole(walletAddress: string): Promise<boolean> {
       .from('pod_members')
       .select('revoked_by_governance')
       .eq('wallet', walletAddress.toLowerCase())
-      .eq('pod_id', '00000001-0000-0000-0000-000000000001') // Executive Pod ID
+      .eq('pod_id', PODS.governance ?? '') // governance (executive) pod
       .single();
 
     // If revoked in database, reject immediately
@@ -54,7 +55,7 @@ async function verifyExecutiveRole(walletAddress: string): Promise<boolean> {
     // Load hat ID from registry
     const executiveHatId = await getHatId('EXECUTIVE_POD_LEADER');
     if (!executiveHatId) {
-      console.error('❌ EXECUTIVE_POD_LEADER hat ID not configured in hat_registry');
+      console.error('❌ EXECUTIVE_POD_LEADER hat ID could not be resolved (check NEXT_PUBLIC_GOVERNANCE_POD_ID)');
       return false;
     }
 

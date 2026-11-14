@@ -1,4 +1,5 @@
 // src/utils/fetchTokenBalances.ts
+import { appUrl } from '@/config/deployment';
 import Web3 from 'web3';
 import { supabase } from '@/utils/supabaseClient';
 
@@ -88,9 +89,8 @@ const MARKET_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_MARKET_MANAGEMENT;
 const EVENT_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_EVENT_MANAGEMENT;
 
 // Advocate NFT contract — donor accreditation token (historically a
-// member-level token). Fallback matches the live .env value.
-const ADVOCATE_TOKEN_CONTRACT =
-  process.env.NEXT_PUBLIC_ADVOCATE || '0x3f0A79ff40D8e15933f24A9F7D0baAdCD7577759';
+// member-level token).
+const ADVOCATE_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_ADVOCATE ?? '';
 
 // Create a Web3 provider and instance.
 const provider = new Web3.providers.HttpProvider(RPC_URL!);
@@ -646,7 +646,7 @@ export async function fetchTokenBalances(
         // (fetchTokenBalances is also called from API routes, where a relative
         // URL has no base).
         const base =
-          process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+          appUrl();
         const holdingsRes = await fetch(
           `${base}/api/self/holdings?wallet=${walletAddress}`,
         );

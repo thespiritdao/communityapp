@@ -1,3 +1,4 @@
+import { emailFrom } from '@/config/deployment.server';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
@@ -209,7 +210,7 @@ async function sendClaimEmail({
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const displayAmount = amount != null ? Number(amount).toLocaleString() : '?';
-  const from = 'SpiritDAO <community@spiritdao.org>';
+  const from = emailFrom();
 
   if (action === 'approve') {
     await resend.emails.send({

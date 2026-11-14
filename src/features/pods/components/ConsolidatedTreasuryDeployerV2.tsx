@@ -32,11 +32,9 @@ import { supabase } from '@/utils/supabaseClient';
 const POD_TREASURY_FACTORY_ADDRESS = (process.env
   .NEXT_PUBLIC_POD_TREASURY_FACTORY ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
-const POD_AUTH_FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY ||
-  '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
+const POD_AUTH_FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY) as `0x${string}`;
 const POD_BOUNTY_SERVICE_ADDRESS = (process.env
-  .NEXT_PUBLIC_POD_BOUNTY_SERVICE ||
-  '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
+  .NEXT_PUBLIC_POD_BOUNTY_SERVICE) as `0x${string}`;
 
 // Default supported tokens for a pod treasury. Only $SYSTEM: $SELF is now a
 // soulbound token that pods never hold (it is a per-epoch minting budget, not a
@@ -662,7 +660,7 @@ export default function ConsolidatedTreasuryDeployerV2() {
               <div className="flex flex-wrap gap-2 mt-2">
                 {DEFAULT_SUPPORTED_TOKENS.map((token, index) => (
                   <Badge key={index} variant="secondary">
-                    {token === '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+                    {token.toLowerCase() === (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ?? '').toLowerCase()
                       ? '$SPIRIT'
                       : '$SELF'}
                   </Badge>

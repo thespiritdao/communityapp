@@ -6,6 +6,8 @@
 // sends per sender per day, dedup against existing members and anyone invited
 // in the last 30 days.
 
+import { appUrl, CONTACT_EMAIL } from '@/config/deployment';
+import { emailFrom } from '@/config/deployment.server';
 import { type NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
@@ -20,7 +22,6 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_PER_DAY = 20;
-const APP_URL = 'https://app.spiritdao.org';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
   // Pod-enroll link if the sender leads/execs the selected pod; otherwise the
   // personal referral link (app access only).
   const inviteCode = podEnrollCode || sender.referral_key;
-  const inviteUrl = `${APP_URL}/?invite=${inviteCode}`;
+  const inviteUrl = `${appUrl()}/?invite=${inviteCode}`;
   const results: Array<{ email: string; status: 'sent' | 'skipped'; reason?: string }> = [];
   let sentCount = 0;
 
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const { error: sendError } = await resend.emails.send({
-        from: 'SpiritDAO <community@spiritdao.org>',
+        from: emailFrom(),
         to: email,
         subject: podEnrollCode
           ? `${senderName} invited you to join ${podName} on SpiritDAO`
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
           `This invitation was sent by ${senderName} through the SpiritDAO app. If you weren't expecting it, you can simply ignore this email — you won't receive any further messages unless you join.`,
           '',
           'The SpiritDAO Team',
-          'community@spiritdao.org | https://app.spiritdao.org',
+          [CONTACT_EMAIL, appUrl()].filter(Boolean).join(' | '),
         ].join('\n'),
       });
       if (sendError) {

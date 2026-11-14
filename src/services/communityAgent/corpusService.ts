@@ -3,11 +3,12 @@
 // Per-pod RAG retrieval for community agents.
 // Reuses the same Pinecone account and embedding model as Sensemaker.
 // Each pod gets namespace `agent-{podId}`.
-// TN pod also queries the shared `spiritdao-books` index.
+// The Kairos pod also queries the shared philosophy index (PINECONE_PHILOSOPHY_INDEX).
 
+import { PINECONE_PHILOSOPHY_INDEX } from '@/config/deployment.server';
 import { Pinecone } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
-import { TN_POD_ID, type RelevantContext } from './types';
+import { KAIROS_POD_ID, type RelevantContext } from './types';
 
 let _pinecone: Pinecone | null = null;
 function getPinecone() {
@@ -22,7 +23,7 @@ function getOpenAI() {
 }
 
 const SENSEMAKER_INDEX = 'sensemaker';
-const BOOKS_INDEX = 'spiritdao-books';
+const BOOKS_INDEX = PINECONE_PHILOSOPHY_INDEX;
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIM = 1536;
 
@@ -37,7 +38,7 @@ async function getEmbedding(text: string): Promise<number[]> {
 
 /**
  * Query the pod-specific agent corpus.
- * For the TN pod, also queries the shared spiritdao-books index and merges results.
+ * For the Kairos pod, also queries the shared philosophy index and merges results.
  */
 export async function queryAgentCorpus(
   podId: string,
@@ -68,8 +69,8 @@ export async function queryAgentCorpus(
       console.warn(`[AgentCorpus] Pod namespace query failed for ${namespace}:`, err);
     }
 
-    // For TN pod, also query the shared spiritdao-books index
-    if (podId === TN_POD_ID) {
+    // For the Kairos pod, also query the shared philosophy index
+    if (podId === KAIROS_POD_ID && BOOKS_INDEX) {
       try {
         const booksIndex = getPinecone().index(BOOKS_INDEX);
         const booksResponse = await booksIndex.namespace('').query({
@@ -81,11 +82,11 @@ export async function queryAgentCorpus(
           results.push({
             content: (match.metadata?.text as string) || '',
             score: match.score || 0,
-            metadata: { ...match.metadata, source_index: 'spiritdao-books' },
+            metadata: { ...match.metadata, source_index: BOOKS_INDEX },
           });
         }
       } catch (err) {
-        console.warn('[AgentCorpus] spiritdao-books query failed:', err);
+        console.warn('[AgentCorpus] philosophy index query failed:', err);
       }
     }
 

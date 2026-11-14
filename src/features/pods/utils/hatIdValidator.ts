@@ -133,7 +133,7 @@ export function generateValidHatId(parentHatId?: string): string {
 
 /**
  * Fixes the problematic executive pod hat ID
- * The current ID 0x0000008800010000000000000000000000000000000000000000000000000000
+ * The current ID 0x0000000100010000000000000000000000000000000000000000000000000000
  * converts to an invalid value. This provides a corrected version.
  */
 export function getFixedExecutivePodHatId(): string {
@@ -142,13 +142,3 @@ export function getFixedExecutivePodHatId(): string {
   return '0x0000000000000000000000000000000000000000000000000000000000000001';
 }
 
-/**
- * Migration helper to update invalid hat IDs in the database
- */
-export function createHatIdMigrationMap(): Record<string, string> {
-  return {
-    // Map the problematic hat ID to a valid one
-    '0x0000074900010000000000000000000000000000000000000000000000000000':
-      getFixedExecutivePodHatId(),
-  };
-}

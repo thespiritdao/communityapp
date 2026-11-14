@@ -10,6 +10,7 @@
 // POST { action:'reviewMint', mintId, decision:'approved'|'rejected' }
 // POST { action:'advanceEpoch' }   (signs SelfEpochs.advanceEpoch via admin key)
 
+import { backendSmartWallet } from '@/config/deployment.server';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -45,7 +46,8 @@ const publicClient = createPublicClient({ chain: base, transport: http() });
 // Backend smart wallet (POD_ADMIN's sponsored account) — the on-chain caller
 // for advanceEpoch. It must hold EPOCH_ADMIN_ROLE on SelfEpochs. The web wallet
 // 0xd481 key is NEVER used by the app.
-const BACKEND_SMART_WALLET = '0x05c06af9fe1a996144902D9571d1d2783866cF63' as const;
+// Backend CDP smart wallet (BACKEND_SMART_WALLET_ADDRESS), resolved at use time.
+const BACKEND_SMART_WALLET = (): `0x${string}` => backendSmartWallet();
 
 const HATS_ABI = [
   {
@@ -212,7 +214,7 @@ export async function POST(req: NextRequest) {
       const signer = privateKeyToAccount(
         (signerKey.startsWith('0x') ? signerKey : `0x${signerKey}`) as `0x${string}`,
       );
-      const wallet = toSmartWallet({ smartWalletAddress: BACKEND_SMART_WALLET, signer });
+      const wallet = toSmartWallet({ smartWalletAddress: BACKEND_SMART_WALLET(), signer });
       const callData = encodeFunctionData({ abi: EPOCHS_ABI, functionName: 'advanceEpoch' });
 
       const result = await sendUserOperation(wallet, {

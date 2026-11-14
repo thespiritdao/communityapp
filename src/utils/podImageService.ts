@@ -72,11 +72,8 @@ export class PodImageService {
         'Market Manager': '/images/pods/marketmanager.png',
       };
 
-      // Also try by ID for uniqueness (using your existing pod IDs)
-      const imagesByIds: Record<string, string> = {
-        'e35c9e25-d29f-4988-b1e8-2902e960b94c': '/images/pods/executivepod.png', // Executive Pod
-        '86d2d359-2e38-4267-b7b7-c7f6155063e2': '/images/pods/devpod.png', // Development Pod
-      };
+      // Lookup by id is deployment data; none are configured in code.
+      const imagesByIds: Record<string, string> = {};
 
       // Try fuzzy matching for variations in naming
       const normalizedName = podName.toLowerCase().replace(/[^a-z]/g, '');

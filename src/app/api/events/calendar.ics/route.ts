@@ -1,3 +1,4 @@
+import { appUrl } from '@/config/deployment';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyCalendarFeed } from '@/lib/calendarFeedToken';
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest) {
     if (event.location) {
       lines.push(`LOCATION:${escapeIcs(event.location)}`);
     }
-    lines.push(`URL:${process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org'}/events/${event.id}`);
+    lines.push(`URL:${appUrl()}/events/${event.id}`);
     lines.push('END:VEVENT');
   }
 

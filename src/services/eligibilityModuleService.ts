@@ -25,14 +25,8 @@ export class EligibilityModuleService {
 
   // Allowed community tokens - ONLY $SELF and $SYSTEM
   private static readonly ALLOWED_TOKENS = {
-    SELF: (
-      process.env.NEXT_PUBLIC_SELF_TOKEN ||
-      '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21'
-    ).toLowerCase(),
-    SYSTEM: (
-      process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-      '0x1317Ae277266D38C4E492558f8693F14143a6A65'
-    ).toLowerCase(),
+    SELF: (process.env.NEXT_PUBLIC_SELF_TOKEN ?? '').toLowerCase(),
+    SYSTEM: (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ?? '').toLowerCase(),
   } as const;
 
   // Extended ABI with support for multiple criterion types

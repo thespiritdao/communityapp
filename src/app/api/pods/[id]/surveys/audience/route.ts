@@ -1,3 +1,4 @@
+import { PODS } from '@/config/deployment';
 import { type NextRequest, NextResponse } from 'next/server';
 import { isPodLeader } from '@/lib/serverPodAuth';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
@@ -6,7 +7,7 @@ import { verifySessionTokenOrThrow } from '@/lib/verifySessionToken';
 
 export const runtime = 'nodejs';
 
-const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+const EXEC_POD_ID = (PODS.governance ?? '');
 
 async function getWalletFromToken(token: string): Promise<string | null> {
   try {

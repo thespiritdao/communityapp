@@ -15,6 +15,7 @@
 // dynamic pod manager contracts. Statically-whitelisted contracts can continue
 // using useCdpPaymaster: true directly.
 
+import { PAYMASTER_EXTRA_ALLOWLIST } from '@/config/deployment.server';
 import { type NextRequest, NextResponse } from 'next/server';
 import { decodeFunctionData, isAddress } from 'viem';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
@@ -37,9 +38,9 @@ const STATIC_WHITELIST = new Set<string>(
     // cancelEvent / certificate mints are all sponsored. ($SELF event payment
     // burns via SELF_PAYMENT, listed below, in a separate userOp.)
     process.env.NEXT_PUBLIC_EVENT_MANAGER,
-    // Pod treasury contracts — needed for setAuthorizedProxy during proxy migration
-    '0x0b76fdf7afa6c38ba0a99aa95b8899631335e70b', // Exec Pod treasury
-    '0xf2d28ba2c110c415cd75824f1e390ea807793bac', // TN Pod treasury
+    // Deployment-specific extras (for example pod treasuries that need
+    // setAuthorizedProxy during a proxy migration): PAYMASTER_EXTRA_ALLOWLIST.
+    ...PAYMASTER_EXTRA_ALLOWLIST,
     // $SELF soulbound system (Phase 0). Backend mint/prestige/receipt ops + the
     // user-facing burn-to-pay all sponsored. SelfEpochs is NOT listed — it is
     // only called internally by Minter/Payment, never as a top-level userOp.

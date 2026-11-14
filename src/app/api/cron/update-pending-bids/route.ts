@@ -7,16 +7,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
+const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS) as `0x${string}`;
 
 // BidPlaced event signature:
 // event BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex)
 const BID_PLACED_TOPIC = '0x8e1ec8b4766f6f8f6c0e6e2f4c3bc5e7a36e7a1b9f0c1e3d2a4b5c6d7e8f9a0b';
 
 // CDP Bundler URL
-const BUNDLER_URL = process.env.NEXT_PUBLIC_PAYMASTER ||
-  'https://api.developer.coinbase.com/rpc/v1/base/[REDACTED]';
+const BUNDLER_URL = process.env.NEXT_PUBLIC_PAYMASTER ?? '';
 
 /**
  * Query CDP bundler for userOperation receipt

@@ -1,5 +1,7 @@
 // src/app/api/sensemaker/chat/route.ts
 
+import { sensemakerAllowedOrigins } from '@/config/deployment.server';
+import { pineconeIndexName } from '@/config/deployment.server';
 import { NextRequest, NextResponse } from 'next/server';
 import { classifyQuery } from '@/services/sensemaker/routingService';
 import { queryPinecone } from '@/services/sensemaker/pineconeService';
@@ -13,20 +15,15 @@ import {
 } from '@/lib/ratelimit';
 
 /**
- * CORS — the public Sensemaker widget is embedded on the marketing site
- * (spiritdao.org), a different origin from the app (app.spiritdao.org), so
- * cross-origin requests to this endpoint must be allowed for known origins.
+ * CORS — the public Sensemaker widget can be embedded on another site (for
+ * example the organisation's marketing site), so cross-origin requests are
+ * allowed for the origins in SENSEMAKER_ALLOWED_ORIGINS (default: the app).
  */
-const ALLOWED_ORIGINS = new Set([
-  'https://spiritdao.org',
-  'https://www.spiritdao.org',
-  'https://app.spiritdao.org',
-  'http://localhost:3000',
-]);
+const allowedOrigins = () => new Set([...sensemakerAllowedOrigins(), 'http://localhost:3000']);
 
 function corsHeaders(req: NextRequest): Record<string, string> {
   const origin = req.headers.get('origin') || '';
-  if (!ALLOWED_ORIGINS.has(origin)) return {};
+  if (!allowedOrigins().has(origin)) return {};
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -244,7 +241,7 @@ export async function GET(req: NextRequest) {
   try {
     const { Pinecone } = await import('@pinecone-database/pinecone');
     const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
-    await pc.index(process.env.PINECONE_INDEX_NAME || 'sensemaker').describeIndexStats();
+    await pc.index(pineconeIndexName()).describeIndexStats();
     checks.pinecone = { ok: true };
   } catch (e: any) {
     checks.pinecone = { ok: false, error: e.message };

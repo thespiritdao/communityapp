@@ -1,3 +1,5 @@
+import { ORG_EIN, ORG_NAME } from '@/config/deployment';
+import { appUrl } from '@/config/deployment';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
     // 2. CREATE STRIPE CHECKOUT SESSION (OLD ACCOUNT)
     // =====================================================
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+    const baseUrl = appUrl();
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -74,8 +76,8 @@ export async function POST(request: NextRequest) {
             currency: 'usd',
             unit_amount: Math.round(fiatAmount * 100),
             product_data: {
-              name: 'Direct Donation to SpiritDAO',
-              description: 'SpiritDAO is a 501(c)(3) nonprofit (EIN: 99-1308806). This donation is 100% tax-deductible. No goods or services are provided in exchange for this contribution.',
+              name: `Direct Donation to ${ORG_NAME}`,
+              description: `${ORG_NAME} is a 501(c)(3) nonprofit (EIN: ${ORG_EIN}). This donation is 100% tax-deductible. No goods or services are provided in exchange for this contribution.`,
             },
           },
           quantity: 1,

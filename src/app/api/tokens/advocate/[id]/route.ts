@@ -1,10 +1,11 @@
+import { appUrl } from '@/config/deployment';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+  const baseUrl = appUrl();
 
   return NextResponse.json({
     name: 'Advocate',

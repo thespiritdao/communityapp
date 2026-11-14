@@ -69,7 +69,6 @@ export { EligibilityCriteriaDisplay } from './EligibilityCriteriaDisplay';
 export { EligibilityGatedContent } from './EligibilityGatedContent';
 
 // Role permissions and diagnostics
-export { RolePermissionsDiagnostics } from './RolePermissionsDiagnostics';
 
 // ==========================================
 // SPECIALIZED POD FEATURES
