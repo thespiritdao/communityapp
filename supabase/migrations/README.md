@@ -3,6 +3,12 @@
 **This directory (`supabase/migrations/`) is the canonical, active migration
 source for the SpiritDAO app.** All new migrations go here.
 
+> To create a database for a new instance, use [`../baseline/`](../baseline/README.md),
+> not these files. They are the change history of the reference deployment:
+> the earliest tables were created by hand and some changes came from a retired
+> parallel stream, so replaying this directory does not produce a working
+> schema. The baseline (2026-11-14) already contains everything here.
+
 ## Convention
 
 - File names use the Supabase timestamp format: `YYYYMMDDHHMMSS_description.sql`

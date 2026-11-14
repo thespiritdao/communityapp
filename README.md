@@ -60,8 +60,10 @@ npm run check:env           # lists anything required that is missing
 npm run dev
 ```
 
-Database schema lives in `supabase/migrations/` and is applied by hand with
-`psql` or the Supabase SQL editor, in timestamp order. The Row Level Security
+Create the database from [`supabase/baseline/`](supabase/baseline/README.md): three
+files applied in order to an empty Supabase project, then enable the
+access-token hook. `supabase/migrations/` is the change history of the
+reference deployment and does not build a database from nothing. The Row Level Security
 policies are the authoritative access-control layer; read
 [`docs/authentication-and-session-model.md`](docs/authentication-and-session-model.md)
 before touching them.

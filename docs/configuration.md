@@ -26,7 +26,7 @@ The build will not start without these:
 | Variable | What it is |
 |---|---|
 | `NEXT_PUBLIC_APP_URL` | Public URL of the deployment. Used in emails, invite links and calendar feeds. |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase project, with `supabase/migrations` applied. |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase project, created from `supabase/baseline/`. |
 | `NEXT_PUBLIC_CDP_PROJECT_ID` | Coinbase Developer Platform project for embedded wallets. |
 | `NEXT_PUBLIC_RPC_URL`, `NEXT_PUBLIC_PAYMASTER` | RPC and paymaster/bundler endpoints. Members' transactions are sponsored through the paymaster. |
 | `NEXT_PUBLIC_GOVERNANCE_POD_ID` | The governance (executive) pod; see below. |

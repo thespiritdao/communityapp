@@ -3,7 +3,7 @@
  *
  * Uses Supabase Postgres for distributed rate limiting across serverless
  * functions (fixed-window counters via the `rate_limit_hit` RPC — see
- * scripts/db-migrations/015_rate_limits.sql). Replaced Upstash Redis, whose
+ * supabase/baseline/01_schema.sql). Replaced Upstash Redis, whose
  * free-tier database was reclaimed for inactivity and took the endpoint down.
  *
  * Server-side ONLY — requires SUPABASE_SERVICE_ROLE_KEY; the RPC is not
