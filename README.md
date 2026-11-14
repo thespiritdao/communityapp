@@ -56,6 +56,7 @@ git clone https://github.com/thespiritdao/communityapp.git
 cd communityapp
 npm install
 cp .env.example .env        # then fill in your values
+npm run check:env           # lists anything required that is missing
 npm run dev
 ```
 
@@ -68,6 +69,10 @@ before touching them.
 Smart contracts compile with `npx hardhat compile`. Deploying your own set
 means creating your own Hats tree and updating the `NEXT_PUBLIC_*` contract
 addresses in `.env`; see `scripts/deploy-*` and the runbooks in `docs/`.
+
+Nothing in the code points at SpiritDAO's own deployment. Every contract, pod,
+hat, domain and mailbox comes from your environment; see
+[`docs/configuration.md`](docs/configuration.md).
 
 Useful commands:
 

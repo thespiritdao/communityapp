@@ -7,7 +7,7 @@
   "bugs": "https://github.com/thespiritdao/communityapp/issues",
   "license": "AGPL-3.0-only",
   "scripts": {
-    "prebuild": "node scripts/copy-maplibre-worker.mjs",
+    "prebuild": "node scripts/check-env.mjs && node scripts/copy-maplibre-worker.mjs",
     "predev": "node scripts/copy-maplibre-worker.mjs",
     "build": "next build",
     "check": "biome check --write .",
@@ -44,7 +44,8 @@
     "verify:invites": "node scripts/leader-invites-e2e.mjs",
     "verify:prod": "npm run verify:static && npm run verify:exposure && npm run verify:session && npm run verify:authority && npm run verify:linking && npm run verify:qr && npm run verify:invites",
     "hooks:install": "node scripts/install-hooks.mjs",
-    "verify:session": "node scripts/verify-issued-session.mjs"
+    "verify:session": "node scripts/verify-issued-session.mjs",
+    "check:env": "node scripts/check-env.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
