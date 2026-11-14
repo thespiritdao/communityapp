@@ -9,10 +9,10 @@ with and preserved alongside the AGPL.
 ## OnchainKit (Coinbase)
 
 This repository was forked from https://github.com/coinbase/onchainkit in
-December 2023. Code under `src/core`, `src/wallet`, `src/token`, `src/network`,
-`src/swap`, `src/frame`, `src/farcaster`, `src/fund`, `src/nft`,
-`src/transaction`, `src/internal` and `src/styles`, and portions of the build
-and test configuration, derive from that project.
+December 2023. The vendored OnchainKit source was removed in November 2026.
+Commits before that date contain it, and portions of the build, lint and test
+configuration (`biome.json`, `vitest.config.ts`, `tsconfig.json`) descend from
+that project. Coinbase's license for that material:
 
 ```
 MIT License

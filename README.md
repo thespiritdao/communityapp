@@ -20,8 +20,9 @@ by a very small team over 2024-2026 and is being published so others can run
 it, learn from it, audit it and contribute. Expect rough edges:
 
 - `next build` passes with `ignoreBuildErrors` on; `tsc` still reports type errors.
-- The test suite is partial. Many suites are inherited from the upstream
-  OnchainKit code and are not maintained here.
+- The unit test suite is small (`npm test`, 8 files, all passing) and covers
+  session verification, vault crypto, hat-id prediction and a few services.
+  Most features have no automated tests yet.
 - Several one-off operational scripts in `scripts/` assume the SpiritDAO
   deployment (contract addresses, pod ids). Treat them as examples.
 
@@ -34,7 +35,7 @@ listed there first for a reason.
 | Layer | Technology |
 |---|---|
 | Web app | Next.js 15 (App Router), React 18, Tailwind, TypeScript |
-| Identity and wallets | Coinbase Developer Platform embedded wallets, OnchainKit, wagmi, viem |
+| Identity and wallets | Coinbase Developer Platform embedded wallets (`@coinbase/cdp-hooks`), wagmi, viem |
 | Membership and roles | Hats Protocol on Base mainnet, custom eligibility and toggle modules |
 | Governance and treasury | Solidity contracts in `src/contracts/` (Governor, pod treasuries, bounty manager, event manager, purchase routers) with Hardhat |
 | Database and auth | Supabase (Postgres, Row Level Security, Supabase-issued sessions via a custom access-token hook) |
@@ -110,13 +111,12 @@ instance.
 ## Provenance and license
 
 This repository began as a fork of Coinbase's
-[OnchainKit](https://github.com/coinbase/onchainkit) in December 2023 and still
-contains code derived from it (notably under `src/core`, `src/wallet`,
-`src/token`, `src/network`, `src/swap`, `src/frame`, `src/farcaster`, `src/fund`,
-`src/nft`, `src/transaction` and `src/styles`). That code remains under
+[OnchainKit](https://github.com/coinbase/onchainkit) in December 2023. The
+OnchainKit code was removed in November 2026, but earlier commits contain it and
+some build and test configuration descends from it. That material remains under
 Coinbase's MIT license; see [`NOTICE.md`](NOTICE.md).
 
-Everything else is Copyright (c) 2024-2026 SpiritDAO Inc and released under the
+The code is Copyright (c) 2024-2026 SpiritDAO Inc and released under the
 GNU Affero General Public License v3.0. See [`LICENSE`](LICENSE). In short: you
 may run, study, modify and redistribute it, and if you run a modified version as
 a service you must offer its source to your users under the same terms.
