@@ -158,3 +158,7 @@ src/features/pods/FEST_submission_draft.md
 src/features/pods/airdrop-attempt.txt
 scripts/airdrop-advocate-to-beta-testers.ts
 scripts/batch-airdrop*.ts
+
+# Legacy standalone Flask chatbot (PythonAnywhere), being retired. Kept locally only.
+src/sensemaker/spiritdao_chatbot/
+src/sensemaker/SENSEMAKER_AI_DOCUMENTATION.md

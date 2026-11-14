@@ -101,9 +101,9 @@ them.
 
 ## Aside: the legacy standalone chatbot (being retired)
 
-There is a **separate, standalone Flask chatbot** at
-`src/sensemaker/spiritdao_chatbot/`: **OpenAI GPT**, **philosophy-only**, hosted
-on **PythonAnywhere**, and historically embedded on the marketing website.
+There is a **separate, standalone Flask chatbot**: **OpenAI GPT**, **philosophy-only**,
+hosted on **PythonAnywhere**, and historically embedded on the marketing website.
+Its source is not part of this repository.
 
 It is **being retired** in favor of embedding the **in-app Sensemaker** described
 above. It is documented here only so the duplication isn't mistaken for a second
