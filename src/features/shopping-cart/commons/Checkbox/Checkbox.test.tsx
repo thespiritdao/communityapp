@@ -1,9 +1,9 @@
 import { render, fireEvent } from '@testing-library/react';
 
-import Checkbox from '.';
+import Checkbox from './Checkbox';
 
 const mockLabel = 'XL';
-const mockHandleOnChange = jest.fn();
+const mockHandleOnChange = vi.fn();
 
 describe('[commons] - Checkbox', () => {
   const setup = () => {

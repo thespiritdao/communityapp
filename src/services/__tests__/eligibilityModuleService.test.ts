@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EligibilityModuleService } from '../eligibilityModuleService';
 
 // Mock viem
-vi.mock('viem', () => ({
+vi.mock('viem', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('viem')>()),
   createPublicClient: vi.fn(() => ({
     readContract: vi.fn(),
   })),
