@@ -119,7 +119,7 @@ src/app/api/marketing/
 *api_key*.json
 *api-key*.json
 
-# MapLibre worker, copied at build time (scripts/copy-maplibre-worker.mjs)
+# MapLibre worker, copied at build time (scripts/build/copy-maplibre-worker.mjs)
 public/maplibre/
 
 

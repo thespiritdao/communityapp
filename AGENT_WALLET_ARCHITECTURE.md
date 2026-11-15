@@ -27,7 +27,7 @@ Now each agent gets:
 | AgentRegistry contract | `src/contracts/AgentRegistry.sol` | Onchain source of truth for "this address is an agent" |
 | Wallet service | `src/services/communityAgent/agentWalletService.ts` | Provision wallets, register onchain, resolve identity |
 | Identity API | `src/app/api/community-agent/identity/route.ts` | Public GET — address + registry status per pod |
-| Deploy script | `scripts/deploy-agent-registry.cjs` | `npx hardhat run scripts/deploy-agent-registry.cjs --network base` |
+| Deploy script | `scripts/deploy/deploy-agent-registry.cjs` | `npx hardhat run scripts/deploy/deploy-agent-registry.cjs --network base` |
 | Migration script | `scripts/migrate-agent-wallets.mjs` | One-time migration of existing agents (supports `--dry-run`) |
 | Auto-provisioning | `src/app/api/pods/[id]/modules/route.ts` | New agents get real wallets when the module is enabled |
 | Identity UI | `src/features/pods/components/PodCommunityAgentManager.tsx` | "Onchain Identity" block with Basescan link |
@@ -76,7 +76,7 @@ signerKey = HMAC-SHA256(AGENT_WALLET_MASTER_KEY, "agent-signer:v1:{podId}:{count
 ## Rollout order
 
 1. Set `AGENT_WALLET_MASTER_KEY` in Vercel + local `.env`.
-2. Deploy: `npx hardhat run scripts/deploy-agent-registry.cjs --network base`.
+2. Deploy: `npx hardhat run scripts/deploy/deploy-agent-registry.cjs --network base`.
 3. Set `NEXT_PUBLIC_AGENT_REGISTRY`; whitelist the contract in the CDP paymaster portal (functions: `registerAgent`, `deactivateAgent`, `reactivateAgent`).
 4. Verify on Basescan (command printed by deploy script).
 5. `node scripts/migrate-agent-wallets.mjs --dry-run` — review the report (Kairos + any other enabled agents; counts of forum/chat/event/explorer rows to rewrite).

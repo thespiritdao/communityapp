@@ -239,7 +239,7 @@ authoritative specs:
 > decay. Current canonical addresses: EpochsV2 `0x169760C0F633dd68D31973b5CFce1133833d28e5`,
 > MinterV2 `0xDcD71ceC0509aF355b4B85E71c9087fe54Bcff83`, PaymentV2
 > `0x3eac92eA5eBC17Af9419cDb03961247EC9d31001` (Receipt/Prestige unchanged).
-> Verified with `scripts/verify-self-roles-v2.mjs` (18/18). See
+> Verified with `scripts/deploy/verify-self-roles.mjs` (18/18). See
 > `runbook-self-decay-deploy.md` + `self-epochs-reference.md`. The V1 facts below
 > are kept as the Phase 0 historical record.
 

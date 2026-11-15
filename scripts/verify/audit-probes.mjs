@@ -1,0 +1,231 @@
+#!/usr/bin/env node
+// scripts/verify/audit-probes.mjs — acceptance test for APP_AUDIT_2026-09-15.md.
+//
+// Re-runs the probes that found the audit's findings, exactly as a browser
+// would (anon key + a normal session), plus the ungated-route checks against
+// production. Every line must read BLOCKED. Any write that succeeds is
+// reverted immediately.
+//
+//   node scripts/verify/audit-probes.mjs                 # against VERIFY_BASE_URL / NEXT_PUBLIC_APP_URL
+//   node scripts/verify/audit-probes.mjs --base http://localhost:3000
+//
+// Exit code 1 if anything is still open.
+
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import { realSession, signOutTestSessions, tokenWallet } from './lib/testSessions.mjs';
+import { resolveTestPods, verifyBaseUrl } from './lib/verifyConfig.mjs';
+
+dotenv.config({ path: '.env' });
+
+const SB = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const BASE = verifyBaseUrl();
+
+const admin = createClient(SB, SERVICE);
+// TN = the test community pod, EXEC = the governance pod (see lib/verifyConfig.mjs).
+const { testPodId: TN, governancePodId: EXEC, leaderHatId: TN_LEADER_HAT } = await resolveTestPods(admin);
+const anon = createClient(SB, ANON);
+
+let open = 0;
+const report = (label, blocked, detail = '') => {
+  if (!blocked) open++;
+  console.log(`${blocked ? '  BLOCKED ' : '  OPEN ✗  '} ${label}${detail ? ' — ' + detail : ''}`);
+};
+
+/** A session for an ordinary TN member who is not a lead. */
+async function ordinaryMember() {
+  const { data: pod } = await admin.from('pods').select('pod_leads').eq('id', TN).single();
+  const leads = (pod.pod_leads || []).map((x) => x.toLowerCase());
+  const { data: rows } = await admin
+    .from('pod_members').select('id, wallet, role, hat_id')
+    .eq('pod_id', TN).eq('is_active', true).eq('role', 'member').limit(20);
+  const { data: profs } = await admin
+    .from('user_profiles').select('user_id, wallet_address')
+    .in('wallet_address', rows.map((r) => r.wallet));
+  const row = rows.find((r) => !leads.includes(r.wallet.toLowerCase())
+    && profs.some((p) => p.wallet_address.toLowerCase() === r.wallet.toLowerCase()));
+  const prof = profs.find((p) => p.wallet_address.toLowerCase() === row.wallet.toLowerCase());
+  const token = await realSession(admin, SB, ANON, prof.user_id);
+  // The hook stamps the account's canonical wallet; probes act as that wallet.
+  const w = tokenWallet(token) || row.wallet.toLowerCase();
+  const client = createClient(SB, ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
+  return { client, token, wallet: w, row };
+}
+
+console.log(`Audit probes against ${SB} and ${BASE}\n`);
+const me = await ordinaryMember();
+console.log(`ordinary member: ${me.wallet.slice(0, 10)}…\n`);
+
+// ── F1: pod_members escalation ──────────────────────────────────────────────
+console.log('F1  pod_members');
+{
+  let r = await me.client.from('pod_members').update({ role: 'leader' }).eq('id', me.row.id).select('id');
+  const ok = !!r.error || !r.data?.length;
+  if (!ok) await admin.from('pod_members').update({ role: 'member' }).eq('id', me.row.id);
+  report('UPDATE own role -> leader', ok);
+
+  r = await me.client.from('pod_members').update({ hat_id: TN_LEADER_HAT }).eq('id', me.row.id).select('id');
+  const ok2 = !!r.error || !r.data?.length;
+  if (!ok2) await admin.from('pod_members').update({ hat_id: me.row.hat_id }).eq('id', me.row.id);
+  report('UPDATE own hat_id -> leader hat', ok2);
+
+  const { data: ex } = await admin.from('pod_members').select('membership_type, hat_id')
+    .eq('pod_id', EXEC).eq('is_active', true).limit(1).single();
+  r = await me.client.from('pod_members').insert({
+    pod_id: EXEC, wallet: me.wallet, role: 'leader', is_active: true,
+    membership_type: ex.membership_type, hat_id: ex.hat_id,
+  }).select('id').single();
+  const ok3 = !!r.error;
+  if (!ok3) await admin.from('pod_members').delete().eq('id', r.data.id);
+  report('INSERT self into Executive Pod as leader', ok3);
+
+  const perm = await admin.rpc('check_pod_permission', { p_user_wallet: me.wallet, p_pod_id: TN, p_permission_key: 'treasuryManagement' });
+  report('check_pod_permission(treasuryManagement) for member', perm.data !== true, `= ${perm.data}`);
+}
+
+// ── F2: forged signature ────────────────────────────────────────────────────
+console.log('F2  pod_accountability_signatures');
+{
+  const { data: someone } = await admin.from('pod_members').select('wallet')
+    .eq('pod_id', TN).eq('is_active', true).neq('wallet', me.wallet).limit(1).single();
+  const r = await me.client.from('pod_accountability_signatures').insert({
+    pod_id: TN, signer_address: someone.wallet, signature_data: 'forged',
+    accountability_statement: 'probe', signed_at: new Date().toISOString(), is_valid: true,
+  }).select('id').single();
+  const ok = !!r.error;
+  if (!ok) await admin.from('pod_accountability_signatures').delete().eq('id', r.data.id);
+  report('INSERT signature as another member', ok);
+}
+
+// ── F3: general_notifications exposure ──────────────────────────────────────
+console.log('F3  general_notifications');
+{
+  const a = await anon.from('general_notifications').select('id').limit(1);
+  report('anon reads', !!a.error || !a.data?.length);
+  // A sender may see what they sent; the exposure is other people's inboxes.
+  const o = await me.client.from('general_notifications').select('id')
+    .neq('recipient_address', me.wallet).neq('sender_address', me.wallet).limit(1);
+  report("member reads others'", !!o.error || !o.data?.length);
+}
+
+// ── F5: ungated routes (production) ─────────────────────────────────────────
+console.log('F5  routes without a session token');
+{
+  const post = async (path, body) => {
+    const res = await fetch(BASE + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return res.status;
+  };
+  const put = async (path, body) => {
+    const res = await fetch(BASE + path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return res.status;
+  };
+  const isBlocked = (s) => s === 401 || s === 403;
+  let s;
+  s = await post('/api/pods/notify-exec', { podId: TN, podName: 'probe' });
+  report('POST /api/pods/notify-exec', isBlocked(s), `HTTP ${s}`);
+  s = await post('/api/pods/notify-leaders', { podId: TN, podName: 'probe', creatorAddress: me.wallet });
+  report('POST /api/pods/notify-leaders', isBlocked(s), `HTTP ${s}`);
+  s = await post('/api/explorer/member-introduced', { walletAddress: '0x000000000000000000000000000000000000dead', displayName: 'probe' });
+  report('POST /api/explorer/member-introduced', isBlocked(s), `HTTP ${s}`);
+  s = await post('/api/claims/request', { walletAddress: '0x000000000000000000000000000000000000dead', amount: 1, payoutEmail: 'probe@example.com' });
+  report('POST /api/claims/request', isBlocked(s), `HTTP ${s}`);
+  s = await put('/api/community-agent/events', { eventId: '00000000-0000-0000-0000-000000000000', action: 'approve', walletAddress: me.wallet });
+  report('PUT  /api/community-agent/events', isBlocked(s), `HTTP ${s}`);
+  s = await post('/api/bounty/cancel', { bountyId: '00000000-0000-0000-0000-000000000000', cancelerAddress: me.wallet, cancellationReason: 'probe' });
+  report('POST /api/bounty/cancel (body-claimed canceler)', isBlocked(s), `HTTP ${s}`);
+  s = await post('/api/community-agent/subscribe', { podId: TN, txHash: '0x' + '0'.repeat(64), walletAddress: me.wallet });
+  report('POST /api/community-agent/subscribe (body-claimed leader)', isBlocked(s), `HTTP ${s}`);
+}
+
+// ── Regression: the lockdown must not break legitimate flows ─────────────────
+// A lockdown that "passes" by blocking everything is not a pass. Each check
+// here is a real path the app takes; each must be ALLOWED.
+console.log('Regression  legitimate flows must still work');
+{
+  const pass = (label, allowed, detail = '') => {
+    if (!allowed) open++;
+    console.log(`${allowed ? '  ALLOWED ' : '  BROKEN ✗'} ${label}${detail ? ' — ' + detail : ''}`);
+  };
+  const { data: pod } = await admin.from('pods').select('pod_leads').eq('id', TN).single();
+  const lead = pod.pod_leads[0].toLowerCase();
+  const { data: lp } = await admin.from('user_profiles').select('user_id').eq('wallet_address', lead).single();
+  const ltok = await realSession(admin, SB, ANON, lp.user_id);
+  const L = createClient(SB, ANON, { global: { headers: { Authorization: `Bearer ${ltok}` } } });
+
+  // Since Phase 1 step 2 the browser never writes pod_members; leads record
+  // members through the server, which confirms the hat on-chain. Re-recording
+  // the lead's own (worn) hat is idempotent — it proves the path without
+  // creating anything. A direct client INSERT must now be refused even for a
+  // plain member row.
+  let r = await fetch(`${BASE}/api/pods/${TN}/members`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${ltok}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ wallet: lead, hatId: TN_LEADER_HAT, role: 'leader', notify: false }),
+  });
+  pass('lead records a member via the server route (chain-verified)', r.status === 200, `HTTP ${r.status}`);
+  {
+    // Self-join another pod as a plain member: the Phase 0 trigger allows a
+    // wallet to insert itself as 'member', so only the policy drop in
+    // 20260915000003 closes this. Uses the Executive Pod, which the probe
+    // member is not in (skipped if they somehow are).
+    const { data: already } = await admin.from('pod_members').select('id').eq('pod_id', EXEC).eq('wallet', me.wallet).maybeSingle();
+    if (already) {
+      console.log('  SKIP     F1 direct client INSERT (probe member already in Executive Pod)');
+    } else {
+      const direct = await me.client.from('pod_members').insert({
+        pod_id: EXEC, wallet: me.wallet, role: 'member', membership_type: 'member', is_active: true,
+      }).select('id').single();
+      const blocked = !!direct.error;
+      if (!blocked && direct.data?.id) await admin.from('pod_members').delete().eq('id', direct.data.id);
+      console.log(`${blocked ? '  BLOCKED ' : '  OPEN ✗  '} F1 direct client INSERT: self-join Executive Pod as plain member — ${blocked ? 'refused' : 'allowed; apply 20260915000003'}`);
+      if (!blocked) open++;
+    }
+  }
+
+  // Lead notifies the applicant and asks for the row back — the pattern the app uses.
+  r = await L.from('general_notifications').insert({
+    recipient_address: me.wallet, sender_address: lead,
+    notification_type: 'pod_application_status', title: 'probe', message: 'probe',
+    // Eight writers set priority; the column only exists once migration
+    // 20260916000001 is applied. Keep this insert shaped like the real ones.
+    priority: 'high',
+  }).select().single();
+  pass('lead sends approval notification (with RETURNING, priority)', !r.error, r.error?.message?.slice(0, 60));
+  if (r.data?.id) await admin.from('general_notifications').delete().eq('id', r.data.id);
+
+  // Member reads own inbox, sends as self, signs as self.
+  r = await me.client.from('general_notifications').select('id').eq('recipient_address', me.wallet).limit(1);
+  pass('member reads own notifications', !r.error);
+  r = await me.client.from('general_notifications').insert({
+    recipient_address: lead, sender_address: me.wallet,
+    notification_type: 'user_mentioned', title: 'probe', message: 'probe',
+  }).select('id').single();
+  pass('member sends a notification as self', !r.error, r.error?.message?.slice(0, 60));
+  if (r.data?.id) await admin.from('general_notifications').delete().eq('id', r.data.id);
+  // Since Phase 1 step 4 the browser never writes signatures either; the
+  // server records one only after the chain (or a verified message
+  // signature) proves it. A claim the chain doesn't back must be refused.
+  {
+    const meTok = me.token;
+    const res = await fetch(`${BASE}/api/pods/${TN}/agreements/sign`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${meTok}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agreementId: 'probe', agreementText: 'probe', agreementCid: 'bafkreiprobeprobeprobeprobeprobeprobeprobeprobeprobeprobeprobe' }),
+    });
+    pass('member records a signature the chain does not back → refused', res.status === 409, `HTTP ${res.status}`);
+    const direct = await me.client.from('pod_accountability_signatures').insert({
+      pod_id: TN, signer_address: me.wallet, signature_data: 'probe',
+      accountability_statement: 'probe', signed_at: new Date().toISOString(), is_valid: true,
+    }).select('id').single();
+    const blocked = !!direct.error;
+    if (!blocked && direct.data?.id) await admin.from('pod_accountability_signatures').delete().eq('id', direct.data.id);
+    console.log(`${blocked ? '  BLOCKED ' : '  OPEN ✗  '} F2 direct client INSERT of own signature — ${blocked ? 'refused' : 'allowed; apply 20260915000004'}`);
+    if (!blocked) open++;
+  }
+}
+
+await signOutTestSessions(admin);
+console.log(`\n${open === 0 ? 'All probes blocked; all legitimate flows allowed.' : `${open} check(s) failing.`}`);
+process.exit(open === 0 ? 0 : 1);

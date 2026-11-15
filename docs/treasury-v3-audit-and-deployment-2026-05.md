@@ -165,7 +165,7 @@ Factory is now `onlyAuthorizedDeployer`-gated; only the wrapper can call it.
 | Threshold below floor (5001 bps) rejected | ✅ PASS |
 | New `PodCreationManagerFactory` correctly wired to V3 | ✅ PASS |
 
-Plus 13 wiring-state checks via `scripts/audit-contract-ownership.mjs` — all passing.
+Plus 13 wiring-state checks via `scripts/deploy/audit-contract-ownership.mjs` — all passing.
 
 ---
 
@@ -239,8 +239,8 @@ Honest reflection on what made this deployment harder than it needed to be:
 
 - Source: `src/contracts/PodTreasuryV3.sol`, `PodTreasuryFactoryV3.sol`, `PodTreasuryDeployerV3.sol`
 - Hardhat-compile mirror: `src/contracts/treasury-deploy/`
-- Wiring script: `scripts/wire-v3-treasury.mjs`
-- Ownership audit script: `scripts/audit-contract-ownership.mjs`
+- Wiring script: `scripts/deploy/wire-treasury-factory.mjs`
+- Ownership audit script: `scripts/deploy/audit-contract-ownership.mjs`
 - Schema migration: `supabase/migrations/20260519000001_add_treasury_threshold.sql`
 - Roadmap: `docs/roadmap-action-items-2026-05.md`
 

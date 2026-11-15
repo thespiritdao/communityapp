@@ -73,7 +73,7 @@ near-immediate (fire-and-forget handler, not cron).
 **Under the hood to appreciate:** these replies are now written through the
 `community_agent` scoped DB role — Postgres itself refuses any write not
 attributed to Kairos's own wallet with `actor_type='agent'`. Verify anytime:
-`node scripts/test-agent-scoped-role.mjs` (8 boundary checks).
+`npm run verify:session` (agent confinement checks with a real Supabase-issued agent session; the older HS256 boundary script was retired when the legacy JWT secret was revoked).
 
 **3d. Crisis protocol (test thoughtfully).** In a low-traffic chat channel,
 @mention the agent with an obvious test phrase (e.g. "@Kairos test: I want to

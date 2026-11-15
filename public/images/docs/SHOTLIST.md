@@ -1,6 +1,6 @@
 # Documentation screenshot shot list
 
-*Generated from `public/images/docs/manifest.json` by `scripts/docs-screenshots.mjs plan`. Edit the manifest, not this file.*
+*Generated from `public/images/docs/manifest.json` by `scripts/build/docs-screenshots.mjs plan`. Edit the manifest, not this file.*
 
 **94 shots** — 48 P1, 34 P2, 12 P3. Do P1 first across all guides; the docs are useful with P1 alone.
 

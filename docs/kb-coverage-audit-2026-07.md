@@ -43,8 +43,8 @@ can likely be deleted).
 ## Cheapest wins
 
 1. ✅ **DONE 2026-07-16 — Mirrored the 10 user guides** into the KB as global
-   markdown items via `scripts/kb-mirror-guides.mjs`. **Re-run that script
-   whenever the guides change** (same cadence as `npm run embed:spiritdao`) —
+   markdown items via `scripts/db/kb-mirror-guides.mjs`. **Re-run that script
+   whenever the guides change** (same cadence as `npm run embed:docs`) —
    it updates existing items in place. This closed the Governance-depth,
    wallet-linking (global), and onboarding-text gaps.
 2. ✅ **DONE 2026-07-17 — Wrote guides 11–16** (Surveys, Password Vault,
@@ -59,7 +59,7 @@ can likely be deleted).
 ## Pipelines (how content flows — for reference)
 
 - **Sensemaker (in-app)**: `src/guides/user/*.md` + QUICK_REFERENCE +
-  operations guide → `npm run embed:spiritdao` → Pinecone `spiritdao`
+  operations guide → `npm run embed:docs` → Pinecone `spiritdao`
   namespace (clears + re-embeds all, idempotent).
 - **KB**: rows in `knowledge_categories`/`knowledge_items` (service-role insert
   or the in-app Pod Knowledge Manager). `content_type='markdown'` renders

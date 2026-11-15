@@ -121,7 +121,7 @@ mint-batch user op, see app changes below.)
 
 ## Step 6 — Verify
 
-- [x] Run `node scripts/verify-self-roles-v2.mjs` (env-driven; reads the V2
+- [x] Run `node scripts/deploy/verify-self-roles.mjs` (env-driven; reads the V2
       addresses from `.env`) → all green (MINTER/BURNER on EpochsV2, ATTESTOR on
       MinterV2→smart wallet, EPOCH_ADMIN on EpochsV2→0xd481 + 0x05c06, MINTER on
       Receipt→PaymentV2, immutable pointers → EpochsV2, decayHorizon=8). The old

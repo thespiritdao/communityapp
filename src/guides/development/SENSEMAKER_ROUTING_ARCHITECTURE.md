@@ -510,7 +510,7 @@ export default function SensemakerAIPage() {
 
 ### 3. Embedding Script
 
-**File: `scripts/embed-spiritdao-docs.ts`**
+**File: `scripts/embed/embed-docs.ts`**
 
 ```typescript
 import { Pinecone } from '@pinecone-database/pinecone';
@@ -664,7 +664,7 @@ embedDocuments().catch(console.error);
 ```json
 {
   "scripts": {
-    "embed:spiritdao": "ts-node --esm scripts/embed-spiritdao-docs.ts"
+    "embed:docs": "ts-node --esm scripts/embed/embed-docs.ts"
   }
 }
 ```

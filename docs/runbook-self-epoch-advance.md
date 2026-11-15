@@ -52,7 +52,7 @@ If the in-app path is ever unavailable, an operator with the `0xd481…`
 EPOCH_ADMIN key can advance manually:
 
 ```
-ADMIN_EPOCH_PRIVATE_KEY=<0xd481 key> CONFIRM=yes node scripts/advance-self-epoch.mjs
+ADMIN_EPOCH_PRIVATE_KEY=<0xd481 key> CONFIRM=yes node scripts/ops/advance-self-epoch.mjs
 ```
 
 This is the only path that touches the `0xd481` key, and it is run by a human at
@@ -69,4 +69,4 @@ SelfEpochs.grantRole(EPOCH_ADMIN_ROLE, 0x05c06af9fe1a996144902D9571d1d2783866cF6
 ```
 - role hash: `0xa8254feae331b360dda9558bd798ab27bf43a131cb76e076a396102d8769e0ac`
 - granted from `0xd481…` (current EPOCH_ADMIN)
-- `0xd481…` keeps the role too (backup). Verify with `node scripts/verify-self-roles-v2.mjs`.
+- `0xd481…` keeps the role too (backup). Verify with `node scripts/deploy/verify-self-roles.mjs`.

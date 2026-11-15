@@ -11,7 +11,7 @@
 set -e
 
 echo "pre-push: member private data must not reach a peer's browser"
-node scripts/check-profile-email-leaks.mjs
+node scripts/verify/check-profile-email-leaks.mjs
 
 # A secret committed once lives in the history forever, so refuse the push
 # rather than ask someone to notice it in review. Deleting such a file cannot
@@ -20,6 +20,7 @@ echo "pre-push: no secrets in the commits being pushed"
 staged_secrets=$(git diff --stat --diff-filter=d @{push}..HEAD -- \
   ':(glob)**/.env' ':(glob)**/.env.*' ':(glob)**/*.pem' ':(glob)**/*.key' \
   ':(glob)**/*api_key*.json' ':(glob)**/*api-key*.json' \
+  ':(exclude,glob)**/*.example' \
   2>/dev/null || true)
 if [ -n "$staged_secrets" ]; then
   echo ""

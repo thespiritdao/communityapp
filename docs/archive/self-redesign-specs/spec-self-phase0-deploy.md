@@ -67,7 +67,7 @@ args), then grant the cross-contract roles.
 | **`admin`** (DEFAULT_ADMIN + EPOCH_ADMIN, and the deploy wallet) | **`0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d`** | The dedicated **platform admin/deployer** wallet (Exec-Pod-custodied; created solely for app contract ops, no other activity). Already the owner of nearly the entire deployed fleet — PodTreasuryFactory V2/V3, TreasuryProxy, PurchaseRouterDecentralized, etc. Using it here keeps $SELF consistent with the existing platform. **Deploy FROM this wallet** so deployer == admin and the Step 6 grantRole calls run directly in Remix. |
 | **attestor / janitor / fulfiller** (backend automation) | **`0x617b20f744f9B3D36724BC46050c84A0f4ddEbAF`** | `POD_ADMIN_WALLET` — the server key (`POD_ADMIN_PRIVATE_KEY` in `.env`) the backend signs automated mints/records with. Used for SelfMinter's `attestor` arg + the SelfReceipt FULFILLER and SelfPrestige JANITOR role grants. |
 
-> Rationale (from the on-chain ownership audit, `scripts/audit-contract-ownership.mjs`):
+> Rationale (from the on-chain ownership audit, `scripts/deploy/audit-contract-ownership.mjs`):
 > the platform's established pattern is web-wallet ownership — `0xd481…` owns
 > the bulk of the live fleet; there is NO multisig in use anywhere. Matching
 > that pattern is the pragmatic, consistent choice. The wallet is intended for

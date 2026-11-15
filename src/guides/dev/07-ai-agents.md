@@ -83,7 +83,7 @@ them.
 
 **Knowledge sources:**
 - The `spiritdao` namespace is embedded from **`src/guides/user/*.md`** plus
-  `spiritdao-operations-guide.md`, via **`npm run embed:spiritdao`**.
+  `spiritdao-operations-guide.md`, via **`npm run embed:docs`**.
 - DAO knowledge is **also partly a hardcoded system prompt** in
   `responseService.ts`, so updating Sensemaker's DAO answers can mean updating
   *both* the embedded corpus and that system prompt.

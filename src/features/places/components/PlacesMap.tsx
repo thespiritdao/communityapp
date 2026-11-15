@@ -18,7 +18,7 @@ import { PLACE_KIND_META } from '../types';
 export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
 // MapLibre v6 cannot find its worker inside Next's bundle; the worker files
-// are copied to public/maplibre by scripts/copy-maplibre-worker.mjs.
+// are copied to public/maplibre by scripts/build/copy-maplibre-worker.mjs.
 maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
 
 export interface PlacesMapProps {

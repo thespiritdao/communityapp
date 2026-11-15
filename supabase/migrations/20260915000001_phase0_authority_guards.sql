@@ -17,7 +17,7 @@
 -- (323 rows of recipient/sender/message). Scoped to the recipient; senders
 -- may still insert from the browser as their own address.
 --
--- Verified by scripts/audit-probes.mjs, which must print all-blocked after
+-- Verified by scripts/verify/audit-probes.mjs, which must print all-blocked after
 -- this is applied.
 
 -- ────────────────────────────────────────────────────────────────────────────

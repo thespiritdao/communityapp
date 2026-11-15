@@ -165,7 +165,7 @@ means granting the new address its hats and revoking the old one. Sequence:
 2. Generate the new key inside the chosen custody.
 3. Grant the new address the hats the old one administers.
 4. Move the app to the new address.
-5. Revoke the old address, and verify with `scripts/verify-authority.mjs`.
+5. Revoke the old address, and verify with `scripts/verify/verify-authority.mjs`.
 
 Until then the old keys stay in `.env`, which is the status quo rather than a
 regression.

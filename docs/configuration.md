@@ -15,7 +15,7 @@ your own infrastructure.
   senders, service wallets, integrations). It throws if bundled into the
   browser.
 - **`src/config/contracts.ts`** collects contract addresses.
-- **`scripts/check-env.mjs`** runs before every `npm run build` and fails the
+- **`scripts/build/check-env.mjs`** runs before every `npm run build` and fails the
   build with a readable list when a required value is missing or malformed.
   Run it on its own with `npm run check:env`.
 

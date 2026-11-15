@@ -1,7 +1,7 @@
 # BountyManagerV5 Redeploy — Remix Guide
 
 **Date:** 2026-08-02
-**Status:** ✅ EXECUTED 2026-08-02 via `scripts/deploy-treasury-contracts.mjs`
+**Status:** ✅ EXECUTED 2026-08-02 via `scripts/deploy/deploy-bounty-system.mjs`
 (script path, not Remix). Deployed and verified:
 
 | Contract | Address |
@@ -53,7 +53,7 @@ sealed it.
 
 ## Script vs. Remix
 
-Either works. `scripts/deploy-treasury-contracts.mjs` does everything in one
+Either works. `scripts/deploy/deploy-bounty-system.mjs` does everything in one
 command (deploy manager + 3 treasuries + registrations + Supabase update);
 Remix does the same via manual clicks, minus the Supabase update.
 

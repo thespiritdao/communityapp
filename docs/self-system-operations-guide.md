@@ -55,7 +55,7 @@ backwards. Budgets are caps consumed *within* an epoch; advancing *ends* one.
 - **Event** — after close-out, attendees with a check-in are credited
   `min(scheduled duration, 8h/day)`.
 - **Role service** — an epoch stipend swept by Exec for active role-holders
-  (`scripts/role-service-stipend.mjs`).
+  (`scripts/ops/role-service-stipend.mjs`).
 
 All earning writes a `pending` row to the mint ledger (`self_mint_queue`), with
 hour-anchoring + per-member diminishing returns + the pod budget cap applied. A
@@ -85,7 +85,7 @@ now `H` epochs old reaches zero value). See `runbook-self-epoch-advance.md` and
 |---|---|---|---|
 | Set pod budgets | per epoch | $SELF Epochs → Budgets (Exec) | Yes, later — Phase 4 algorithmic baseline (`base + α·members + β·last-epoch-hours`). Manual now by design. |
 | Run mint-batch | periodic (e.g. weekly) | `POST /api/self/mint-batch` | Yes — could be a cron; Exec-run in Phase 1 to watch first mints |
-| Role-service stipend | per epoch close | `scripts/role-service-stipend.mjs` | Partially — sweep script; rate is an Exec input |
+| Role-service stipend | per epoch close | `scripts/ops/role-service-stipend.mjs` | Partially — sweep script; rate is an Exec input |
 | Review flagged mints | as they appear | $SELF Epochs → Review (Exec) | No — human judgment |
 | Advance epoch | quarterly | $SELF Epochs → Epoch (Exec) | Deliberately manual (irreversible) |
 | Vote credit | automatic | on every vote | Already automatic |

@@ -5,7 +5,7 @@ production (`supabase/migrations/20260918000001_public_profiles_view.sql`),
 every peer-facing client read uses it, `ProfileService.getOwnByWallet` is the
 only client path that reads private columns (own row), the conference
 `participant-name` route requires a session and no longer falls back to the
-email local-part, and `scripts/check-profile-email-leaks.mjs` now fails
+email local-part, and `scripts/verify/check-profile-email-leaks.mjs` now fails
 (exit 1) on regressions. Step 2, tightening the base-table SELECT policy to
 own-row, is pending a week of clean production; the SQL is in the migration
 header.*
@@ -35,7 +35,7 @@ without `email`, and the clickable email was removed:
 
 ## What remains (DEFERRED)
 
-`scripts/check-profile-email-leaks.mjs` (advisory) lists ~30 remaining client
+`scripts/verify/check-profile-email-leaks.mjs` (advisory) lists ~30 remaining client
 `select('*')` on `user_profiles` across bounty, events, marketplace, surveys, and
 a few chat/vote spots. Fixing these one-by-one is broad and risky, especially
 right before onboarding. Do NOT chase them individually.

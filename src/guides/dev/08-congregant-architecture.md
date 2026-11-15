@@ -36,7 +36,7 @@ Every layer below is inspectable by anyone at **`/constitution`**.
 | `LedgerAnchor` | `0xDbcE1A7cA8a3C887D4E112FE36994D545e032b21` | Weekly Merkle roots of the activity ledger — tamper-evidence. |
 
 Sources: `src/contracts/AgentRegistry.sol`, `AgentExclusionEligibilityModule.sol`,
-`LedgerAnchor.sol`. Deploy scripts: `scripts/deploy-agent-registry.cjs`,
+`LedgerAnchor.sol`. Deploy scripts: `scripts/deploy/deploy-agent-registry.cjs`,
 `deploy-agent-exclusion-module.cjs`, `deploy-ledger-anchor.cjs`.
 
 Pending-redeploy guards: `ProofOfCuriosityV2.sol`, `AdvocateV2.sol`,
@@ -91,7 +91,7 @@ the service role (migrations `20260818000001`, `20260818000002`):
   failures do, loudly.
 - `explorer_events.actor_type` is stamped by a **DB trigger**
   (`is_agent_wallet()`) regardless of caller claims.
-- Boundary test suite: `node scripts/test-agent-scoped-role.mjs` (8 checks).
+- Boundary checks: `npm run verify:session` (agent confinement with a real agent session).
 
 ## Governance lifecycle
 
@@ -195,7 +195,7 @@ node scripts/verify-agent-exclusion.mjs
 open https://app.spiritdao.org/constitution
 
 # Scoped-role boundaries (8 checks incl. masquerade + mis-attribution)
-node scripts/test-agent-scoped-role.mjs
+npm run verify:session
 
 # Crisis detection patterns
 npx tsx --env-file=.env scripts/test-crisis-detection.ts

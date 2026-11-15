@@ -117,7 +117,7 @@ Keep the OLD proxy's entry until Step 6 verification passes, then remove it.
 
 - `.env`: `NEXT_PUBLIC_TREASURY_PROXY=NEW_PROXY`
 - Vercel: same variable, same value → redeploy the app
-- `scripts/deploy-treasury-contracts.mjs`: update its `PROXY` constant so future
+- `scripts/deploy/deploy-bounty-system.mjs`: update its `PROXY` constant so future
   treasury deploys bake in the new proxy (I'll do this when you give me the
   address)
 
