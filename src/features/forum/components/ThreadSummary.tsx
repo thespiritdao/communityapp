@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
+import { ensureAuthHeaders } from '@/lib/authHeaders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,32 +71,11 @@ export function ThreadSummary({
     setError(null);
 
     try {
-      // Fetch all posts in the thread
-      const { data: posts, error: postsError } = await supabase
-        .from('forum_posts')
-        .select('content')
-        .eq('thread_id', threadId)
-        .order('created_at', { ascending: true });
-
-      if (postsError) throw postsError;
-
-      // Combine thread content and posts
-      const fullContent = [
-        threadTitle,
-        threadContent || '',
-        ...(posts?.map((p) => p.content) || []),
-      ].join('\n\n');
-
-      // Call Sensemaker API for summarization
-      // NOTE: You'll need to set up the Sensemaker API endpoint
+      // The server reads the thread itself, as the signed-in member.
       const sensemakerResponse = await fetch('/api/sensemaker/summarize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: fullContent,
-          threadId,
-          threadTitle,
-        }),
+        headers: { 'Content-Type': 'application/json', ...(await ensureAuthHeaders()) },
+        body: JSON.stringify({ threadId }),
       });
 
       if (!sensemakerResponse.ok) {

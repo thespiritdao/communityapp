@@ -118,6 +118,13 @@ export const rateLimiters = {
   sensemaker: makeLimiter('sensemaker', 10, 60),
 
   /**
+   * Forum thread summaries (one OpenAI call each)
+   *
+   * Limit: 10 per hour per wallet
+   */
+  sensemakerSummarize: makeLimiter('sensemaker:summarize', 10, 3600),
+
+  /**
    * Airdrop Endpoint
    *
    * Limit: 3 requests per hour per wallet address
