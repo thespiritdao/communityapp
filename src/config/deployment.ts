@@ -156,22 +156,12 @@ const builderCodeParts = BUILDER_CODE
   : undefined;
 
 /**
- * Suffix appended to wagmi-routed transactions:
- * codes ‖ codesLength ‖ schemaId(0) ‖ marker.
+ * ERC-8021 schema-0 suffix: codes ‖ codesLength ‖ schemaId(0) ‖ marker.
+ * Appended to wagmi transactions and to CDP user operations alike. Check an
+ * attributed transaction with Base's Builder Code Validation tool.
  */
 export const BUILDER_CODE_SUFFIX = builderCodeParts
   ? (`0x${builderCodeParts.codes}${builderCodeParts.length}00${ERC8021_MARKER}` as `0x${string}`)
-  : undefined;
-
-/**
- * Suffix passed to CDP sendUserOperation:
- * codesLength ‖ codes ‖ schemaId(0) ‖ marker.
- * Note: the byte order differs from BUILDER_CODE_SUFFIX. Both reproduce the
- * values the app has always sent; which layout the indexer expects should be
- * confirmed against ERC-8021 before changing either.
- */
-export const BUILDER_CODE_USEROP_SUFFIX = builderCodeParts
-  ? (`0x${builderCodeParts.length}${builderCodeParts.codes}00${ERC8021_MARKER}` as `0x${string}`)
   : undefined;
 
 /** Base mini-app id advertised in the page head (optional). */

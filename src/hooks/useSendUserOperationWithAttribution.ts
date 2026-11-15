@@ -10,17 +10,17 @@
 // sent unchanged.
 
 import { useSendUserOperation } from '@coinbase/cdp-hooks';
-import { BUILDER_CODE_USEROP_SUFFIX } from '@/config/deployment';
+import { BUILDER_CODE_SUFFIX } from '@/config/deployment';
 
 export function useSendUserOperationWithAttribution() {
   const { sendUserOperation, ...rest } = useSendUserOperation();
 
   const sendUserOperationWithAttribution: typeof sendUserOperation = (params) => {
-    if (!BUILDER_CODE_USEROP_SUFFIX) return sendUserOperation(params);
+    if (!BUILDER_CODE_SUFFIX) return sendUserOperation(params);
     return sendUserOperation({
       ...params,
-      dataSuffix: BUILDER_CODE_USEROP_SUFFIX,
-    } as any);
+      dataSuffix: BUILDER_CODE_SUFFIX,
+    });
   };
 
   return { sendUserOperation: sendUserOperationWithAttribution, ...rest };
