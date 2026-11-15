@@ -7,6 +7,12 @@
  * manager is write-once, so a new manager always needs new treasuries; run this
  * for the first deployment, or when replacing the manager.
  *
+ * NOT for a brand-new deployment. Treasuries made here are deployed directly,
+ * not through PodTreasuryFactoryV3, so TreasuryProxy (which looks treasuries
+ * up in the factory) cannot see them. On a new deployment, deploy the manager
+ * with deploy-bounty-manager-v5.cjs, then create each pod's treasury from the
+ * app (treasury activation), which goes through the factory. See docs/SETUP.md.
+ *
  *   1. Deploy BountyManagerV5 (the deployer becomes its admin, which enables
  *      registerPodMetadataFor without pod-leader hats).
  *   2. Deploy a PodTreasuryV3 per pod with the new manager baked in.

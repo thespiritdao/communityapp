@@ -30,10 +30,13 @@ const need = (k) => {
 const FACTORY_V3_CORRECT = need('NEXT_PUBLIC_POD_TREASURY_FACTORY_V3');
 const DEPLOYER_V3 = need('NEXT_PUBLIC_POD_TREASURY_DEPLOYER_V3');
 
-const POD_CREATION_MANAGER_V2 = need('NEXT_PUBLIC_POD_CREATION_MANAGER');
-const POD_SELF_DISTRIBUTOR = need('NEXT_PUBLIC_POD_SELF_DISTRIBUTOR');
-const PURCHASE_ROUTER_DECENTRALIZED = need('NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED');
-const POD_CREATION_MANAGER_FACTORY = need('NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY');
+// Optional: steps for contracts you have not deployed are skipped.
+const opt = (k) => (process.env[k] ? need(k) : null);
+const TREASURY_PROXY = opt('NEXT_PUBLIC_TREASURY_PROXY');
+const POD_CREATION_MANAGER_V2 = opt('NEXT_PUBLIC_POD_CREATION_MANAGER');
+const POD_SELF_DISTRIBUTOR = opt('NEXT_PUBLIC_POD_SELF_DISTRIBUTOR'); // legacy deployments only
+const PURCHASE_ROUTER_DECENTRALIZED = opt('NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED');
+const POD_CREATION_MANAGER_FACTORY = opt('NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY');
 
 const PERSONAL_KEY = process.env.CONTRACT_ADMIN_PRIVATE_KEY;
 const POD_ADMIN_KEY = process.env.POD_ADMIN_PRIVATE_KEY;
@@ -71,6 +74,8 @@ const podAdminWallet = createWalletClient({ account: podAdminAccount, chain: bas
 const ABI = {
   treasuryFactory: [{ name: 'treasuryFactory', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] }],
   factory: [{ name: 'factory', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] }],
+  authorizedProxy: [{ name: 'authorizedProxy', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] }],
+  updateAuthorizedProxy: [{ name: 'updateAuthorizedProxy', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_newProxy', type: 'address' }], outputs: [] }],
   authorizedDeployer: [{ name: 'authorizedDeployer', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] }],
   updateTreasuryFactory: [{ name: 'updateTreasuryFactory', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_treasuryFactory', type: 'address' }], outputs: [] }],
   updateFactory: [{ name: 'updateFactory', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: 'newFactory', type: 'address' }], outputs: [] }],
@@ -87,6 +92,10 @@ async function readAddr(addr, fn) {
 
 async function callIfNeeded({ label, target, currentGetter, expected, callFn, callAbiName, wallet }) {
   console.log(`\n→ ${label}`);
+  if (!target) {
+    console.log('  – Skipped: contract not configured');
+    return;
+  }
   console.log(`  Target: ${target}`);
   const current = await readAddr(target, currentGetter);
   const exp = expected.toLowerCase();
@@ -141,6 +150,18 @@ async function main() {
     wallet: personalWallet,
   });
 
+  // Step 2b: Factory.authorizedProxy → TREASURY_PROXY. Each treasury copies the
+  // proxy address when it is created, so set this before the first treasury.
+  await callIfNeeded({
+    label: 'Step 2b: PodTreasuryFactoryV3.updateAuthorizedProxy',
+    target: TREASURY_PROXY ? FACTORY_V3_CORRECT : null,
+    currentGetter: 'authorizedProxy',
+    expected: TREASURY_PROXY || '',
+    callFn: 'updateAuthorizedProxy',
+    callAbiName: 'updateAuthorizedProxy',
+    wallet: personalWallet,
+  });
+
   // Step 3a: PodCreationManagerV2.treasuryFactory → FACTORY_V3_CORRECT
   await callIfNeeded({
     label: 'Step 3a: PodCreationManagerV2.updateTreasuryFactory',
@@ -189,10 +210,11 @@ async function main() {
   console.log('Final state:');
   console.log(`  Deployer.factory:              ${await readAddr(DEPLOYER_V3, 'factory')}`);
   console.log(`  Factory.authorizedDeployer:    ${await readAddr(FACTORY_V3_CORRECT, 'authorizedDeployer')}`);
-  console.log(`  PodCreationManagerV2:          ${await readAddr(POD_CREATION_MANAGER_V2, 'treasuryFactory')}`);
-  console.log(`  PodSELFDistributor:            ${await readAddr(POD_SELF_DISTRIBUTOR, 'treasuryFactory')}`);
-  console.log(`  PurchaseRouterDecentralized:   ${await readAddr(PURCHASE_ROUTER_DECENTRALIZED, 'treasuryFactory')}`);
-  console.log(`  PodCreationManagerFactory:     ${await readAddr(POD_CREATION_MANAGER_FACTORY, 'treasuryFactory')}`);
+  console.log(`  Factory.authorizedProxy:       ${await readAddr(FACTORY_V3_CORRECT, 'authorizedProxy')}`);
+  if (POD_CREATION_MANAGER_V2) console.log(`  PodCreationManagerV2:          ${await readAddr(POD_CREATION_MANAGER_V2, 'treasuryFactory')}`);
+  if (POD_SELF_DISTRIBUTOR) console.log(`  PodSELFDistributor:            ${await readAddr(POD_SELF_DISTRIBUTOR, 'treasuryFactory')}`);
+  if (PURCHASE_ROUTER_DECENTRALIZED) console.log(`  PurchaseRouterDecentralized:   ${await readAddr(PURCHASE_ROUTER_DECENTRALIZED, 'treasuryFactory')}`);
+  if (POD_CREATION_MANAGER_FACTORY) console.log(`  PodCreationManagerFactory:     ${await readAddr(POD_CREATION_MANAGER_FACTORY, 'treasuryFactory')}`);
 }
 
 main().catch((e) => {

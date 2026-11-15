@@ -31,7 +31,6 @@
     "pinecone:setup": "tsx scripts/embed/setup-pinecone-index.ts",
     "pinecone:test": "tsx scripts/embed/test-pinecone-indexes.ts",
     "embed:docs": "tsx scripts/embed/embed-docs.ts",
-    "deploy:testnet": "node scripts/deploy/deploy-testnet.mjs",
     "dev:testnet": "cross-env NODE_ENV=development DOTENV_CONFIG_PATH=.env.testnet next dev",
     "build:testnet": "cross-env DOTENV_CONFIG_PATH=.env.testnet next build",
     "start:testnet": "cross-env DOTENV_CONFIG_PATH=.env.testnet next start",
