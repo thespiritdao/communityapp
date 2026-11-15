@@ -105,3 +105,6 @@ jobs:
 
       - name: Wallet linking end to end
         run: npm run verify:linking
+
+      - name: Only the uploader can overwrite or delete a stored file
+        run: npm run verify:storage
