@@ -4,6 +4,7 @@
 import React from 'react';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { MarkdownContent } from '@/components/MarkdownContent';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 interface MentionRendererProps {
   content: string;
@@ -86,7 +87,7 @@ export function MentionRenderer({ content, className = '' }: MentionRendererProp
     return (
       <div
         className={className}
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );
   }
@@ -121,7 +122,7 @@ export function MentionRenderer({ content, className = '' }: MentionRendererProp
           return (
             <span
               key={index}
-              dangerouslySetInnerHTML={{ __html: segment.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(segment.content) }}
             />
           );
         }

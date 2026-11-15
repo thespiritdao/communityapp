@@ -3,6 +3,7 @@
 
 import { VideoPlayer } from './VideoPlayer';
 import type { KnowledgeItem } from '../types';
+import { sanitizeHtml, safeHref } from '@/lib/sanitizeHtml';
 
 interface ContentDisplayProps {
   item: KnowledgeItem;
@@ -55,7 +56,7 @@ export const ContentDisplay: React.FC<ContentDisplayProps> = ({
             >
               {item.content_type === 'markdown' ? (
                 <div
-                  dangerouslySetInnerHTML={{ __html: item.content_text }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content_text) }}
                   style={{
                     whiteSpace: 'pre-wrap',
                   }}
@@ -72,7 +73,7 @@ export const ContentDisplay: React.FC<ContentDisplayProps> = ({
                 </pre>
               )}
             </div>
-          ) : item.content_url ? (
+          ) : safeHref(item.content_url) ? (
             <div style={{ textAlign: 'center' }}>
               <p
                 style={{
@@ -84,7 +85,7 @@ export const ContentDisplay: React.FC<ContentDisplayProps> = ({
                 This document is available for download:
               </p>
               <a
-                href={item.content_url}
+                href={safeHref(item.content_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
