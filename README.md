@@ -20,11 +20,12 @@ by a very small team over 2024-2026 and is being published so others can run
 it, learn from it, audit it and contribute. Expect rough edges:
 
 - `next build` passes with `ignoreBuildErrors` on; `tsc` still reports type errors.
-- The unit test suite is small (`npm test`, 8 files, all passing) and covers
-  session verification, vault crypto, hat-id prediction and a few services.
-  Most features have no automated tests yet.
-- Several one-off operational scripts in `scripts/` assume the SpiritDAO
-  deployment (contract addresses, pod ids). Treat them as examples.
+- The unit test suite is small (`npm test`, all passing) and covers session
+  verification, HTML sanitising, vault crypto, hat-id prediction and a few
+  services. Most features have no automated tests yet. Security behaviour is
+  checked by live suites in `scripts/verify/` against a running deployment.
+- [`docs/known-limitations.md`](docs/known-limitations.md) lists deliberate
+  design decisions, accepted contract items and good first issues.
 
 The engineering docs in [`docs/README.md`](docs/README.md) are the best place to
 start. The architecture overview, authentication model and permission design are
@@ -46,6 +47,10 @@ listed there first for a reason.
 | Hosting | Vercel (web), scheduled jobs via Vercel cron (`vercel.json`) |
 
 ## Running it locally
+
+To run your own deployment end to end (database, wallets, contracts, Hats
+tree, hosting), follow [`docs/SETUP.md`](docs/SETUP.md). The short version for
+local development:
 
 Prerequisites: Node 24 (see `.nvmrc`), npm, a Supabase project, and a Coinbase
 Developer Platform project for embedded wallets. A Base RPC endpoint and a
@@ -70,7 +75,8 @@ before touching them.
 
 Smart contracts compile with `npx hardhat compile`. Deploying your own set
 means creating your own Hats tree and updating the `NEXT_PUBLIC_*` contract
-addresses in `.env`; see `scripts/deploy-*` and the runbooks in `docs/`.
+addresses in `.env`; see [`docs/SETUP.md`](docs/SETUP.md) and
+[`scripts/README.md`](scripts/README.md).
 
 Nothing in the code points at SpiritDAO's own deployment. Every contract, pod,
 hat, domain and mailbox comes from your environment; see
@@ -93,8 +99,8 @@ src/app/           Next.js routes and API handlers (src/app/api/**)
 src/features/      Feature modules: pods, governance, forum, bounty, events, chat, identity, knowledge, ...
 src/contracts/     Solidity sources
 src/lib/           Server-side helpers: session verification, pod authorization guards, CDP auth
-supabase/          Migrations (schema, RLS policies, RPCs, triggers)
-scripts/           Operational and verification scripts
+supabase/          baseline/ builds a new database; migrations/ is the change history
+scripts/           Operator tooling: build, db, deploy, ops, verify (see scripts/README.md)
 docs/              Engineering docs; start at docs/README.md
 user-flows/        Narrative walkthroughs of each feature from the member's point of view
 public/images/docs Screenshots used by the in-app documentation

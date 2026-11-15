@@ -75,7 +75,8 @@ them; see `NOTICE.md`.
 
 ## What is still Base-specific
 
-The app targets Base. `NEXT_PUBLIC_CHAIN_ID` selects the explorer URL, but many
-call sites still import viem's `base` chain directly and fall back to the public
-Base RPC. Running on another chain needs those call sites routed through the
-config first.
+The app runs on Base mainnet only. `NEXT_PUBLIC_CHAIN_ID` selects the explorer
+URL, but wagmi is configured for `base`, about 60 files import viem's `base`
+chain, user operations name Base mainnet (`network: 'base'`, chain id 8453),
+and the deploy scripts sign with `chain: base`. Base Sepolia or any other
+network needs those call sites routed through the config first.

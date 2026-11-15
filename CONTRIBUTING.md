@@ -8,6 +8,9 @@ so the most useful contributions are the ones that are easy to review.
 - Read [`docs/README.md`](docs/README.md), then the architecture docs it lists
   first: pods architecture, authentication and session model, permission design.
 - Open an issue before a large change so we can agree on the approach.
+- [`docs/known-limitations.md`](docs/known-limitations.md) lists deliberate
+  design decisions, accepted contract items and a set of good first issues.
+  Check it before reporting a bug or picking something to work on.
 - Security problems go to the address in [`SECURITY.md`](SECURITY.md), never to a
   public issue or pull request.
 
@@ -44,7 +47,7 @@ npm install
 npm run dev
 # make the change
 npm run check          # biome
-npm test               # vitest (some inherited suites are known-red; do not make them worse)
+npm test               # vitest, all green: keep it that way
 npm run verify:static
 ```
 

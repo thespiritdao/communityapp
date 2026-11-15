@@ -22,8 +22,8 @@ running them against mainnet.
 ## Order for a new deployment
 
 1. Database: apply `supabase/baseline/` (see its README), then `supabase/migrations/`.
-2. Contracts: `scripts/deploy/` and `docs/SETUP.md`. Run `node scripts/deploy/verify-env-vars.mjs` once your addresses are in `.env`; it fails on any address without contract code.
-3. Checks: `npm run verify:static`, then the live suites (`verify:exposure`, `verify:authority`, `verify:linking`, `verify:session`) against your deployed app.
+2. Contracts: follow `docs/SETUP.md` sections 4 to 6 (about half the contracts have a script here; the rest are deployed by hand). Run `node scripts/deploy/verify-env-vars.mjs` once your addresses are in `.env`; it fails on any address without contract code.
+3. Checks: `npm run verify:static`, then the live suites (`verify:exposure`, `verify:authority`, `verify:linking`, `verify:session`, `verify:storage`) against your deployed app.
 
 ## The verify suites write to your database
 

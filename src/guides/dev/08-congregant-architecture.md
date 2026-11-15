@@ -86,9 +86,11 @@ the service role (migrations `20260818000001`, `20260818000002`):
   Migration `20260819000002`.)
 - RLS requires attribution to the caller's own registered agent wallet AND
   `actor_type='agent'` — provenance is enforced at the boundary.
-- Auth: short-lived HS256 JWTs (`agentDbClient.ts`, signed with
-  `SUPABASE_JWT_SECRET`). RLS refusals never fall back to admin; infra
-  failures do, loudly.
+- Auth: each agent has its own Supabase auth account
+  (`<wallet>@AGENT_EMAIL_DOMAIN`); Supabase issues its session and the access
+  token hook stamps `role=community_agent` (`agentDbClient.ts`). Nothing in the
+  app signs tokens. A refused scoped write is an error, never a fallback to
+  the service role.
 - `explorer_events.actor_type` is stamped by a **DB trigger**
   (`is_agent_wallet()`) regardless of caller claims.
 - Boundary checks: `npm run verify:session` (agent confinement with a real agent session).
@@ -181,8 +183,8 @@ user guide 16.
 | `AGENT_WALLET_MASTER_KEY` | Signer derivation (server-only, critical) |
 | `NEXT_PUBLIC_AGENT_REGISTRY` | AgentRegistry address |
 | `NEXT_PUBLIC_AGENT_EXCLUSION_MODULE` | Eligibility module (scripts only) |
-| `NEXT_PUBLIC_LEDGER_ANCHOR` | LedgerAnchor (hardcoded fallback exists) |
-| `SUPABASE_JWT_SECRET` | Agent-role JWT signing |
+| `NEXT_PUBLIC_LEDGER_ANCHOR` | LedgerAnchor address |
+| `AGENT_EMAIL_DOMAIN` | Domain of the agents' synthetic auth accounts |
 | `CRON_SECRET` | Cron auth (Vercel injects as Bearer header) |
 
 ## Verification runbook

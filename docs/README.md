@@ -7,7 +7,9 @@ the SpiritDAO Community App. New contributors should start here.
 
 | Doc | Topic |
 |---|---|
-| [configuration](configuration.md) | **Start here to run your own instance.** Every environment variable, the structural pods, how hats resolve, what is still Base-specific |
+| [SETUP](SETUP.md) | **Start here to run your own instance.** Accounts, database, wallets, contracts, Hats tree, hosting and checks, in order |
+| [configuration](configuration.md) | Every environment variable, the structural pods, how hats resolve, what is still Base-specific |
+| [known-limitations](known-limitations.md) | Deliberate design decisions, accepted contract items, engineering debt and good first issues. Read before reporting a bug |
 | [pods-architecture-overview](pods-architecture-overview.md) | Pods feature — the central organizing unit. Layer cake, services map, creation flow, footguns |
 | [authentication-and-session-model](authentication-and-session-model.md) | How CDP wallet identity becomes a Supabase JWT, what RLS sees. **Includes the wallet-hook rule: `useUserWallet` for identity, `useSigningWallet` for signing — never `useEvmAddress` for identity** |
 | [role-permissions-design-philosophy](role-permissions-design-philosophy.md) | Three principles behind the permission model (module ↔ permission coupling, Core/Add-Ons/Paid, capability-exposing UI) |

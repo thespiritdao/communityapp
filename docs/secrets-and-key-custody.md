@@ -12,6 +12,12 @@ only names, what each one can do, and how to rotate it. Safe to make public.*
 > ever held those values. The sections below are kept as the record of the finding
 > and the runbook that fixed it.
 
+> **Setting up your own deployment?** This page is the reference deployment's
+> record. The parts that apply to you are the table under "The ones that can do
+> real damage" (what each secret can do if it leaks) and "Where secrets should
+> live". [`SETUP.md`](SETUP.md) section 4 lists the server keys a new
+> deployment needs and what on-chain role each one holds.
+
 ---
 
 ## The finding that matters most
