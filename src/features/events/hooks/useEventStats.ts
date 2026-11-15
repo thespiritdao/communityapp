@@ -42,17 +42,15 @@ export function useEventStats(): EventStats {
 
         if (completedError) throw completedError;
 
-        // Get total participants (all valid registrations across all events)
-        const { count: participantsCount, error: participantsError } =
-          await supabase
-            .from('event_registrations')
-            .select('*', { count: 'exact', head: true })
-            .in('registration_status', [
-              'registered',
-              'checked_in',
-              'completed',
-            ])
-            .neq('registration_status', 'cancelled');
+        // Total participants across all events (counts only).
+        const { data: regCounts, error: participantsError } = await supabase.rpc(
+          'event_registration_counts',
+          { p_event_ids: null },
+        );
+        const participantsCount = ((regCounts as any[]) || []).reduce(
+          (sum, r) => sum + (Number(r.registration_count) || 0),
+          0,
+        );
 
         if (participantsError) throw participantsError;
 

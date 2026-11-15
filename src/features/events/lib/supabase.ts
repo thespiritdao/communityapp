@@ -379,33 +379,26 @@ export class EventService {
 
     if (eventIds.length > 0) {
       try {
-        const { data: regs, error: regError } = await supabase
-          .from('event_registrations')
-          .select('event_id, registration_status')
-          .in('event_id', eventIds)
-          .in('registration_status', ['registered', 'checked_in', 'completed']);
+        // Counts only: registrations themselves are visible to attendees and
+        // organisers, not to every member.
+        const { data: counts, error: regError } = await supabase.rpc(
+          'event_registration_counts',
+          { p_event_ids: eventIds },
+        );
 
         if (regError) throw regError;
 
-        for (const row of regs || []) {
-          const c =
-            countsByEvent.get(row.event_id) || {
-              registration: 0,
-              checkedIn: 0,
-              completed: 0,
-            };
-          // "registration_count" = registered OR checked_in OR completed
-          c.registration += 1;
-          if (
-            row.registration_status === 'checked_in' ||
-            row.registration_status === 'completed'
-          ) {
-            c.checkedIn += 1;
-          }
-          if (row.registration_status === 'completed') {
-            c.completed += 1;
-          }
-          countsByEvent.set(row.event_id, c);
+        for (const row of (counts || []) as Array<{
+          event_id: string;
+          registration_count: number;
+          checked_in_count: number;
+          completed_count: number;
+        }>) {
+          countsByEvent.set(row.event_id, {
+            registration: Number(row.registration_count) || 0,
+            checkedIn: Number(row.checked_in_count) || 0,
+            completed: Number(row.completed_count) || 0,
+          });
         }
       } catch (countError) {
         console.error('Failed to batch-load event registration counts:', countError);
@@ -505,26 +498,15 @@ export class EventService {
 
     // Calculate registration counts for this event
     try {
-      // Get registration count for this event
-      const { count: registrationCount } = await supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', eventId)
-        .in('registration_status', ['registered', 'checked_in', 'completed']);
-
-      // Get checked-in count
-      const { count: checkedInCount } = await supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', eventId)
-        .in('registration_status', ['checked_in', 'completed']);
-
-      // Get completed count
-      const { count: completedCount } = await supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', eventId)
-        .eq('registration_status', 'completed');
+      const { data: counts, error: countsError } = await supabase.rpc(
+        'event_registration_counts',
+        { p_event_ids: [eventId] },
+      );
+      if (countsError) throw countsError;
+      const row = (counts as any[] | null)?.[0];
+      const registrationCount = Number(row?.registration_count) || 0;
+      const checkedInCount = Number(row?.checked_in_count) || 0;
+      const completedCount = Number(row?.completed_count) || 0;
 
       // Transform regular event to EventWithStats format with actual counts
       return {
