@@ -35,8 +35,14 @@ Out of scope:
 
 ## What we consider serious
 
-- Any path that lets one member read another member's private data, including
-  membership in a community, direct messages, email, or location.
+- Any path that lets one member read another member's private data: direct
+  messages, email, location, or event registrations for events they neither
+  attend nor organise. Anything readable without signing in.
+- Not private by design: signed-in members can see who belongs to which pod
+  and how members voted (membership is an on-chain hat anyway), and public
+  profile fields. Reports that a member can read these are not
+  vulnerabilities, but reports that a non-member or a signed-out visitor can
+  are.
 - Any path that lets a caller act as a member they are not, on-chain or in the
   database.
 - Treasury, bounty or donation flows that move funds without the required

@@ -10,6 +10,10 @@
 
 set -e
 
+# git passes "<local ref> <local sha> <remote ref> <remote sha>" per ref on
+# stdin. Read it before anything else can consume it.
+refs=$(cat)
+
 echo "pre-push: member private data must not reach a peer's browser"
 node scripts/verify/check-profile-email-leaks.mjs
 
@@ -17,15 +21,31 @@ node scripts/verify/check-profile-email-leaks.mjs
 # rather than ask someone to notice it in review. Deleting such a file cannot
 # leak anything, so deletions are ignored (--diff-filter=d).
 echo "pre-push: no secrets in the commits being pushed"
-staged_secrets=$(git diff --stat --diff-filter=d @{push}..HEAD -- \
-  ':(glob)**/.env' ':(glob)**/.env.*' ':(glob)**/*.pem' ':(glob)**/*.key' \
-  ':(glob)**/*api_key*.json' ':(glob)**/*api-key*.json' \
-  ':(exclude,glob)**/*.example' \
-  2>/dev/null || true)
-if [ -n "$staged_secrets" ]; then
+zero=0000000000000000000000000000000000000000
+found=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "$local_sha" ] && continue
+  [ "$local_sha" = "$zero" ] && continue   # deleting a remote branch
+  if [ "$remote_sha" = "$zero" ]; then
+    range="$local_sha --not --remotes"     # new branch: everything not yet pushed anywhere
+  else
+    range="$remote_sha..$local_sha"
+  fi
+  # shellcheck disable=SC2086
+  hits=$(git log --format= --name-only --diff-filter=d $range -- \
+    ':(glob)**/.env' ':(glob)**/.env.*' ':(glob)**/*.pem' ':(glob)**/*.key' \
+    ':(glob)**/*api_key*.json' ':(glob)**/*api-key*.json' \
+    ':(exclude,glob)**/*.example' | sort -u)
+  [ -n "$hits" ] && found="$found$hits
+"
+done <<REFS
+$refs
+REFS
+
+if [ -n "$found" ]; then
   echo ""
   echo "  Refusing: these commits touch a secrets file:"
-  echo "$staged_secrets"
+  printf '%s' "$found"
   echo ""
   echo "  Remove it from the history before pushing."
   exit 1
