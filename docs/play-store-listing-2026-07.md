@@ -9,7 +9,7 @@ Artifacts: `C:\Users\PC\Documents\DAO\App\spiritdao-twa\app-release-bundle.aab` 
 - **App name** (30 char max): `SpiritDAO Community`
 - **Category**: Social
 - **Tags**: community, governance, events
-- **Contact email**: tech@spiritdao.org
+- **Contact email**: ron@spiritdao.org
 - **Website**: https://spiritdao.org
 - **Privacy policy URL**: https://app.spiritdao.org/privacy  (live, verified 200)
 
@@ -93,7 +93,7 @@ Security section:
   https://app.spiritdao.org/identity/account-deletion** (live, public,
   30-day completion; deployed 2026-07-27). In-app deletion: Delete Account
   button at the bottom of /identity (POST /api/account/delete → records in
-  account_deletion_requests + notifies tech@spiritdao.org + signs out).
+  account_deletion_requests + notifies ron@spiritdao.org + signs out).
   REQUIRES: apply scripts/db-migrations/007_account_deletion_requests.sql
   to prod Supabase (route degrades to email-only until applied).
 - No data sold. No third-party ad SDKs. Analytics: declare if any (check

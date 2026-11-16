@@ -6,7 +6,7 @@ with respect.
 
 ## Reporting a vulnerability
 
-Email **tech@spiritdao.org** with a description of the issue, steps to
+Email **ron@spiritdao.org** with a description of the issue, steps to
 reproduce, and the impact you believe it has. Encrypting is not required. Please
 do not open a public GitHub issue, discussion or pull request for a security
 problem, and please do not test against the production deployment at

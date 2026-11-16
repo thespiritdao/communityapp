@@ -599,7 +599,7 @@ export default function PrivacyPolicyPage() {
               <strong>SpiritDAO</strong>
             </p>
             <p className="text-gray-700">501(c)(3) Religious Organization</p>
-            <p className="text-gray-700 mt-2">Email: tech@spiritdao.org</p>
+            <p className="text-gray-700 mt-2">Email: ron@spiritdao.org</p>
             <p className="text-gray-700">
               Support: Through Platform contact forum
             </p>
