@@ -40,6 +40,12 @@ const ENSURE_CATEGORIES = [
 // file → { category (global category name), title, description }
 const MANIFEST = [
   {
+    file: '20-open-source.md',
+    category: 'Getting Started',
+    title: 'Open Source: Join SpiritDAO or Run Your Own',
+    description: 'What the open-source release means, when running your own copy makes sense, and why most communities should join instead.',
+  },
+  {
     file: '01-getting-started.md',
     category: 'Getting Started',
     title: 'Getting Started Guide',
