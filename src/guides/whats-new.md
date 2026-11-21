@@ -5,6 +5,29 @@ recent first.
 
 ---
 
+## November 2026 — SpiritDAO is open source
+
+### The code is public
+The software behind SpiritDAO is now published under the AGPL-3.0 license at
+[github.com/thespiritdao/communityapp](https://github.com/thespiritdao/communityapp).
+Anyone can read it, check how votes are counted and who can see what, and
+contribute fixes. The SpiritDAO name, our deployment and member information are
+not part of the release.
+
+### Should your community join or run its own copy?
+For almost every community, joining is the better path: everything is ready
+today, and hosting, security, fiscal sponsorship and the shared economy come
+with it. The new [Open Source guide](20-open-source.md) explains when running
+your own copy makes sense, and what it involves.
+
+### Safer before it went public
+Before publishing we reviewed the whole codebase. Member-written posts are now
+cleaned before display, only the uploader can replace or delete a file, event
+registrations are visible only to fellow attendees and organisers, and security
+reports go to ron@spiritdao.org.
+
+---
+
 ## September 2026 — Journal and Places
 
 ### A journal, not just a forum
