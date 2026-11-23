@@ -7,6 +7,8 @@ import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { usePodModules } from '@/features/pods/hooks/usePodModules';
+import { useUserWallet } from '@/hooks/useUserWallet';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 import {
   getUserIdentity,
   getAccessibleEvents,
@@ -45,8 +47,26 @@ export function usePods() {
   };
 }
 
+/**
+ * Why a member cannot register, once the check has finished:
+ *   requirements — the event is gated and the member lacks what it asks for
+ *   closed       — the member qualifies, but registration is not open to them
+ *                  (already registered, full, started, or not published)
+ *   signin       — no wallet is connected in this browser
+ *   error        — the check itself failed; says nothing about eligibility
+ */
+export type RegisterBlockReason = 'requirements' | 'closed' | 'signin' | 'error';
+
 export function useEventAccess(event: Event | null) {
-  const { evmAddress: address } = useEvmAddress();
+  // Two wallets: the device wallet signs and is the one a registration is
+  // written under; the canonical wallet is the member's identity, which pod
+  // memberships are keyed on. Eligibility is an identity question.
+  const { evmAddress } = useEvmAddress();
+  const { isInitializing: walletInitializing } = useCDPStatus();
+  const canonicalAddress = useUserWallet();
+  const deviceAddress = evmAddress ? evmAddress.toLowerCase() : null;
+  const identityAddress = canonicalAddress ?? deviceAddress;
+
   const { balances: tokenBalances, error: tokenBalancesError } =
     useTokenBalances();
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
@@ -55,13 +75,41 @@ export function useEventAccess(event: Event | null) {
   const [canManage, setCanManage] = useState(false);
   const [userTokens, setUserTokens] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  // True until a check has actually finished. canRegister is false while this
+  // is true, and that must not be shown to the member as "ineligible".
+  const [checking, setChecking] = useState(true);
+  const [registerBlockReason, setRegisterBlockReason] =
+    useState<RegisterBlockReason | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const checkAccess = useCallback(async () => {
-    if (!event || !address || hatPermissionsLoading) {
+    if (!event) {
       setCanView(false);
       setCanRegister(false);
       setCanManage(false);
+      setRegisterBlockReason(null);
+      setChecking(false);
+      return;
+    }
+
+    if (!deviceAddress || !identityAddress) {
+      setCanView(false);
+      setCanRegister(false);
+      setCanManage(false);
+      if (walletInitializing) {
+        setChecking(true);
+      } else {
+        setRegisterBlockReason('signin');
+        setChecking(false);
+      }
+      return;
+    }
+
+    if (hatPermissionsLoading) {
+      setCanView(false);
+      setCanRegister(false);
+      setCanManage(false);
+      setChecking(true);
       return;
     }
 
@@ -69,43 +117,57 @@ export function useEventAccess(event: Event | null) {
       setLoading(true);
       setError(null);
 
-      // Check if user is the creator
-      const isCreator =
-        event.creator_address.toLowerCase() === address.toLowerCase();
+      // Check if user is the creator (under either of their wallets)
+      const creator = event.creator_address.toLowerCase();
+      const isCreator = creator === identityAddress || creator === deviceAddress;
       setCanManage(isCreator);
 
       // NEW: Use normalized access control system
       const effectiveTokenBalances =
-        tokenBalances || (await fetchTokenBalances(address));
+        tokenBalances || (await fetchTokenBalances(identityAddress));
       const identity = await getUserIdentity(
-        address,
+        identityAddress,
         effectiveTokenBalances,
         userHats,
       );
       logUserIdentity(identity, 'Event Access Check');
 
       // Check if user has access to this specific event
-      const hasAccess = await hasEventAccess(event.id, identity, address);
+      const hasAccess =
+        isCreator || (await hasEventAccess(event.id, identity, identityAddress));
       console.log(`🎪 User has access to event "${event.title}": ${hasAccess}`);
 
       setCanView(hasAccess);
 
       if (hasAccess) {
+        const generalRegistrationPermission = canRegisterForEvents(identity);
         // Check if user can register based on other requirements (date, capacity, etc.)
         try {
+          // Registrations are stored under the device wallet, lower-cased.
           const canRegisterForEvent =
-            await EventService.canUserRegisterForEvent(event.id, address);
-          const generalRegistrationPermission = canRegisterForEvents(identity);
-          setCanRegister(canRegisterForEvent && generalRegistrationPermission);
+            await EventService.canUserRegisterForEvent(event.id, deviceAddress);
+          const allowed = canRegisterForEvent && generalRegistrationPermission;
+          setCanRegister(allowed);
+          setRegisterBlockReason(
+            allowed
+              ? null
+              : generalRegistrationPermission
+                ? 'closed'
+                : 'requirements',
+          );
         } catch (registrationError) {
           console.warn(
             'Error checking registration permission, defaulting to true:',
             registrationError,
           );
-          setCanRegister(canRegisterForEvents(identity));
+          setCanRegister(generalRegistrationPermission);
+          setRegisterBlockReason(
+            generalRegistrationPermission ? null : 'requirements',
+          );
         }
       } else {
         setCanRegister(false);
+        setRegisterBlockReason('requirements');
       }
     } catch (err) {
       console.error('Error in event access check:', err);
@@ -115,10 +177,20 @@ export function useEventAccess(event: Event | null) {
       setCanView(false);
       setCanRegister(false);
       setCanManage(false);
+      setRegisterBlockReason('error');
     } finally {
       setLoading(false);
+      setChecking(false);
     }
-  }, [event, address, tokenBalances, userHats, hatPermissionsLoading]);
+  }, [
+    event,
+    deviceAddress,
+    identityAddress,
+    walletInitializing,
+    tokenBalances,
+    userHats,
+    hatPermissionsLoading,
+  ]);
 
   useEffect(() => {
     checkAccess();
@@ -130,6 +202,8 @@ export function useEventAccess(event: Event | null) {
     canManage,
     userTokens,
     loading,
+    checking,
+    registerBlockReason,
     error,
     recheckAccess: checkAccess,
   };

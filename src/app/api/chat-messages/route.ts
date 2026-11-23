@@ -359,29 +359,33 @@ export async function POST(request: Request) {
     }
 
     // ✅ NOTIFICATION: Send @everyone notifications if applicable
-    if (isEveryoneTag && data && pod_id) {
+    // A chat with no pod (e.g. General) notifies every member; the permission
+    // check above already limited that to Executive Pod leaders.
+    // Runs via after() so the fan-out is not cut off when the response is sent.
+    if (isEveryoneTag && data) {
       console.log('🔔 Chat message POST: Triggering @everyone notifications...');
 
-      // Get sender name and pod name for better notification context
-      const senderName = await everyoneNotificationService.getSenderName(sender_wallet_id);
-      const podName = await everyoneNotificationService.getPodName(pod_id);
-      const messagePreview = everyoneNotificationService.createMessagePreview(content);
+      after(async () => {
+        try {
+          const [senderName, podName] = await Promise.all([
+            everyoneNotificationService.getSenderName(sender_wallet_id),
+            pod_id ? everyoneNotificationService.getPodName(pod_id) : undefined,
+          ]);
 
-      // Send notifications asynchronously (don't block response)
-      everyoneNotificationService.sendEveryoneNotifications({
-        senderAddress: sender_wallet_id,
-        senderName,
-        messageContent: content,
-        messagePreview,
-        contextType: 'chat',
-        contextId: chat_group_id,
-        contextUrl: `/chat/${chat_group_id}`,
-        podId: pod_id,
-        podName,
-      }).then((result) => {
-        console.log(`✅ Chat message POST: @everyone notifications sent: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped`);
-      }).catch((error) => {
-        console.error('❌ Chat message POST: @everyone notification error:', error);
+          const result = await everyoneNotificationService.sendEveryoneNotifications({
+            senderAddress: sender_wallet_id,
+            senderName,
+            messagePreview: everyoneNotificationService.createMessagePreview(content),
+            contextType: 'chat',
+            contextId: chat_group_id,
+            contextUrl: `/chat/${chat_group_id}`,
+            podId: pod_id,
+            contextName: podName || groupData.title,
+          });
+          console.log(`✅ Chat message POST: @everyone notifications: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped`);
+        } catch (error) {
+          console.error('❌ Chat message POST: @everyone notification error:', error);
+        }
       });
     }
 

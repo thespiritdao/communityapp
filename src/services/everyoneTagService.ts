@@ -1,16 +1,21 @@
 /**
- * @everyone Tag Service
+ * @everyone Tag Service (server-only)
  *
- * Handles permission checking and notification delivery for @everyone mentions in chat/forums.
+ * Permission checking and recipient lookup for @everyone mentions in
+ * chat/forums. Runs inside API routes, so it reads with the service-role
+ * client: the shared browser client has no session on the server and the
+ * anon role has no table access.
  *
- * Permission Rules:
- * 1. User must have 'chatModeration' permission in the specific pod
- * 2. Executive Pod Leaders can use @everyone in any chat
- * 3. Permission is pod-scoped - having it in one pod doesn't grant cross-pod access
+ * Permission rules:
+ * 1. Executive Pod leaders can use @everyone in any chat.
+ * 2. In a pod's chat, members whose role has 'chatModeration' in that pod can
+ *    use it. The permission is pod-scoped.
+ * 3. In a chat that belongs to no pod (e.g. General), only Executive Pod
+ *    leaders can use it, and it reaches every member of the platform.
  */
 
-import { supabase } from '@/utils/supabaseClient';
-import { getClientHatId } from '@/lib/hatRegistryClient';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { getHatId } from '@/lib/hatRegistry';
 
 export interface EveryoneTagPermission {
   canUseEveryoneTag: boolean;
@@ -22,9 +27,13 @@ export interface EveryoneTagPermission {
 export interface EveryoneTagContext {
   userWallet: string;
   chatGroupId?: string;
-  podId?: string;
+  podId?: string | null;
   contextType: 'chat' | 'forum';
 }
+
+// The mention picker stores the tag as "@[everyone](everyone)"; typing it by
+// hand leaves a bare "@everyone". Both count.
+const EVERYONE_PATTERN = /@\[everyone\]\(everyone\)|@everyone\b/i;
 
 class EveryoneTagService {
   /**
@@ -33,55 +42,52 @@ class EveryoneTagService {
   async checkEveryoneTagPermission(
     context: EveryoneTagContext,
   ): Promise<EveryoneTagPermission> {
-    const { userWallet, chatGroupId, podId, contextType } = context;
+    const { userWallet, chatGroupId } = context;
 
     try {
-      // Step 1: Determine the pod context
-      let targetPodId = podId;
+      // Step 1: Determine the pod context (none for platform-wide chats)
+      let targetPodId: string | undefined = context.podId || undefined;
 
       if (!targetPodId && chatGroupId) {
-        // Get pod from chat group
-        const { data: chatGroup } = await supabase
+        const { data: chatGroup, error } = await supabaseAdmin
           .from('chat_groups')
           .select('pod_id')
           .eq('id', chatGroupId)
-          .single();
+          .maybeSingle();
 
-        if (chatGroup?.pod_id) {
-          targetPodId = chatGroup.pod_id;
+        if (error) throw error;
+        if (!chatGroup) {
+          return {
+            canUseEveryoneTag: false,
+            reason: 'Cannot determine chat context for @everyone tag',
+          };
         }
+        targetPodId = chatGroup.pod_id || undefined;
       }
 
-      if (!targetPodId) {
+      if (!targetPodId && !chatGroupId) {
         return {
           canUseEveryoneTag: false,
           reason: 'Cannot determine pod context for @everyone tag',
         };
       }
 
-      // Step 2: Check if user is Executive Pod Leader (global @everyone access)
-      const isExecutiveLeader = await this.isExecutivePodLeader(userWallet);
+      // Step 2: Executive Pod leaders have global @everyone access
+      if (await this.isExecutivePodLeader(userWallet)) {
+        return { canUseEveryoneTag: true, podId: targetPodId, chatGroupId };
+      }
 
-      if (isExecutiveLeader) {
+      // Step 3: A chat with no pod reaches all members: executive leaders only
+      if (!targetPodId) {
         return {
-          canUseEveryoneTag: true,
-          podId: targetPodId,
-          chatGroupId,
+          canUseEveryoneTag: false,
+          reason: 'Only Executive Pod leaders can use @everyone in this chat',
         };
       }
 
-      // Step 3: Check if user has chatModeration permission in this specific pod
-      const hasChatModeration = await this.hasChatModerationInPod(
-        userWallet,
-        targetPodId,
-      );
-
-      if (hasChatModeration) {
-        return {
-          canUseEveryoneTag: true,
-          podId: targetPodId,
-          chatGroupId,
-        };
+      // Step 4: chatModeration permission in this specific pod
+      if (await this.hasChatModerationInPod(userWallet, targetPodId)) {
+        return { canUseEveryoneTag: true, podId: targetPodId, chatGroupId };
       }
 
       return {
@@ -93,7 +99,7 @@ class EveryoneTagService {
       console.error('[EveryoneTagService] Permission check failed:', error);
       return {
         canUseEveryoneTag: false,
-        reason: 'Failed to verify permissions',
+        reason: 'Failed to verify permissions for @everyone',
       };
     }
   }
@@ -102,28 +108,26 @@ class EveryoneTagService {
    * Check if user is an Executive Pod Leader
    */
   private async isExecutivePodLeader(userWallet: string): Promise<boolean> {
-    const executiveLeaderHat = getClientHatId('EXECUTIVE_POD_LEADER');
+    const executiveLeaderHat = await getHatId('EXECUTIVE_POD_LEADER');
 
     if (!executiveLeaderHat) {
       console.warn('[EveryoneTagService] EXECUTIVE_POD_LEADER hat not configured');
       return false;
     }
 
-    try {
-      // Check if user has the executive leader HAT in active_pod_members
-      const { data: membership } = await supabase
-        .from('active_pod_members')
-        .select('hat_id, is_active')
-        .eq('wallet', userWallet.toLowerCase())
-        .eq('hat_id', executiveLeaderHat)
-        .eq('is_active', true)
-        .maybeSingle();
+    const { data, error } = await supabaseAdmin
+      .from('active_pod_members')
+      .select('hat_id')
+      .eq('wallet', userWallet.toLowerCase())
+      .eq('hat_id', executiveLeaderHat)
+      .eq('is_active', true)
+      .limit(1);
 
-      return !!membership;
-    } catch (error) {
+    if (error) {
       console.error('[EveryoneTagService] Executive leader check failed:', error);
       return false;
     }
+    return (data?.length ?? 0) > 0;
   }
 
   /**
@@ -133,107 +137,87 @@ class EveryoneTagService {
     userWallet: string,
     podId: string,
   ): Promise<boolean> {
-    try {
-      // Get user's membership in the pod
-      const { data: membership } = await supabase
-        .from('active_pod_members')
-        .select('hat_id')
-        .eq('pod_id', podId)
-        .eq('wallet', userWallet.toLowerCase())
-        .eq('is_active', true)
-        .maybeSingle();
+    const { data: memberships, error: memberError } = await supabaseAdmin
+      .from('active_pod_members')
+      .select('hat_id')
+      .eq('pod_id', podId)
+      .eq('wallet', userWallet.toLowerCase())
+      .eq('is_active', true);
 
-      if (!membership?.hat_id) {
-        return false;
-      }
-
-      // Check role permissions for chatModeration
-      const { data: rolePermissions } = await supabase
-        .from('pod_role_permissions')
-        .select('permissions')
-        .eq('pod_id', podId)
-        .eq('token_address', membership.hat_id)
-        .maybeSingle();
-
-      if (!rolePermissions) {
-        return false;
-      }
-
-      const permissions =
-        typeof rolePermissions.permissions === 'string'
-          ? JSON.parse(rolePermissions.permissions)
-          : rolePermissions.permissions;
-
-      return permissions.chatModeration === true;
-    } catch (error) {
-      console.error('[EveryoneTagService] Chat moderation check failed:', error);
+    if (memberError) {
+      console.error('[EveryoneTagService] Membership lookup failed:', memberError);
       return false;
     }
-  }
 
-  /**
-   * Get all members of a chat group who should receive @everyone notifications
-   */
-  async getChatGroupMembers(chatGroupId: string): Promise<string[]> {
-    try {
-      // Get pod ID from chat group
-      const { data: chatGroup } = await supabase
-        .from('chat_groups')
-        .select('pod_id')
-        .eq('id', chatGroupId)
-        .single();
+    const userHats = new Set(
+      (memberships ?? [])
+        .map((m) => m.hat_id?.toLowerCase())
+        .filter(Boolean) as string[],
+    );
+    if (userHats.size === 0) return false;
 
-      if (!chatGroup?.pod_id) {
-        console.error('[EveryoneTagService] Chat group has no associated pod');
-        return [];
-      }
+    const { data: roles, error: roleError } = await supabaseAdmin
+      .from('pod_role_permissions')
+      .select('permissions, token_address')
+      .eq('pod_id', podId);
 
-      // Get all active members of the pod
-      const { data: members } = await supabase
-        .from('active_pod_members')
-        .select('wallet')
-        .eq('pod_id', chatGroup.pod_id)
-        .eq('is_active', true);
-
-      if (!members) {
-        return [];
-      }
-
-      return members.map((m) => m.wallet);
-    } catch (error) {
-      console.error('[EveryoneTagService] Failed to get chat group members:', error);
-      return [];
+    if (roleError) {
+      console.error('[EveryoneTagService] Role permission lookup failed:', roleError);
+      return false;
     }
+
+    return (roles ?? []).some((role) => {
+      if (!role.token_address || !userHats.has(role.token_address.toLowerCase())) {
+        return false;
+      }
+      try {
+        const permissions =
+          typeof role.permissions === 'string'
+            ? JSON.parse(role.permissions)
+            : role.permissions;
+        return permissions?.chatModeration === true;
+      } catch {
+        return false;
+      }
+    });
   }
 
   /**
-   * Get all members of a forum/pod who should receive @everyone notifications
+   * Wallets that should receive an @everyone notification: the pod's active
+   * members, or every member of the platform when the chat has no pod.
+   * Lower-cased and de-duplicated.
    */
-  async getPodMembers(podId: string): Promise<string[]> {
-    try {
-      const { data: members } = await supabase
+  async getRecipients(podId?: string | null): Promise<string[]> {
+    let wallets: (string | null)[];
+
+    if (podId) {
+      const { data, error } = await supabaseAdmin
         .from('active_pod_members')
         .select('wallet')
         .eq('pod_id', podId)
         .eq('is_active', true);
-
-      if (!members) {
-        return [];
-      }
-
-      return members.map((m) => m.wallet);
-    } catch (error) {
-      console.error('[EveryoneTagService] Failed to get pod members:', error);
-      return [];
+      if (error) throw error;
+      wallets = (data ?? []).map((m) => m.wallet);
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from('public_profiles')
+        .select('wallet_address');
+      if (error) throw error;
+      wallets = (data ?? []).map((p) => p.wallet_address);
     }
+
+    return [
+      ...new Set(
+        wallets.filter(Boolean).map((w) => (w as string).toLowerCase()),
+      ),
+    ];
   }
 
   /**
    * Detect if message contains @everyone tag
    */
   detectEveryoneTag(content: string): boolean {
-    const everyonePattern = /@everyone\b/i;
-    return everyonePattern.test(content);
+    return EVERYONE_PATTERN.test(content);
   }
 
   /**
@@ -243,13 +227,10 @@ class EveryoneTagService {
     content: string,
     context: EveryoneTagContext,
   ): Promise<{ isValid: boolean; shouldNotify: boolean; reason?: string }> {
-    const hasEveryoneTag = this.detectEveryoneTag(content);
-
-    if (!hasEveryoneTag) {
+    if (!this.detectEveryoneTag(content)) {
       return { isValid: true, shouldNotify: false };
     }
 
-    // Check permission
     const permission = await this.checkEveryoneTagPermission(context);
 
     if (!permission.canUseEveryoneTag) {
