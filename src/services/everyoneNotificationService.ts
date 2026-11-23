@@ -1,29 +1,35 @@
 /**
- * @everyone Notification Service
+ * @everyone Notification Service (server-only)
  *
- * Handles bulk notification delivery when @everyone is used in chat/forums.
- * Integrates with the existing UnifiedNotificationService.
+ * Bulk notification delivery when @everyone is used in chat/forums. Writes
+ * through the server notification helper (preference check, insert, push),
+ * so it must be called from an API route, inside `after()` so the fan-out
+ * survives the response being sent.
  */
 
-import { unifiedNotificationService } from './unifiedNotificationService';
+import { sendServerNotificationBatch } from '@/lib/serverNotifications';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { everyoneTagService } from './everyoneTagService';
-import { supabase } from '@/utils/supabaseClient';
 
 export interface EveryoneNotificationPayload {
   senderAddress: string;
   senderName?: string;
-  messageContent: string;
   messagePreview: string; // First 100 chars
   contextType: 'chat' | 'forum';
   contextId: string; // chat_group_id or forum_thread_id
   contextUrl: string; // Deep link to message
-  podId: string;
-  podName?: string;
+  /** Pod whose members are notified; omit for a platform-wide chat. */
+  podId?: string | null;
+  /** Name shown in the title: the pod's, or the chat's when there is no pod. */
+  contextName?: string;
 }
+
+const BATCH_SIZE = 20;
 
 class EveryoneNotificationService {
   /**
-   * Send @everyone notifications to all pod/chat group members
+   * Send @everyone notifications to all pod members, or to every member of
+   * the platform when the chat has no pod.
    */
   async sendEveryoneNotifications(
     payload: EveryoneNotificationPayload,
@@ -31,82 +37,49 @@ class EveryoneNotificationService {
     const {
       senderAddress,
       senderName,
-      messageContent,
       messagePreview,
       contextType,
       contextId,
       contextUrl,
       podId,
-      podName,
+      contextName,
     } = payload;
 
-    try {
-      // Get all recipients based on context
-      let recipients: string[] = [];
+    const sender = senderAddress.toLowerCase();
+    const recipients = (await everyoneTagService.getRecipients(podId)).filter(
+      (wallet) => wallet !== sender,
+    );
 
-      if (contextType === 'chat') {
-        recipients = await everyoneTagService.getChatGroupMembers(contextId);
-      } else if (contextType === 'forum') {
-        recipients = await everyoneTagService.getPodMembers(podId);
-      }
+    console.log(`[EveryoneNotificationService] Sending @everyone to ${recipients.length} members`);
 
-      // Remove sender from recipients (don't notify yourself)
-      recipients = recipients.filter(
-        (wallet) => wallet.toLowerCase() !== senderAddress.toLowerCase(),
+    const title = `@everyone in ${contextName || (podId ? 'pod' : 'chat')}`;
+    const message = `${senderName || 'Someone'} mentioned @everyone: ${messagePreview}`;
+
+    let sent = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+      const result = await sendServerNotificationBatch(
+        recipients.slice(i, i + BATCH_SIZE).map((recipient_address) => ({
+          recipient_address,
+          sender_address: sender,
+          notification_type: 'chat_message',
+          title,
+          message,
+          context_url: contextUrl,
+          context_type: contextType,
+          context_id: contextId,
+          priority: 'high' as const, // @everyone gets through quiet hours
+        })),
       );
-
-      console.log(`[EveryoneNotificationService] Sending @everyone to ${recipients.length} members`);
-
-      let sent = 0;
-      let failed = 0;
-      let skipped = 0;
-
-      // Send notification to each recipient
-      for (const recipientAddress of recipients) {
-        try {
-          const title = `@everyone in ${podName || 'pod'}`;
-          const message = `${senderName || 'Someone'} mentioned @everyone: ${messagePreview}`;
-
-          const result = await unifiedNotificationService.createNotification({
-            recipient_address: recipientAddress,
-            sender_address: senderAddress,
-            notification_type: 'chat_message', // Use existing type
-            title,
-            message,
-            context_url: contextUrl,
-            context_type: contextType,
-            context_id: contextId,
-            priority: 'high', // @everyone gets high priority
-            metadata: {
-              isEveryoneTag: true,
-              podId,
-              podName,
-              fullMessage: messageContent,
-            },
-          });
-
-          if (result === null) {
-            // Notification was skipped due to user preferences
-            skipped++;
-          } else {
-            sent++;
-          }
-        } catch (error) {
-          console.error(
-            `[EveryoneNotificationService] Failed to notify ${recipientAddress}:`,
-            error,
-          );
-          failed++;
-        }
-      }
-
-      console.log(`[EveryoneNotificationService] Results: ${sent} sent, ${failed} failed, ${skipped} skipped`);
-
-      return { sent, failed, skipped };
-    } catch (error) {
-      console.error('[EveryoneNotificationService] Failed to send @everyone notifications:', error);
-      return { sent: 0, failed: 0, skipped: 0 };
+      sent += result.sent;
+      skipped += result.skipped;
     }
+
+    const failed = recipients.length - sent - skipped;
+    console.log(`[EveryoneNotificationService] Results: ${sent} sent, ${failed} failed, ${skipped} skipped`);
+
+    return { sent, failed, skipped };
   }
 
   /**
@@ -114,17 +87,26 @@ class EveryoneNotificationService {
    */
   async getSenderName(senderAddress: string): Promise<string | undefined> {
     try {
-      const { data: profile } = await supabase
+      const { data: profile } = await supabaseAdmin
         .from('public_profiles')
-        .select('full_name, username, basename')
+        .select('*')
         .eq('wallet_address', senderAddress.toLowerCase())
         .maybeSingle();
 
-      if (!profile) {
-        return undefined;
-      }
+      if (!profile) return undefined;
 
-      return profile.full_name || profile.username || profile.basename || undefined;
+      const fullName = [profile.first_name, profile.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+
+      return (
+        fullName ||
+        profile.full_name ||
+        profile.username ||
+        profile.basename ||
+        undefined
+      );
     } catch (error) {
       console.error('[EveryoneNotificationService] Failed to get sender name:', error);
       return undefined;
@@ -136,7 +118,7 @@ class EveryoneNotificationService {
    */
   async getPodName(podId: string): Promise<string | undefined> {
     try {
-      const { data: pod } = await supabase
+      const { data: pod } = await supabaseAdmin
         .from('pods')
         .select('name')
         .eq('id', podId)
@@ -150,11 +132,16 @@ class EveryoneNotificationService {
   }
 
   /**
-   * Create message preview (first 100 chars)
+   * Create message preview (first 100 chars), with mention markup flattened:
+   * the @everyone tag is dropped and "@[Name](id)" becomes "@Name".
    */
   createMessagePreview(content: string, maxLength: number = 100): string {
-    // Remove @everyone tag from preview
-    const cleanedContent = content.replace(/@everyone\s*/gi, '').trim();
+    const cleanedContent = content
+      .replace(/@\[everyone\]\(everyone\)\s*/gi, '')
+      .replace(/@everyone\b\s*/gi, '')
+      .replace(/@\[([^\]]+)\]\([^)]*\)/g, '@$1')
+      .replace(/^[\s\-–—:,]+/, '')
+      .trim();
 
     if (cleanedContent.length <= maxLength) {
       return cleanedContent;
