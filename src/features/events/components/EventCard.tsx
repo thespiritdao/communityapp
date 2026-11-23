@@ -52,7 +52,14 @@ export const EventCard: React.FC<EventCardProps> = ({
   compact = false,
   registrationStatus,
 }) => {
-  const { canView, canRegister, loading } = useEventAccess(event);
+  const {
+    canView,
+    canRegister,
+    loading,
+    checking,
+    registerBlockReason,
+    recheckAccess,
+  } = useEventAccess(event);
   const { evmAddress: address } = useEvmAddress();
 
   // Fetch pods from Supabase and store in state
@@ -319,6 +326,18 @@ export const EventCard: React.FC<EventCardProps> = ({
                 <CheckCircle className="w-4 h-4" />
                 <span className="text-sm font-medium">You're Registered!</span>
               </div>
+            ) : checking ? (
+              <Button size="sm" disabled={true} className="bg-gray-400">
+                Checking…
+              </Button>
+            ) : !canRegister && registerBlockReason === 'signin' ? (
+              <Button size="sm" variant="outline" asChild={true}>
+                <Link href="/">Sign in to register</Link>
+              </Button>
+            ) : !canRegister && registerBlockReason === 'error' ? (
+              <Button size="sm" variant="outline" onClick={recheckAccess}>
+                Retry
+              </Button>
             ) : (
               <Button
                 size="sm"
@@ -340,7 +359,14 @@ export const EventCard: React.FC<EventCardProps> = ({
                       : undefined,
                 }}
               >
-                {canRegister ? 'Register' : 'Ineligible'}
+                {canRegister
+                  ? 'Register'
+                  : registerBlockReason === 'closed'
+                    ? event.max_attendees &&
+                      (event.registration_count || 0) >= event.max_attendees
+                      ? 'Full'
+                      : 'Closed'
+                    : 'Ineligible'}
               </Button>
             )}
             {!canRegister &&

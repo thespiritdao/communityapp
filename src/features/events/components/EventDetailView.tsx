@@ -65,7 +65,13 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
     refetch: refetchRegistrations,
   } = useEventRegistrations(eventId);
   const { agendas, loading: agendasLoading } = useEventAgendas(eventId);
-  const { canView, canRegister, canManage } = useEventAccess(event);
+  const {
+    canView,
+    canRegister,
+    canManage,
+    checking: accessChecking,
+    registerBlockReason,
+  } = useEventAccess(event);
   const {
     registration: hookRegistration,
     isRegistered: hookIsRegistered,
@@ -743,6 +749,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                             : `${event.price_amount} ${event.price_token}`}
                         </p>
                       </>
+                    ) : accessChecking ? (
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <p className="text-sm text-gray-600">
+                          Checking your access…
+                        </p>
+                      </div>
                     ) : (
                       <div
                         className="p-4 rounded-lg"
@@ -752,10 +764,22 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                         }}
                       >
                         <p className="font-medium" style={{ color: '#8B3A3A' }}>
-                          Cannot Register
+                          {registerBlockReason === 'signin'
+                            ? 'Sign in to register'
+                            : registerBlockReason === 'closed'
+                              ? 'Registration closed'
+                              : registerBlockReason === 'error'
+                                ? "Couldn't check your access"
+                                : 'Cannot Register'}
                         </p>
                         <p className="text-sm" style={{ color: '#8B3A3A' }}>
-                          You don't meet the requirements for this event
+                          {registerBlockReason === 'signin'
+                            ? "Your wallet isn't connected in this browser. Sign in again to register."
+                            : registerBlockReason === 'closed'
+                              ? "Registration isn't open for this event right now."
+                              : registerBlockReason === 'error'
+                                ? 'Reload the page to try again.'
+                                : "You don't meet the requirements for this event"}
                         </p>
                       </div>
                     )
